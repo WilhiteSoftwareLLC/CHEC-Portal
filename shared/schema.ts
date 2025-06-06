@@ -56,13 +56,13 @@ export const grades = pgTable("grades", {
 
 // Hour table - names of class periods (1st, 2nd, 3rd, etc.)
 export const hours = pgTable("hours", {
-  id: integer("id").primaryKey(),
+  id: serial("id").primaryKey(),
   description: varchar("description", { length: 50 }).notNull(),
 });
 
 // Family table - matches your existing structure
 export const families = pgTable("families", {
-  id: integer("id").primaryKey(),
+  id: serial("id").primaryKey(),
   lastName: varchar("last_name", { length: 255 }).notNull(),
   father: varchar("father", { length: 255 }),
   mother: varchar("mother", { length: 255 }),
