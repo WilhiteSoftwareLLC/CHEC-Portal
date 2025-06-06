@@ -347,6 +347,81 @@ export default function Import() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        <TabsContent value="grades">
+          <Card>
+            <CardHeader>
+              <CardTitle>Import Grades</CardTitle>
+              <CardDescription>
+                Expected fields: GradeName, Code
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="Paste CSV data here..."
+                value={csvData.grades}
+                onChange={(e) => setCsvData({ ...csvData, grades: e.target.value })}
+                rows={10}
+              />
+              <Button 
+                onClick={() => handleImport('grades')}
+                disabled={importGrades.isPending}
+              >
+                {importGrades.isPending ? "Importing..." : "Import Grades"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="hours">
+          <Card>
+            <CardHeader>
+              <CardTitle>Import Hours</CardTitle>
+              <CardDescription>
+                Expected fields: ID, Description
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="Paste CSV data here..."
+                value={csvData.hours}
+                onChange={(e) => setCsvData({ ...csvData, hours: e.target.value })}
+                rows={10}
+              />
+              <Button 
+                onClick={() => handleImport('hours')}
+                disabled={importHours.isPending}
+              >
+                {importHours.isPending ? "Importing..." : "Import Hours"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="settings">
+          <Card>
+            <CardHeader>
+              <CardTitle>Import Settings</CardTitle>
+              <CardDescription>
+                Expected fields: FamilyFee, BackgroundFee, StudentFee, SchoolYear
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <Textarea
+                placeholder="Paste CSV data here..."
+                value={csvData.settings}
+                onChange={(e) => setCsvData({ ...csvData, settings: e.target.value })}
+                rows={10}
+              />
+              <Button 
+                onClick={() => handleImport('settings')}
+                disabled={importSettings.isPending}
+              >
+                {importSettings.isPending ? "Importing..." : "Import Settings"}
+              </Button>
+            </CardContent>
+          </Card>
+        </TabsContent>
       </Tabs>
     </div>
   );
