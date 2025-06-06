@@ -101,8 +101,13 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Classes Imported",
-        description: `Successfully imported ${response.successful || 0} classes. ${response.failed || 0} failed.`,
+        description: `New: ${response.newClasses || 0} (replaced all previous). ${response.failed || 0} failed.`,
       });
+      // Clear the form data after successful import
+      setCsvData({ ...csvData, classes: "" });
+      // Invalidate cache to refresh classes list
+      queryClient.invalidateQueries({ queryKey: ["/api/classes"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error) => {
       toast({

@@ -70,6 +70,7 @@ export interface IStorage {
   createClass(classData: InsertClass): Promise<Class>;
   updateClass(id: number, classData: Partial<InsertClass>): Promise<Class>;
   deleteClass(id: number): Promise<void>;
+  deleteAllClasses(): Promise<void>;
 
   // Grade operations
   getGrades(): Promise<Grade[]>;
@@ -410,6 +411,10 @@ export class DatabaseStorage implements IStorage {
 
   async deleteClass(id: number): Promise<void> {
     await db.delete(classes).where(eq(classes.id, id));
+  }
+
+  async deleteAllClasses(): Promise<void> {
+    await db.delete(classes);
   }
 
   // Grade operations
