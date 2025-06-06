@@ -38,31 +38,72 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
     queryKey: ["/api/families"],
   });
 
-  // Create queries for courses by hour (1-8)
-  const { data: hour1Courses = [] } = useQuery({
-    queryKey: ["/api/courses/by-hour/1"],
+  // Fetch all courses and classes for filtering
+  const { data: courses = [] } = useQuery({
+    queryKey: ["/api/courses"],
   });
-  const { data: hour2Courses = [] } = useQuery({
-    queryKey: ["/api/courses/by-hour/2"],
+  
+  const { data: classes = [] } = useQuery({
+    queryKey: ["/api/classes"],
   });
-  const { data: hour3Courses = [] } = useQuery({
-    queryKey: ["/api/courses/by-hour/3"],
+
+  const { data: grades = [] } = useQuery({
+    queryKey: ["/api/grades"],
   });
-  const { data: hour4Courses = [] } = useQuery({
-    queryKey: ["/api/courses/by-hour/4"],
+
+  const { data: settings } = useQuery({
+    queryKey: ["/api/settings"],
   });
-  const { data: hour5Courses = [] } = useQuery({
-    queryKey: ["/api/courses/by-hour/5"],
-  });
-  const { data: hour6Courses = [] } = useQuery({
-    queryKey: ["/api/courses/by-hour/6"],
-  });
-  const { data: hour7Courses = [] } = useQuery({
-    queryKey: ["/api/courses/by-hour/7"],
-  });
-  const { data: hour8Courses = [] } = useQuery({
-    queryKey: ["/api/courses/by-hour/8"],
-  });
+
+  // Helper function to get student's current grade code
+  const getCurrentGrade = (gradYear: string | null) => {
+    if (!gradYear || !settings || !grades) return null;
+    
+    const schoolYear = parseInt((settings as any).SchoolYear || "2024");
+    const graduationYear = parseInt(gradYear);
+    const gradeCode = schoolYear - graduationYear + 13;
+    
+    return gradeCode;
+  };
+
+  // Helper function to get student's class
+  const getStudentClass = (gradYear: string | null) => {
+    if (!gradYear || !settings || !classes) return null;
+    
+    const gradeCode = getCurrentGrade(gradYear);
+    if (gradeCode === null) return null;
+    
+    const studentClass = Array.isArray(classes) ? classes.find((cls: any) => 
+      gradeCode >= cls.startCode && gradeCode <= cls.endCode
+    ) : null;
+    
+    return studentClass;
+  };
+
+  // Watch the gradYear field to dynamically filter courses
+  const currentGradYear = form.watch("gradYear");
+  const studentClass = getStudentClass(currentGradYear);
+
+  // Filter courses by hour and student class
+  const getCoursesByHour = (hour: number) => {
+    if (!courses || !Array.isArray(courses)) return [];
+    
+    return courses.filter((course: any) => 
+      course.hour === hour && 
+      (course.classId === studentClass?.id || course.classId === null)
+    );
+  };
+
+  // Math hour courses (hour 0)
+  const mathHourCourses = getCoursesByHour(0);
+  const hour1Courses = getCoursesByHour(1);
+  const hour2Courses = getCoursesByHour(2);
+  const hour3Courses = getCoursesByHour(3);
+  const hour4Courses = getCoursesByHour(4);
+  const hour5Courses = getCoursesByHour(5);
+  const hour6Courses = getCoursesByHour(6);
+  const hour7Courses = getCoursesByHour(7);
+  const hour8Courses = getCoursesByHour(8);
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {

@@ -34,6 +34,11 @@ export default function Schedules() {
     queryKey: ["/api/grades"],
   });
 
+  const { data: classes } = useQuery({
+    queryKey: ["/api/classes"],
+    retry: false,
+  });
+
   const getCurrentGrade = (gradYear: string | null) => {
     if (!gradYear || !settings || !grades) return null;
     
@@ -56,6 +61,21 @@ export default function Schedules() {
     return grade ? grade.gradeName : "Unknown";
   };
 
+  // Get the class that a student belongs to based on their current grade
+  const getStudentClass = (gradYear: string | null) => {
+    if (!gradYear || !settings || !classes) return null;
+    
+    const gradeCode = getCurrentGrade(gradYear);
+    if (gradeCode === null) return null;
+    
+    // Find the class that contains this grade code
+    const studentClass = Array.isArray(classes) ? classes.find((cls: any) => 
+      gradeCode >= cls.startCode && gradeCode <= cls.endCode
+    ) : null;
+    
+    return studentClass;
+  };
+
   // Filter students to only show 7th grade and older
   const eligibleStudents = students?.filter((student: StudentWithFamily) => {
     const gradeCode = getCurrentGrade(student.gradYear);
@@ -74,16 +94,26 @@ export default function Schedules() {
     return true;
   });
 
-  // Get courses by hour
-  const getCoursesByHour = (hour: number) => {
+  // Get courses by hour and student class
+  const getCoursesByHour = (hour: number, studentGradYear: string | null) => {
     if (!courses) return [];
-    return (courses as Course[]).filter(course => course.hour === hour);
+    const studentClass = getStudentClass(studentGradYear);
+    
+    return (courses as Course[]).filter(course => 
+      course.hour === hour && 
+      (course.classId === studentClass?.id || course.classId === null)
+    );
   };
 
-  // Get courses for Math Hour (hour 0)
-  const getMathHourCourses = () => {
+  // Get courses for Math Hour (hour 0) filtered by student class
+  const getMathHourCourses = (studentGradYear: string | null) => {
     if (!courses) return [];
-    return (courses as Course[]).filter(course => course.hour === 0);
+    const studentClass = getStudentClass(studentGradYear);
+    
+    return (courses as Course[]).filter(course => 
+      course.hour === 0 && 
+      (course.classId === studentClass?.id || course.classId === null)
+    );
   };
 
   // Get current course selection for a student and hour
@@ -273,20 +303,23 @@ export default function Schedules() {
                           <SelectContent>
                             <SelectItem value="none">No Course</SelectItem>
                             {hour.key === "mathHour" ? (
-                              getMathHourCourses().map((course: Course) => (
+                              getMathHourCourses(student.gradYear).map((course: Course) => (
                                 <SelectItem key={course.id} value={course.courseName}>
                                   {course.courseName}
                                 </SelectItem>
                               ))
                             ) : hour.hourNumber ? (
-                              getCoursesByHour(hour.hourNumber).map((course: Course) => (
+                              getCoursesByHour(hour.hourNumber, student.gradYear).map((course: Course) => (
                                 <SelectItem key={course.id} value={course.courseName}>
                                   {course.courseName}
                                 </SelectItem>
                               ))
                             ) : (
-                              // For any other special hours, show all available courses
-                              (courses as Course[] || []).map((course: Course) => (
+                              // For any other special hours, show courses filtered by student class
+                              (courses as Course[] || []).filter((course: Course) => {
+                                const studentClass = getStudentClass(student.gradYear);
+                                return course.classId === studentClass?.id || course.classId === null;
+                              }).map((course: Course) => (
                                 <SelectItem key={course.id} value={course.courseName}>
                                   {course.courseName}
                                 </SelectItem>
