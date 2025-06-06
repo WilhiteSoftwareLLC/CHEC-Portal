@@ -3,6 +3,7 @@ import { ChevronUp, ChevronDown, Edit, Save, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
 export interface GridColumn {
@@ -11,7 +12,8 @@ export interface GridColumn {
   sortable?: boolean;
   editable?: boolean;
   width?: string;
-  type?: "text" | "email" | "tel" | "number" | "checkbox";
+  type?: "text" | "email" | "tel" | "number" | "checkbox" | "dropdown";
+  options?: { value: any; label: string }[];
 }
 
 export interface EditableGridProps {
@@ -176,6 +178,31 @@ export default function EditableGrid({
                               }}
                             />
                           </div>
+                        ) : column.type === "dropdown" ? (
+                          <Select
+                            value={String(value || "")}
+                            onValueChange={async (newValue) => {
+                              try {
+                                const parsedValue = isNaN(Number(newValue)) ? newValue : Number(newValue);
+                                await onRowUpdate(row.id, { [column.key]: parsedValue });
+                              } catch (error) {
+                                console.error("Failed to update dropdown:", error);
+                              }
+                            }}
+                          >
+                            <SelectTrigger className="h-8 text-sm">
+                              <SelectValue>
+                                {column.options?.find(opt => opt.value === value)?.label || "Select..."}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {column.options?.map((option) => (
+                                <SelectItem key={option.value} value={String(option.value)}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
                         ) : isEditing ? (
                           <div className="flex items-center space-x-2">
                             <Input

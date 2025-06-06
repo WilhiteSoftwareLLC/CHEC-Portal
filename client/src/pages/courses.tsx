@@ -20,6 +20,16 @@ export default function Courses() {
     retry: false,
   });
 
+  const { data: hours } = useQuery({
+    queryKey: ["/api/hours"],
+    queryFn: async () => {
+      const response = await fetch("/api/hours", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
+  });
+
   const updateCourseMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Record<string, any> }) => {
       await apiRequest(`/api/courses/${id}`, "PATCH", updates);
@@ -82,16 +92,18 @@ export default function Courses() {
     }
   };
 
-  // Prepare data with computed display values
-  const coursesWithDisplay = courses?.map((course: Course) => ({
-    ...course,
-    hourDisplay: course.hour === 0 ? "Math Hour" : course.hour?.toString() || "",
-  })) || [];
+  // Create hour options for dropdown
+  const hourOptions = [
+    { value: 0, label: "Math Hour" },
+    ...(hours || []).map((hour: any) => ({
+      value: hour.hourNumber,
+      label: `${hour.hourNumber}${hour.hourNumber === 1 ? 'st' : hour.hourNumber === 2 ? 'nd' : hour.hourNumber === 3 ? 'rd' : 'th'} Hour`
+    }))
+  ];
 
   const columns: GridColumn[] = [
     { key: "courseName", label: "Course Name", sortable: true, editable: true, width: "64" },
-    { key: "hourDisplay", label: "Hour", sortable: true, editable: false, width: "24" },
-    { key: "hour", label: "Hour (Edit)", sortable: true, editable: true, type: "number", width: "32" },
+    { key: "hour", label: "Hour", sortable: true, editable: false, width: "32", type: "dropdown", options: hourOptions },
     { key: "offeredFall", label: "Fall", sortable: true, editable: false, width: "20", type: "checkbox" },
     { key: "offeredSpring", label: "Spring", sortable: true, editable: false, width: "20", type: "checkbox" },
   ];
@@ -99,7 +111,7 @@ export default function Courses() {
   return (
     <div className="p-6">
       <EditableGrid
-        data={coursesWithDisplay}
+        data={courses || []}
         columns={columns}
         onRowUpdate={handleUpdateCourse}
         onRowDelete={handleDeleteCourse}
