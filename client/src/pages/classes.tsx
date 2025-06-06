@@ -2,10 +2,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import EditableGrid, { type GridColumn } from "@/components/ui/editable-grid";
+import AddClassDialog from "@/components/dialogs/add-class-dialog";
+import { useDialogs } from "@/contexts/dialog-context";
 import type { Class, Grade, InsertClass } from "@shared/schema";
 
 export default function Classes() {
   const { toast } = useToast();
+  const { addClassOpen, setAddClassOpen } = useDialogs();
 
   const { data: classes, isLoading: classesLoading } = useQuery({
     queryKey: ["/api/classes"],
@@ -107,6 +110,11 @@ export default function Classes() {
         onRowUpdate={handleUpdateClass}
         onRowDelete={handleDeleteClass}
         isLoading={classesLoading}
+      />
+      
+      <AddClassDialog
+        open={addClassOpen}
+        onOpenChange={setAddClassOpen}
       />
     </div>
   );

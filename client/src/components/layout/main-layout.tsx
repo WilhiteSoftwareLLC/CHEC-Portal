@@ -9,7 +9,7 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { setAddFamilyOpen, setAddStudentOpen, setAddCourseOpen } = useDialogs();
+  const { setAddFamilyOpen, setAddStudentOpen, setAddCourseOpen, setAddClassOpen } = useDialogs();
 
   return (
     <div className="min-h-screen flex bg-gray-50">
@@ -20,6 +20,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
           onAddFamily={() => setAddFamilyOpen(true)}
           onAddStudent={() => setAddStudentOpen(true)}
           onAddCourse={() => setAddCourseOpen(true)}
+          onAddClass={() => setAddClassOpen(true)}
         />
         {children}
       </main>

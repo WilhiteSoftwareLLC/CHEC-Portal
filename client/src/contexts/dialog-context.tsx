@@ -7,6 +7,8 @@ interface DialogContextType {
   setAddStudentOpen: (open: boolean) => void;
   addCourseOpen: boolean;
   setAddCourseOpen: (open: boolean) => void;
+  addClassOpen: boolean;
+  setAddClassOpen: (open: boolean) => void;
 }
 
 const DialogContext = createContext<DialogContextType | undefined>(undefined);
@@ -15,6 +17,7 @@ export function DialogProvider({ children }: { children: ReactNode }) {
   const [addFamilyOpen, setAddFamilyOpen] = useState(false);
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const [addCourseOpen, setAddCourseOpen] = useState(false);
+  const [addClassOpen, setAddClassOpen] = useState(false);
 
   return (
     <DialogContext.Provider value={{
@@ -24,6 +27,8 @@ export function DialogProvider({ children }: { children: ReactNode }) {
       setAddStudentOpen,
       addCourseOpen,
       setAddCourseOpen,
+      addClassOpen,
+      setAddClassOpen,
     }}>
       {children}
     </DialogContext.Provider>
