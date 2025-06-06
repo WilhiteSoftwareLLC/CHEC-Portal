@@ -37,13 +37,14 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Settings table - configurable variables for each year
+// Settings table - key-value pairs for better extensibility
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
-  familyFee: decimal("family_fee", { precision: 10, scale: 2 }),
-  backgroundFee: decimal("background_fee", { precision: 10, scale: 2 }),
-  studentFee: decimal("student_fee", { precision: 10, scale: 2 }),
-  schoolYear: integer("school_year"),
+  key: varchar("key").notNull().unique(),
+  value: varchar("value"),
+  description: varchar("description"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
 });
 
 // Grade table - maps grade names to codes (including negative codes for preschool)
@@ -196,6 +197,8 @@ export const insertHourSchema = createInsertSchema(hours).omit({
 
 export const insertSettingsSchema = createInsertSchema(settings).omit({
   id: true,
+  createdAt: true,
+  updatedAt: true,
 });
 
 // Types

@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth } from "./replitAuth";
+import { setupAuth, isAuthenticated } from "./replitAuth";
 import {
   insertFamilySchema,
   insertStudentSchema,
@@ -377,16 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/settings", async (req, res) => {
-    try {
-      const settingsData = insertSettingsSchema.partial().parse(req.body);
-      const settings = await storage.updateSettings(settingsData);
-      res.json(settings);
-    } catch (error) {
-      console.error("Error updating settings:", error);
-      res.status(500).json({ message: "Failed to update settings" });
-    }
-  });
+
 
   // Dashboard stats
   app.get("/api/dashboard/stats", async (req, res) => {
@@ -763,34 +754,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/import/settings", async (req, res) => {
+  // Settings API routes
+  app.get("/api/settings", async (req, res) => {
     try {
-      const settingsData = req.body;
-      
-      // First, delete all existing settings (fresh start each year)
-      console.log("Deleting all existing settings before import...");
-      await storage.deleteAllSettings();
-      
-      // Map MS Access Settings table columns to our schema
-      const settings = {
-        familyFee: settingsData.FamilyFee ? String(settingsData.FamilyFee) : null,
-        backgroundFee: settingsData.BackgroundFee ? String(settingsData.BackgroundFee) : null,
-        studentFee: settingsData.StudentFee ? String(settingsData.StudentFee) : null,
-        schoolYear: settingsData.SchoolYear || settingsData.schoolYear || null,
-      };
-
-      const result = await storage.updateSettings(settings);
-      console.log("New settings created, deleted all previous settings");
-      
-      res.json({ 
-        message: "Settings imported successfully", 
-        settings: result,
-        newSettings: 1,
-        deletedPrevious: true
-      });
+      const settings = await storage.getSettings();
+      res.json(settings);
     } catch (error) {
-      console.error("Error importing settings:", error);
-      res.status(500).json({ message: "Failed to import settings" });
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
+    }
+  });
+
+  app.get("/api/settings/:key", async (req, res) => {
+    try {
+      const { key } = req.params;
+      const value = await storage.getSetting(key);
+      if (value === null) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      res.json({ key, value });
+    } catch (error) {
+      console.error("Error fetching setting:", error);
+      res.status(500).json({ message: "Failed to fetch setting" });
+    }
+  });
+
+  app.put("/api/settings/:key", async (req, res) => {
+    try {
+      const { key } = req.params;
+      const { value, description } = req.body;
+      
+      if (!value) {
+        return res.status(400).json({ message: "Value is required" });
+      }
+
+      const result = await storage.setSetting(key, value, description);
+      res.json({ message: "Setting updated successfully", setting: result });
+    } catch (error) {
+      console.error("Error updating setting:", error);
+      res.status(500).json({ message: "Failed to update setting" });
+    }
+  });
+
+  app.delete("/api/settings/:key", async (req, res) => {
+    try {
+      const { key } = req.params;
+      await storage.deleteSetting(key);
+      res.json({ message: "Setting deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting setting:", error);
+      res.status(500).json({ message: "Failed to delete setting" });
     }
   });
 

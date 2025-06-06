@@ -83,8 +83,10 @@ export interface IStorage {
   deleteAllHours(): Promise<void>;
 
   // Settings operations
-  getSettings(): Promise<Settings | undefined>;
-  updateSettings(settings: Partial<InsertSettings>): Promise<Settings>;
+  getSettings(): Promise<Record<string, string>>;
+  getSetting(key: string): Promise<string | null>;
+  setSetting(key: string, value: string, description?: string): Promise<Settings>;
+  deleteSetting(key: string): Promise<void>;
   deleteAllSettings(): Promise<void>;
 
   // Dashboard stats
@@ -455,28 +457,52 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Settings operations
-  async getSettings(): Promise<Settings | undefined> {
-    const [settings_data] = await db.select().from(settings).limit(1);
-    return settings_data;
+  async getSettings(): Promise<Record<string, string>> {
+    const settingsRows = await db.select().from(settings);
+    const result: Record<string, string> = {};
+    for (const row of settingsRows) {
+      if (row.key && row.value) {
+        result[row.key] = row.value;
+      }
+    }
+    return result;
   }
 
-  async updateSettings(settingsData: Partial<InsertSettings>): Promise<Settings> {
-    // Try to update first
-    const [updatedSettings] = await db
+  async getSetting(key: string): Promise<string | null> {
+    const [setting] = await db
+      .select()
+      .from(settings)
+      .where(eq(settings.key, key))
+      .limit(1);
+    return setting?.value || null;
+  }
+
+  async setSetting(key: string, value: string, description?: string): Promise<Settings> {
+    // Try to update existing setting first
+    const [updatedSetting] = await db
       .update(settings)
-      .set(settingsData)
+      .set({ 
+        value, 
+        description: description || null,
+        updatedAt: new Date()
+      })
+      .where(eq(settings.key, key))
       .returning();
     
     // If no rows were updated, insert a new record
-    if (!updatedSettings) {
-      const [newSettings] = await db
+    if (!updatedSetting) {
+      const [newSetting] = await db
         .insert(settings)
-        .values(settingsData as InsertSettings)
+        .values({ key, value, description: description || null })
         .returning();
-      return newSettings;
+      return newSetting;
     }
     
-    return updatedSettings;
+    return updatedSetting;
+  }
+
+  async deleteSetting(key: string): Promise<void> {
+    await db.delete(settings).where(eq(settings.key, key));
   }
 
   async deleteAllSettings(): Promise<void> {
