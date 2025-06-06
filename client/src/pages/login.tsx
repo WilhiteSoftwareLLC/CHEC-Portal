@@ -79,10 +79,7 @@ export default function Login() {
               <GraduationCap className="h-8 w-8 text-blue-600 dark:text-blue-400" />
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Welcome Back</CardTitle>
-          <CardDescription>
-            Sign in to your Homeschool Cooperative account
-          </CardDescription>
+          <CardTitle className="text-2xl font-bold">CHEC Portal</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -134,19 +131,9 @@ export default function Login() {
               className="w-full"
               disabled={loginMutation.isPending}
             >
-              {loginMutation.isPending ? "Signing in..." : "Sign In"}
+              {loginMutation.isPending ? "Logging in..." : "Login"}
             </Button>
           </form>
-
-          <div className="mt-6 text-center text-sm text-gray-600 dark:text-gray-400">
-            <Alert className="text-left">
-              <AlertDescription>
-                <strong>Default Admin Login:</strong><br />
-                Username: admin<br />
-                Password: password
-              </AlertDescription>
-            </Alert>
-          </div>
         </CardContent>
       </Card>
     </div>
