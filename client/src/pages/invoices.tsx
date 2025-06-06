@@ -60,7 +60,9 @@ export default function Invoices() {
   };
 
   const computedInvoices = Array.isArray(families) && Array.isArray(students) && settings && Array.isArray(grades)
-    ? (families as Family[]).map(family => calculateFamilyInvoice(family, students as any[], settings, grades as any[]))
+    ? (families as Family[])
+        .filter(family => family.active !== false) // Only show active families
+        .map(family => calculateFamilyInvoice(family, students as any[], settings, grades as any[]))
     : [];
 
   const calculateTotalRevenue = () => {
