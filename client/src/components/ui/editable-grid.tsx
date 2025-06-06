@@ -106,16 +106,17 @@ export default function EditableGrid({
   };
 
   return (
-    <div className={cn("border rounded-lg overflow-hidden", className)}>
-      <div className="overflow-x-auto">
+    <div className={cn("border rounded-lg flex flex-col", className)}>
+      {/* Fixed Header */}
+      <div className="bg-gray-50 dark:bg-gray-800 border-b overflow-x-auto">
         <table className="w-full">
-          <thead className="bg-gray-50 dark:bg-gray-800">
+          <thead>
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   className={cn(
-                    "px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider",
+                    "px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap",
                     column.sortable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700",
                     column.width && `w-${column.width}`
                   )}
@@ -128,12 +129,18 @@ export default function EditableGrid({
                 </th>
               ))}
               {onRowDelete && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20 whitespace-nowrap">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
+        </table>
+      </div>
+
+      {/* Scrollable Body */}
+      <div className="flex-1 overflow-auto max-h-[70vh]">
+        <table className="w-full">
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {isLoading ? (
               <tr>
@@ -155,7 +162,13 @@ export default function EditableGrid({
                     const value = row[column.key];
                     
                     return (
-                      <td key={column.key} className="px-4 py-3 whitespace-nowrap">
+                      <td 
+                        key={column.key} 
+                        className={cn(
+                          "px-4 py-3 whitespace-nowrap",
+                          column.width && `w-${column.width}`
+                        )}
+                      >
                         {isEditing ? (
                           <div className="flex items-center space-x-2">
                             <Input
@@ -198,7 +211,7 @@ export default function EditableGrid({
                     );
                   })}
                   {onRowDelete && (
-                    <td className="px-4 py-3 whitespace-nowrap">
+                    <td className="px-4 py-3 whitespace-nowrap w-20">
                       <Button
                         size="sm"
                         variant="ghost"
