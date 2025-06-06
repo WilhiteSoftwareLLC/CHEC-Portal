@@ -58,6 +58,7 @@ export interface IStorage {
   updateCourse(id: number, course: Partial<InsertCourse>): Promise<Course>;
   deleteCourse(id: number): Promise<void>;
   searchCourses(query: string): Promise<Course[]>;
+  getCoursesByHour(hour: number): Promise<Course[]>;
 
   // Class operations (for 6th grade and younger)
   getClasses(): Promise<Class[]>;
@@ -301,6 +302,14 @@ export class DatabaseStorage implements IStorage {
         sql`LOWER(${courses.courseName}) LIKE LOWER(${'%' + query + '%'}) OR 
             LOWER(${courses.location}) LIKE LOWER(${'%' + query + '%'})`
       )
+      .orderBy(courses.courseName);
+  }
+
+  async getCoursesByHour(hour: number): Promise<Course[]> {
+    return await db
+      .select()
+      .from(courses)
+      .where(eq(courses.hour, hour))
       .orderBy(courses.courseName);
   }
 

@@ -399,6 +399,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // CSV Import routes
+  app.post("/api/import/families", async (req, res) => {
+    try {
+      const families = req.body;
+      if (!Array.isArray(families)) {
+        return res.status(400).json({ message: "Expected array of families" });
+      }
+
+      const results = [];
+      for (const familyData of families) {
+        try {
+          const validatedFamily = insertFamilySchema.parse(familyData);
+          const family = await storage.createFamily(validatedFamily);
+          results.push({ success: true, family });
+        } catch (error) {
+          results.push({ success: false, error: error.message, data: familyData });
+        }
+      }
+
+      res.json({ 
+        message: `Processed ${families.length} families`, 
+        results,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+    } catch (error) {
+      console.error("Error importing families:", error);
+      res.status(500).json({ message: "Failed to import families" });
+    }
+  });
+
+  app.post("/api/import/students", async (req, res) => {
+    try {
+      const students = req.body;
+      if (!Array.isArray(students)) {
+        return res.status(400).json({ message: "Expected array of students" });
+      }
+
+      const results = [];
+      for (const studentData of students) {
+        try {
+          const validatedStudent = insertStudentSchema.parse(studentData);
+          const student = await storage.createStudent(validatedStudent);
+          results.push({ success: true, student });
+        } catch (error) {
+          results.push({ success: false, error: error.message, data: studentData });
+        }
+      }
+
+      res.json({ 
+        message: `Processed ${students.length} students`, 
+        results,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+    } catch (error) {
+      console.error("Error importing students:", error);
+      res.status(500).json({ message: "Failed to import students" });
+    }
+  });
+
+  app.post("/api/import/courses", async (req, res) => {
+    try {
+      const courses = req.body;
+      if (!Array.isArray(courses)) {
+        return res.status(400).json({ message: "Expected array of courses" });
+      }
+
+      const results = [];
+      for (const courseData of courses) {
+        try {
+          const validatedCourse = insertCourseSchema.parse(courseData);
+          const course = await storage.createCourse(validatedCourse);
+          results.push({ success: true, course });
+        } catch (error) {
+          results.push({ success: false, error: error.message, data: courseData });
+        }
+      }
+
+      res.json({ 
+        message: `Processed ${courses.length} courses`, 
+        results,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+    } catch (error) {
+      console.error("Error importing courses:", error);
+      res.status(500).json({ message: "Failed to import courses" });
+    }
+  });
+
+  app.post("/api/import/classes", async (req, res) => {
+    try {
+      const classes = req.body;
+      if (!Array.isArray(classes)) {
+        return res.status(400).json({ message: "Expected array of classes" });
+      }
+
+      const results = [];
+      for (const classData of classes) {
+        try {
+          const validatedClass = insertClassSchema.parse(classData);
+          const newClass = await storage.createClass(validatedClass);
+          results.push({ success: true, class: newClass });
+        } catch (error) {
+          results.push({ success: false, error: error.message, data: classData });
+        }
+      }
+
+      res.json({ 
+        message: `Processed ${classes.length} classes`, 
+        results,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+    } catch (error) {
+      console.error("Error importing classes:", error);
+      res.status(500).json({ message: "Failed to import classes" });
+    }
+  });
+
+  // Get courses by hour for dropdown selection
+  app.get("/api/courses/by-hour/:hour", async (req, res) => {
+    try {
+      const hour = parseInt(req.params.hour);
+      const courses = await storage.getCoursesByHour(hour);
+      res.json(courses);
+    } catch (error) {
+      console.error("Error fetching courses by hour:", error);
+      res.status(500).json({ message: "Failed to fetch courses by hour" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
