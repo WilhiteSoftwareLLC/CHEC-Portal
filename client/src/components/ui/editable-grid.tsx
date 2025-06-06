@@ -13,7 +13,7 @@ export interface GridColumn {
   editable?: boolean;
   width?: string;
   type?: "text" | "email" | "tel" | "number" | "checkbox" | "dropdown";
-  options?: { value: any; label: string }[];
+  options?: { value: any; label: string }[] | ((row: any) => { value: any; label: string }[]);
 }
 
 export interface EditableGridProps {

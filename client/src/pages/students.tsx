@@ -28,6 +28,10 @@ export default function Students() {
     queryKey: ["/api/grades"],
   });
 
+  const { data: classes } = useQuery({
+    queryKey: ["/api/classes"],
+  });
+
   const { data: courses } = useQuery({
     queryKey: ["/api/courses"],
     queryFn: async () => {
@@ -98,21 +102,55 @@ export default function Students() {
     return grade ? grade.gradeName : "Unknown";
   };
 
-  // Get courses for specific hour
-  const getCoursesByHour = (hour: number) => {
-    if (!courses) return [];
-    return (courses as any[]).filter((course: any) => course.hour === hour);
+  // Get current grade code for a student
+  const getCurrentGradeCode = (gradYear: any) => {
+    if (!settings || !gradYear) return null;
+    
+    const schoolYear = parseInt((settings as any).SchoolYear || "2024");
+    const gradeCode = schoolYear - parseInt(gradYear) + 13;
+    return gradeCode;
   };
 
-  // Get Math Hour courses (hour = 0)
-  const getMathHourCourses = () => {
-    if (!courses) return [];
-    return (courses as any[]).filter((course: any) => course.hour === 0);
+  // Get the class that a student belongs to based on their current grade
+  const getStudentClass = (gradYear: any) => {
+    if (!gradYear || !settings || !classes) return null;
+    
+    const gradeCode = getCurrentGradeCode(gradYear);
+    if (gradeCode === null) return null;
+    
+    // Find the class that contains this grade code
+    const studentClass = Array.isArray(classes) ? classes.find((cls: any) => 
+      gradeCode >= cls.startCode && gradeCode <= cls.endCode
+    ) : null;
+    
+    return studentClass;
   };
 
-  // Create course options for dropdowns
-  const createCourseOptions = (hour: number) => {
-    const hourCourses = hour === 0 ? getMathHourCourses() : getCoursesByHour(hour);
+  // Get courses for specific hour filtered by student's class
+  const getCoursesByHour = (hour: number, studentGradYear: any) => {
+    if (!courses) return [];
+    const studentClass = getStudentClass(studentGradYear);
+    
+    return (courses as any[]).filter((course: any) => 
+      course.hour === hour && 
+      (course.classId === studentClass?.id || course.classId === null)
+    );
+  };
+
+  // Get Math Hour courses (hour = 0) filtered by student's class
+  const getMathHourCourses = (studentGradYear: any) => {
+    if (!courses) return [];
+    const studentClass = getStudentClass(studentGradYear);
+    
+    return (courses as any[]).filter((course: any) => 
+      course.hour === 0 && 
+      (course.classId === studentClass?.id || course.classId === null)
+    );
+  };
+
+  // Create course options for dropdowns based on student's grade
+  const createCourseOptions = (hour: number, studentGradYear: any) => {
+    const hourCourses = hour === 0 ? getMathHourCourses(studentGradYear) : getCoursesByHour(hour, studentGradYear);
     return [
       { value: "NO_COURSE", label: "No Course" },
       ...hourCourses.map((course: any) => ({
@@ -135,11 +173,51 @@ export default function Students() {
     { key: "familyName", label: "Family", sortable: true, editable: false, width: "40" },
     { key: "currentGrade", label: "Current Grade", sortable: true, editable: false, width: "32" },
     { key: "gradYear", label: "Grad Year", sortable: true, editable: true, type: "number", width: "28" },
-    { key: "mathHour", label: "Math Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(0) },
-    { key: "firstHour", label: "1st Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(1) },
-    { key: "secondHour", label: "2nd Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(2) },
-    { key: "thirdHour", label: "3rd Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(3) },
-    { key: "fourthHour", label: "4th Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(4) },
+    { 
+      key: "mathHour", 
+      label: "Math Hour", 
+      sortable: true, 
+      editable: false, 
+      width: "40", 
+      type: "dropdown", 
+      options: (row: any) => createCourseOptions(0, row.gradYear)
+    },
+    { 
+      key: "firstHour", 
+      label: "1st Hour", 
+      sortable: true, 
+      editable: false, 
+      width: "40", 
+      type: "dropdown", 
+      options: (row: any) => createCourseOptions(1, row.gradYear)
+    },
+    { 
+      key: "secondHour", 
+      label: "2nd Hour", 
+      sortable: true, 
+      editable: false, 
+      width: "40", 
+      type: "dropdown", 
+      options: (row: any) => createCourseOptions(2, row.gradYear)
+    },
+    { 
+      key: "thirdHour", 
+      label: "3rd Hour", 
+      sortable: true, 
+      editable: false, 
+      width: "40", 
+      type: "dropdown", 
+      options: (row: any) => createCourseOptions(3, row.gradYear)
+    },
+    { 
+      key: "fourthHour", 
+      label: "4th Hour", 
+      sortable: true, 
+      editable: false, 
+      width: "40", 
+      type: "dropdown", 
+      options: (row: any) => createCourseOptions(4, row.gradYear)
+    },
     { key: "fifthHourFall", label: "5th Hour (Fall)", sortable: true, editable: true, width: "48" },
     { key: "fifthHourSpring", label: "5th Hour (Spring)", sortable: true, editable: true, width: "48" },
   ];
