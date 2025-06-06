@@ -107,7 +107,7 @@ export default function EditableGrid({
 
   return (
     <div className={cn("border rounded-lg", className)}>
-      <div className="overflow-auto max-h-[70vh]">
+      <div className="overflow-auto max-h-[80vh]">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
             <tr>

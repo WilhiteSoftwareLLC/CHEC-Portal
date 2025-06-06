@@ -118,7 +118,6 @@ export default function Students() {
         onRowUpdate={handleUpdateStudent}
         onRowDelete={handleDeleteStudent}
         isLoading={studentsLoading}
-        className="mb-6"
       />
 
       <AddStudentDialog 

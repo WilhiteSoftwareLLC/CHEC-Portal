@@ -93,7 +93,6 @@ export default function Families() {
         onRowUpdate={handleUpdateFamily}
         onRowDelete={handleDeleteFamily}
         isLoading={isLoading}
-        className="mb-6"
       />
 
       <AddFamilyDialog 

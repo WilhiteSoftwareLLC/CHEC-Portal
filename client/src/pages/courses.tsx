@@ -108,7 +108,6 @@ export default function Courses() {
         onRowUpdate={handleUpdateCourse}
         onRowDelete={handleDeleteCourse}
         isLoading={isLoading}
-        className="mb-6"
       />
 
       <AddCourseDialog 
