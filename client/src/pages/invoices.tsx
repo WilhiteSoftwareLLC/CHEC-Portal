@@ -31,38 +31,71 @@ export default function Invoices() {
     retry: false,
   });
 
+  const { data: courses } = useQuery({
+    queryKey: ["/api/courses"],
+    retry: false,
+  });
+
+  const { data: hours } = useQuery({
+    queryKey: ["/api/hours"],
+    retry: false,
+  });
+
   // Calculate computed invoices from families and students data
-  const calculateFamilyInvoice = (family: Family, studentsData: any[], settingsData: any, gradesData: any[]) => {
+  const calculateFamilyInvoice = (family: Family, studentsData: any[], settingsData: any, gradesData: any[], coursesData: any[], hoursData: any[]) => {
     const familyFee = parseFloat(settingsData?.FamilyFee || "20");
     const backgroundFee = parseFloat(settingsData?.BackgroundFee || "0");
     const studentFee = parseFloat(settingsData?.StudentFee || "20");
 
     const familyStudents = studentsData.filter((s: any) => s.familyId === family.id);
     
+    // Sort students by gradYear in reverse order (younger students first)
+    const sortedStudents = familyStudents.sort((a: any, b: any) => {
+      const gradYearA = parseInt(a.gradYear) || 0;
+      const gradYearB = parseInt(b.gradYear) || 0;
+      return gradYearB - gradYearA; // Higher gradYear = younger student
+    });
+    
     let total = familyFee + backgroundFee;
     total += familyStudents.length * studentFee;
     
-    // Add course fees (placeholder amounts)
-    familyStudents.forEach((student: any) => {
-      if (student.mathHour) total += 15;
-      if (student.firstHour) total += 25;
-      if (student.secondHour) total += 25;
-      if (student.thirdHour) total += 25;
-      if (student.fourthHour) total += 25;
+    // Add course fees for each student (youngest first)
+    sortedStudents.forEach((student: any) => {
+      // Define hour order and corresponding student field names
+      const hourMappings = [
+        { hour: 0, field: 'mathHour' },
+        { hour: 1, field: 'firstHour' },
+        { hour: 2, field: 'secondHour' },
+        { hour: 3, field: 'thirdHour' },
+        { hour: 4, field: 'fourthHour' },
+      ];
+
+      // Process courses in hour order
+      hourMappings.forEach(mapping => {
+        const courseName = student[mapping.field];
+        if (courseName && courseName !== 'NO_COURSE') {
+          // Find the actual course to get its fee
+          const course = coursesData?.find((c: any) => c.courseName === courseName);
+          if (course && course.fee && parseFloat(course.fee) > 0) {
+            total += parseFloat(course.fee);
+          }
+        }
+      });
     });
 
     return {
       id: family.id,
       family,
       total,
-      paid: false // Default to unpaid - could be stored in database later
+      paid: false, // Default to unpaid - could be stored in database later
+      students: sortedStudents
     };
   };
 
-  const computedInvoices = Array.isArray(families) && Array.isArray(students) && settings && Array.isArray(grades)
+  const computedInvoices = Array.isArray(families) && Array.isArray(students) && settings && Array.isArray(grades) && Array.isArray(courses) && Array.isArray(hours)
     ? (families as Family[])
         .filter(family => family.active !== false) // Only show active families
-        .map(family => calculateFamilyInvoice(family, students as any[], settings, grades as any[]))
+        .map(family => calculateFamilyInvoice(family, students as any[], settings, grades as any[], courses as any[], hours as any[]))
     : [];
 
   const calculateTotalRevenue = () => {
@@ -84,12 +117,13 @@ export default function Invoices() {
   };
 
   const handlePrintAllInvoices = () => {
-    if (!families || !students || !settings || !grades) return;
+    if (!families || !students || !settings || !grades || !courses) return;
     
     // Cache data for invoice generation
     (window as any).cachedSettings = settings;
     (window as any).cachedStudents = students;
     (window as any).cachedGrades = grades;
+    (window as any).cachedCourses = courses;
     
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
@@ -145,13 +179,20 @@ export default function Invoices() {
     const backgroundFee = parseFloat((window as any).cachedSettings?.BackgroundFee || "0");
     const studentFee = parseFloat((window as any).cachedSettings?.StudentFee || "20");
 
-    // Get students for this family
-    const familyStudents = (window as any).cachedStudents?.filter((s: any) => s.familyId === family.id) || [];
+    // Get students for this family and sort by gradYear (youngest first)
+    const familyStudents = ((window as any).cachedStudents?.filter((s: any) => s.familyId === family.id) || [])
+      .sort((a: any, b: any) => {
+        const gradYearA = parseInt(a.gradYear) || 0;
+        const gradYearB = parseInt(b.gradYear) || 0;
+        return gradYearB - gradYearA; // Higher gradYear = younger student
+      });
 
+    const coursesData = (window as any).cachedCourses || [];
+    
     let invoiceRows = [];
     let total = 0;
 
-    // Add family fee
+    // 1. Add family fee first
     invoiceRows.push({
       name: `${family.father || ''} & ${family.mother || ''}`.trim() || family.lastName,
       grade: '',
@@ -161,7 +202,7 @@ export default function Invoices() {
     });
     total += familyFee;
 
-    // Add background check fee
+    // 2. Add background check fee second
     invoiceRows.push({
       name: `${family.father || ''} & ${family.mother || ''}`.trim() || family.lastName,
       grade: '',
@@ -171,7 +212,7 @@ export default function Invoices() {
     });
     total += backgroundFee;
 
-    // Add student fees and course fees
+    // 3. Add student fees (youngest first)
     familyStudents.forEach((student: any) => {
       const currentGrade = getCurrentGradeForStudent(student);
       
@@ -184,62 +225,40 @@ export default function Invoices() {
         fee: studentFee
       });
       total += studentFee;
+    });
 
-      // Course fees (placeholder - would need actual course fee data)
-      if (student.mathHour) {
-        invoiceRows.push({
-          name: student.firstName,
-          grade: currentGrade,
-          hour: 'Math',
-          item: student.mathHour,
-          fee: 15 // placeholder fee
-        });
-        total += 15;
-      }
+    // 4. Add course fees for each student (youngest first), in hour order
+    familyStudents.forEach((student: any) => {
+      const currentGrade = getCurrentGradeForStudent(student);
+      
+      // Define hour order and corresponding student field names
+      const hourMappings = [
+        { hour: 0, field: 'mathHour', hourName: 'Math' },
+        { hour: 1, field: 'firstHour', hourName: '1st' },
+        { hour: 2, field: 'secondHour', hourName: '2nd' },
+        { hour: 3, field: 'thirdHour', hourName: '3rd' },
+        { hour: 4, field: 'fourthHour', hourName: '4th' },
+      ];
 
-      if (student.firstHour) {
-        invoiceRows.push({
-          name: student.firstName,
-          grade: currentGrade,
-          hour: '1st',
-          item: student.firstHour,
-          fee: 25 // placeholder fee
-        });
-        total += 25;
-      }
-
-      if (student.secondHour) {
-        invoiceRows.push({
-          name: student.firstName,
-          grade: currentGrade,
-          hour: '2nd',
-          item: student.secondHour,
-          fee: 25 // placeholder fee
-        });
-        total += 25;
-      }
-
-      if (student.thirdHour) {
-        invoiceRows.push({
-          name: student.firstName,
-          grade: currentGrade,
-          hour: '3rd',
-          item: student.thirdHour,
-          fee: 25 // placeholder fee
-        });
-        total += 25;
-      }
-
-      if (student.fourthHour) {
-        invoiceRows.push({
-          name: student.firstName,
-          grade: currentGrade,
-          hour: '4th',
-          item: student.fourthHour,
-          fee: 25 // placeholder fee
-        });
-        total += 25;
-      }
+      // Process courses in hour order, only include those with fees
+      hourMappings.forEach(mapping => {
+        const courseName = student[mapping.field];
+        if (courseName && courseName !== 'NO_COURSE') {
+          // Find the actual course to get its fee
+          const course = coursesData.find((c: any) => c.courseName === courseName);
+          if (course && course.fee && parseFloat(course.fee) > 0) {
+            const courseFee = parseFloat(course.fee);
+            invoiceRows.push({
+              name: student.firstName,
+              grade: currentGrade,
+              hour: mapping.hourName,
+              item: courseName,
+              fee: courseFee
+            });
+            total += courseFee;
+          }
+        }
+      });
     });
 
     const rowsHTML = invoiceRows.map(row => `
@@ -296,6 +315,7 @@ export default function Invoices() {
     (window as any).cachedSettings = settings;
     (window as any).cachedStudents = students;
     (window as any).cachedGrades = grades;
+    (window as any).cachedCourses = courses;
     
     setSelectedFamily(family);
     setInvoiceDialogOpen(true);
