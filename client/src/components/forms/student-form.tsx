@@ -216,7 +216,7 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {families.map((family: Family) => (
+                    {Array.isArray(families) && families.map((family: Family) => (
                       <SelectItem key={family.id} value={family.id.toString()}>
                         {family.lastName}
                       </SelectItem>
@@ -263,7 +263,7 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
               <FormItem>
                 <FormLabel>Graduation Year</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter graduation year" {...field} />
+                  <Input placeholder="Enter graduation year" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
