@@ -53,9 +53,10 @@ export default function Students() {
     }
   };
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Not specified";
-    return new Date(dateString).toLocaleDateString('en-US', {
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return "Not specified";
+    const dateObj = typeof date === 'string' ? new Date(date) : date;
+    return dateObj.toLocaleDateString('en-US', {
       month: 'short',
       day: 'numeric',
       year: 'numeric'
@@ -157,39 +158,34 @@ export default function Students() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      {student.grade && (
+                      {student.gradYear && (
                         <div className="flex items-center text-gray-600">
                           <GraduationCap className="mr-2 h-4 w-4" />
-                          {student.grade}
+                          Class of {student.gradYear}
                         </div>
                       )}
-                      {student.dateOfBirth && (
+                      {student.birthdate && (
                         <div className="flex items-center text-gray-600">
                           <Calendar className="mr-2 h-4 w-4" />
-                          {formatDate(student.dateOfBirth)}
+                          {formatDate(student.birthdate)}
                         </div>
                       )}
                     </div>
                     
-                    {(student.allergies || student.medicalConditions || student.specialNeeds) && (
+                    {student.comment1 && (
                       <div className="pt-2 border-t border-gray-100">
-                        <p className="text-xs text-gray-500 font-medium mb-1">Health Notes:</p>
-                        <div className="text-xs text-gray-600 space-y-1">
-                          {student.allergies && (
-                            <p><span className="font-medium">Allergies:</span> {student.allergies}</p>
-                          )}
-                          {student.medicalConditions && (
-                            <p><span className="font-medium">Medical:</span> {student.medicalConditions}</p>
-                          )}
-                          {student.specialNeeds && (
-                            <p><span className="font-medium">Special Needs:</span> {student.specialNeeds}</p>
-                          )}
+                        <p className="text-xs text-gray-500 font-medium mb-1">Notes:</p>
+                        <div className="text-xs text-gray-600">
+                          {student.comment1}
                         </div>
                       </div>
                     )}
 
                     <div className="pt-2">
-                      {getStatusBadge(student.active)}
+                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
+                        <User className="mr-1 h-3 w-3" />
+                        Active Student
+                      </Badge>
                     </div>
                   </div>
                 </CardContent>
