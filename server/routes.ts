@@ -42,9 +42,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Auth middleware
-  await setupAuth(app);
-
   // Authentication routes
   app.post('/api/login', async (req, res) => {
     try {
@@ -95,15 +92,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Auth routes - temporarily disabled for testing
+  // Legacy auth route compatibility
   app.get('/api/auth/user', async (req: any, res) => {
-    try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
-    } catch (error) {
-      console.error("Error fetching user:", error);
-      res.status(500).json({ message: "Failed to fetch user" });
+    if (req.authUser) {
+      res.json(req.authUser);
+    } else {
+      res.status(401).json({ message: "Not authenticated" });
     }
   });
 
