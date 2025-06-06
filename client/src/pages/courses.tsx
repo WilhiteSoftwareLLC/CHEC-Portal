@@ -30,6 +30,16 @@ export default function Courses() {
     retry: false,
   });
 
+  const { data: classes } = useQuery({
+    queryKey: ["/api/classes"],
+    queryFn: async () => {
+      const response = await fetch("/api/classes", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
+  });
+
   const updateCourseMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Record<string, any> }) => {
       await apiRequest(`/api/courses/${id}`, "PATCH", updates);
@@ -82,6 +92,9 @@ export default function Courses() {
     if (updates.hour !== undefined) {
       processedUpdates.hour = parseInt(updates.hour);
     }
+    if (updates.classId !== undefined) {
+      processedUpdates.classId = updates.classId === "null" || updates.classId === null ? null : parseInt(updates.classId);
+    }
     
     await updateCourseMutation.mutateAsync({ id, updates: processedUpdates });
   };
@@ -101,11 +114,21 @@ export default function Courses() {
     }))
   ];
 
+  // Create class options for dropdown
+  const classOptions = [
+    { value: null, label: "No Class" },
+    ...(classes || []).map((cls: any) => ({
+      value: cls.id,
+      label: cls.className
+    }))
+  ];
+
   const columns: GridColumn[] = [
-    { key: "courseName", label: "Course Name", sortable: true, editable: true, width: "64" },
-    { key: "hour", label: "Hour", sortable: true, editable: false, width: "32", type: "dropdown", options: hourOptions },
-    { key: "offeredFall", label: "Fall", sortable: true, editable: false, width: "20", type: "checkbox" },
-    { key: "offeredSpring", label: "Spring", sortable: true, editable: false, width: "20", type: "checkbox" },
+    { key: "courseName", label: "Course Name", sortable: true, editable: true, width: "48" },
+    { key: "classId", label: "Class", sortable: true, editable: false, width: "32", type: "dropdown", options: classOptions },
+    { key: "hour", label: "Hour", sortable: true, editable: false, width: "24", type: "dropdown", options: hourOptions },
+    { key: "offeredFall", label: "Fall", sortable: true, editable: false, width: "16", type: "checkbox" },
+    { key: "offeredSpring", label: "Spring", sortable: true, editable: false, width: "16", type: "checkbox" },
   ];
 
   return (
