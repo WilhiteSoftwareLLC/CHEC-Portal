@@ -2,21 +2,14 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, FileText, Download, PrinterCheck, DollarSign, Calendar, Users } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { FileText, Download, PrinterCheck, DollarSign, Eye } from "lucide-react";
 import type { Family } from "@shared/schema";
 
 export default function Invoices() {
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("");
-
-  const { data: invoices, isLoading } = useQuery({
-    queryKey: ["/api/invoices"],
-    retry: false,
-  });
+  const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
+  const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
 
   const { data: families } = useQuery({
     queryKey: ["/api/families"],
@@ -38,75 +31,54 @@ export default function Invoices() {
     retry: false,
   });
 
-  const filteredInvoices = Array.isArray(invoices) ? invoices.filter((invoice: any) => {
-    if (statusFilter && statusFilter !== "all" && invoice.status !== statusFilter) {
-      return false;
-    }
-    if (search) {
-      const searchLower = search.toLowerCase();
-      return (
-        invoice.invoiceNumber?.toLowerCase().includes(searchLower) ||
-        invoice.family?.name?.toLowerCase().includes(searchLower)
-      );
-    }
-    return true;
-  }) : [];
+  // Calculate computed invoices from families and students data
+  const calculateFamilyInvoice = (family: Family, studentsData: any[], settingsData: any, gradesData: any[]) => {
+    const familyFee = parseFloat(settingsData?.FamilyFee || "20");
+    const backgroundFee = parseFloat(settingsData?.BackgroundFee || "0");
+    const studentFee = parseFloat(settingsData?.StudentFee || "20");
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Not specified";
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
+    const familyStudents = studentsData.filter((s: any) => s.familyId === family.id);
+    
+    let total = familyFee + backgroundFee;
+    total += familyStudents.length * studentFee;
+    
+    // Add course fees (placeholder amounts)
+    familyStudents.forEach((student: any) => {
+      if (student.mathHour) total += 15;
+      if (student.firstHour) total += 25;
+      if (student.secondHour) total += 25;
+      if (student.thirdHour) total += 25;
+      if (student.fourthHour) total += 25;
     });
+
+    return {
+      id: family.id,
+      family,
+      total,
+      paid: false // Default to unpaid - could be stored in database later
+    };
   };
 
-  const formatCurrency = (amount: string | null) => {
-    if (!amount) return "$0.00";
-    return `$${parseFloat(amount).toFixed(2)}`;
-  };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'paid':
-        return <Badge className="bg-green-100 text-green-800">Paid</Badge>;
-      case 'pending':
-        return <Badge className="bg-yellow-100 text-yellow-800">Pending</Badge>;
-      case 'overdue':
-        return <Badge className="bg-red-100 text-red-800">Overdue</Badge>;
-      case 'cancelled':
-        return <Badge className="bg-gray-100 text-gray-800">Cancelled</Badge>;
-      default:
-        return <Badge variant="secondary">{status}</Badge>;
-    }
-  };
+  const computedInvoices = Array.isArray(families) && Array.isArray(students) && settings && Array.isArray(grades)
+    ? (families as Family[]).map(family => calculateFamilyInvoice(family, students as any[], settings, grades as any[]))
+    : [];
 
   const calculateTotalRevenue = () => {
-    return Array.isArray(invoices) ? invoices.reduce((total: number, invoice: any) => {
-      if (invoice.status === 'paid') {
-        return total + parseFloat(invoice.total || "0");
+    return computedInvoices.reduce((total: number, invoice: any) => {
+      if (invoice.paid) {
+        return total + invoice.total;
       }
       return total;
-    }, 0) : 0;
+    }, 0);
   };
 
   const calculatePendingAmount = () => {
-    return Array.isArray(invoices) ? invoices.reduce((total: number, invoice: any) => {
-      if (invoice.status === 'pending') {
-        return total + parseFloat(invoice.total || "0");
+    return computedInvoices.reduce((total: number, invoice: any) => {
+      if (!invoice.paid) {
+        return total + invoice.total;
       }
       return total;
-    }, 0) : 0;
-  };
-
-  const handleExportInvoices = () => {
-    // TODO: Implement invoice export functionality
-    console.log("Exporting invoices...");
-  };
-
-  const handlePrintInvoice = (invoiceId: number) => {
-    // TODO: Implement invoice printing functionality
-    console.log("Printing invoice:", invoiceId);
+    }, 0);
   };
 
   const handlePrintAllInvoices = () => {
@@ -306,15 +278,25 @@ export default function Invoices() {
   };
 
   const getCurrentGradeForStudent = (student: any) => {
-    const settings = (window as any).cachedSettings;
-    const grades = (window as any).cachedGrades;
+    const settingsCache = (window as any).cachedSettings;
+    const gradesCache = (window as any).cachedGrades;
     
-    if (!settings || !grades || !student.gradYear) return "Unknown";
+    if (!settingsCache || !gradesCache || !student.gradYear) return "Unknown";
     
-    const schoolYear = parseInt(settings.SchoolYear || "2024");
+    const schoolYear = parseInt(settingsCache.SchoolYear || "2024");
     const gradeCode = schoolYear - parseInt(student.gradYear) + 13;
-    const grade = grades.find((g: any) => g.code === gradeCode);
+    const grade = gradesCache.find((g: any) => g.code === gradeCode);
     return grade ? grade.gradeName : "Unknown";
+  };
+
+  const handleViewInvoice = (family: Family) => {
+    // Cache data for invoice generation
+    (window as any).cachedSettings = settings;
+    (window as any).cachedStudents = students;
+    (window as any).cachedGrades = grades;
+    
+    setSelectedFamily(family);
+    setInvoiceDialogOpen(true);
   };
 
   return (
@@ -322,20 +304,12 @@ export default function Invoices() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold text-gray-900">Invoices</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage billing and payments</p>
+          <p className="text-sm text-gray-600 mt-1">Automatically computed from family and student data</p>
         </div>
         <div className="flex space-x-2">
-          <Button variant="outline" onClick={handleExportInvoices}>
-            <Download className="mr-2 h-4 w-4" />
-            Export
-          </Button>
           <Button variant="outline" onClick={handlePrintAllInvoices}>
             <PrinterCheck className="mr-2 h-4 w-4" />
             Print All Invoices
-          </Button>
-          <Button className="bg-blue-600 hover:bg-blue-700">
-            <Plus className="mr-2 h-4 w-4" />
-            Create Invoice
           </Button>
         </div>
       </div>
@@ -351,7 +325,7 @@ export default function Invoices() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Revenue</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {formatCurrency(calculateTotalRevenue().toString())}
+                  ${calculateTotalRevenue()}
                 </p>
               </div>
             </div>
@@ -361,13 +335,13 @@ export default function Invoices() {
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-                <FileText className="text-yellow-600 h-6 w-6" />
+              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-orange-600 h-6 w-6" />
               </div>
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Pending Amount</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {formatCurrency(calculatePendingAmount().toString())}
+                  ${calculatePendingAmount()}
                 </p>
               </div>
             </div>
@@ -383,7 +357,7 @@ export default function Invoices() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Invoices</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {Array.isArray(invoices) ? invoices.length : 0}
+                  {computedInvoices.length}
                 </p>
               </div>
             </div>
@@ -391,152 +365,75 @@ export default function Invoices() {
         </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4 mb-6">
-        <div className="relative w-96">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search invoices..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-48">
-            <SelectValue placeholder="Filter by status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Statuses</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-            <SelectItem value="overdue">Overdue</SelectItem>
-            <SelectItem value="cancelled">Cancelled</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Invoices Table */}
+      {/* Invoice Grid */}
       <Card>
         <CardHeader>
-          <CardTitle>Invoice List</CardTitle>
+          <CardTitle>Family Invoices</CardTitle>
         </CardHeader>
         <CardContent>
-          {isLoading ? (
-            <div className="space-y-4">
-              {[1, 2, 3, 4, 5].map((i) => (
-                <div key={i} className="flex items-center space-x-4 p-4">
-                  <Skeleton className="w-16 h-4" />
-                  <Skeleton className="w-32 h-4" />
-                  <Skeleton className="w-24 h-4" />
-                  <Skeleton className="w-24 h-4" />
-                  <Skeleton className="w-16 h-4" />
-                  <Skeleton className="w-20 h-6" />
-                </div>
-              ))}
-            </div>
-          ) : filteredInvoices?.length > 0 ? (
-            <div className="overflow-x-auto">
-              <table className="min-w-full">
-                <thead>
-                  <tr className="border-b">
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Invoice #</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Family</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Date</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Due Date</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Amount</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500 text-sm">Status</th>
-                    <th className="relative py-3 px-4"><span className="sr-only">Actions</span></th>
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b">
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Family Name</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Total Amount</th>
+                  <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
+                  <th className="relative py-3 px-4"><span className="sr-only">Actions</span></th>
+                </tr>
+              </thead>
+              <tbody>
+                {computedInvoices.map((invoice: any) => (
+                  <tr key={invoice.id} className="border-b hover:bg-gray-50">
+                    <td className="py-4 px-4">
+                      <div className="text-sm font-medium text-gray-900">
+                        {invoice.family.lastName}, {invoice.family.father} & {invoice.family.mother}
+                      </div>
+                    </td>
+                    <td className="py-4 px-4 text-sm text-gray-900">
+                      ${invoice.total}
+                    </td>
+                    <td className="py-4 px-4">
+                      <Badge variant={invoice.paid ? "default" : "destructive"}>
+                        {invoice.paid ? "Paid" : "Unpaid"}
+                      </Badge>
+                    </td>
+                    <td className="py-4 px-4 text-right">
+                      <div className="flex items-center justify-end space-x-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleViewInvoice(invoice.family)}
+                        >
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {filteredInvoices.map((invoice: any) => (
-                    <tr key={invoice.id} className="border-b hover:bg-gray-50">
-                      <td className="py-4 px-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {invoice.invoiceNumber}
-                        </div>
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 bg-gray-200 rounded-full flex items-center justify-center mr-3">
-                            <span className="text-xs font-medium text-gray-600">
-                              {invoice.family.name[0]}
-                            </span>
-                          </div>
-                          <div>
-                            <div className="text-sm font-medium text-gray-900">
-                              {invoice.family.name}
-                            </div>
-                            <div className="text-xs text-gray-500">
-                              {invoice.family.primaryContact}
-                            </div>
-                          </div>
-                        </div>
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-900">
-                        {formatDate(invoice.invoiceDate)}
-                      </td>
-                      <td className="py-4 px-4 text-sm text-gray-900">
-                        {formatDate(invoice.dueDate)}
-                      </td>
-                      <td className="py-4 px-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {formatCurrency(invoice.total)}
-                        </div>
-                        {invoice.items.length > 0 && (
-                          <div className="text-xs text-gray-500">
-                            {invoice.items.length} item{invoice.items.length !== 1 ? 's' : ''}
-                          </div>
-                        )}
-                      </td>
-                      <td className="py-4 px-4">
-                        {getStatusBadge(invoice.status)}
-                      </td>
-                      <td className="py-4 px-4 text-right">
-                        <div className="flex space-x-1">
-                          <Button variant="ghost" size="sm">
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="sm"
-                            onClick={() => handlePrintInvoice(invoice.id)}
-                          >
-                            <PrinterCheck className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : (
-            <div className="text-center py-12">
-              <FileText className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No invoices found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {search || statusFilter
-                  ? "Try adjusting your search terms or filters."
-                  : "Get started by creating your first invoice."}
-              </p>
-              {!search && !statusFilter && (
-                <div className="mt-6">
-                  <Button>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Create Invoice
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
+                ))}
+              </tbody>
+            </table>
+          </div>
         </CardContent>
       </Card>
+
+      {/* Invoice Preview Dialog */}
+      <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              Invoice Preview - {selectedFamily?.lastName}
+            </DialogTitle>
+          </DialogHeader>
+          {selectedFamily && (
+            <div 
+              className="border rounded-lg p-6 bg-white"
+              dangerouslySetInnerHTML={{ 
+                __html: generateSingleInvoiceHTML(selectedFamily, false) 
+              }}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
