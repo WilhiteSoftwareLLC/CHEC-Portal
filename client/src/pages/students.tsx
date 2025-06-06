@@ -149,11 +149,19 @@ export default function Students() {
   };
 
   // Create course options for dropdowns based on student's grade
-  const createCourseOptions = (hour: number, studentGradYear: any) => {
+  const createCourseOptions = (hour: number, studentGradYear: any, semester?: 'fall' | 'spring') => {
     const hourCourses = hour === 0 ? getMathHourCourses(studentGradYear) : getCoursesByHour(hour, studentGradYear);
+    
+    // Filter by semester if specified
+    const filteredCourses = semester ? hourCourses.filter((course: any) => {
+      if (semester === 'fall') return course.offeredFall;
+      if (semester === 'spring') return course.offeredSpring;
+      return true;
+    }) : hourCourses;
+    
     return [
       { value: "NO_COURSE", label: "No Course" },
-      ...hourCourses.map((course: any) => ({
+      ...filteredCourses.map((course: any) => ({
         value: course.courseName,
         label: course.courseName
       }))
@@ -225,7 +233,7 @@ export default function Students() {
       editable: false, 
       width: "48", 
       type: "dropdown", 
-      options: (row: any) => createCourseOptions(5, row.gradYear)
+      options: (row: any) => createCourseOptions(5, row.gradYear, 'fall')
     },
     { 
       key: "fifthHourSpring", 
@@ -234,7 +242,7 @@ export default function Students() {
       editable: false, 
       width: "48", 
       type: "dropdown", 
-      options: (row: any) => createCourseOptions(5, row.gradYear)
+      options: (row: any) => createCourseOptions(5, row.gradYear, 'spring')
     },
     { 
       key: "fridayScience", 
