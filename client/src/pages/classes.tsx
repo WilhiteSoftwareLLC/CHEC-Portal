@@ -95,7 +95,7 @@ export default function Classes() {
   };
 
   const handleCreateClass = () => {
-    if (!newClass.className || newClass.startGrade === undefined || newClass.endGrade === undefined) {
+    if (!newClass.className || newClass.startCode === undefined || newClass.endCode === undefined) {
       toast({
         title: "Error",
         description: "Please fill in all fields",
@@ -171,8 +171,8 @@ export default function Classes() {
                   </TableCell>
                   <TableCell>
                     <Select
-                      value={newClass.startGrade?.toString() || ""}
-                      onValueChange={(value) => setNewClass({ ...newClass, startGrade: parseInt(value) })}
+                      value={newClass.startCode?.toString() || ""}
+                      onValueChange={(value) => setNewClass({ ...newClass, startCode: parseInt(value) })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select Start Grade" />
@@ -188,8 +188,8 @@ export default function Classes() {
                   </TableCell>
                   <TableCell>
                     <Select
-                      value={newClass.endGrade?.toString() || ""}
-                      onValueChange={(value) => setNewClass({ ...newClass, endGrade: parseInt(value) })}
+                      value={newClass.endCode?.toString() || ""}
+                      onValueChange={(value) => setNewClass({ ...newClass, endCode: parseInt(value) })}
                     >
                       <SelectTrigger>
                         <SelectValue placeholder="Select End Grade" />
@@ -242,8 +242,8 @@ export default function Classes() {
                   <TableCell>
                     {editingClass?.id === classData.id ? (
                       <Select
-                        value={editingClass.startGrade.toString()}
-                        onValueChange={(value) => setEditingClass({ ...editingClass, startGrade: parseInt(value) })}
+                        value={editingClass.startCode?.toString() || ""}
+                        onValueChange={(value) => setEditingClass({ ...editingClass, startCode: parseInt(value) })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -257,14 +257,14 @@ export default function Classes() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      getGradeName(classData.startGrade)
+                      getGradeName(classData.startCode || 0)
                     )}
                   </TableCell>
                   <TableCell>
                     {editingClass?.id === classData.id ? (
                       <Select
-                        value={editingClass.endGrade.toString()}
-                        onValueChange={(value) => setEditingClass({ ...editingClass, endGrade: parseInt(value) })}
+                        value={editingClass.endCode?.toString() || ""}
+                        onValueChange={(value) => setEditingClass({ ...editingClass, endCode: parseInt(value) })}
                       >
                         <SelectTrigger>
                           <SelectValue />
@@ -278,7 +278,7 @@ export default function Classes() {
                         </SelectContent>
                       </Select>
                     ) : (
-                      getGradeName(classData.endGrade)
+                      getGradeName(classData.endCode || 0)
                     )}
                   </TableCell>
                   <TableCell className="text-right">
