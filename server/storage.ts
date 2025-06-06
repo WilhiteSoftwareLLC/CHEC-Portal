@@ -163,29 +163,30 @@ export class DatabaseStorage implements IStorage {
       .orderBy(families.lastName);
   }
 
-  async upsertFamily(family: InsertFamily): Promise<{ family: Family; isNew: boolean }> {
+  async upsertFamily(familyWithId: InsertFamily & { id: number }): Promise<{ family: Family; isNew: boolean }> {
     // Check if family exists (inactive families count as existing)
     const existingFamily = await db
       .select()
       .from(families)
-      .where(eq(families.id, family.id))
+      .where(eq(families.id, familyWithId.id))
       .limit(1);
 
     const isNew = existingFamily.length === 0;
+    const { id, ...familyData } = familyWithId;
 
     if (isNew) {
       // Insert new family
       const [newFamily] = await db
         .insert(families)
-        .values(family)
+        .values({ ...familyData, id })
         .returning();
       return { family: newFamily, isNew: true };
     } else {
       // Update existing family
       const [updatedFamily] = await db
         .update(families)
-        .set(family)
-        .where(eq(families.id, family.id))
+        .set({ ...familyData, updatedAt: new Date() })
+        .where(eq(families.id, id))
         .returning();
       return { family: updatedFamily, isNew: false };
     }
