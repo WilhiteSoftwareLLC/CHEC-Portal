@@ -410,6 +410,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Invoices routes - returns placeholder data for now
+  app.get("/api/invoices", async (req, res) => {
+    try {
+      // Return empty array since invoices are generated on demand
+      res.json([]);
+    } catch (error) {
+      console.error("Error fetching invoices:", error);
+      res.status(500).json({ message: "Failed to fetch invoices" });
+    }
+  });
+
   // CSV Import routes
   app.post("/api/import/families", async (req, res) => {
     try {

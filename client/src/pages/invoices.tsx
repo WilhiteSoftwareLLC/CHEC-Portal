@@ -38,8 +38,8 @@ export default function Invoices() {
     retry: false,
   });
 
-  const filteredInvoices = invoices?.filter((invoice: any) => {
-    if (statusFilter && invoice.status !== statusFilter) {
+  const filteredInvoices = Array.isArray(invoices) ? invoices.filter((invoice: any) => {
+    if (statusFilter && statusFilter !== "all" && invoice.status !== statusFilter) {
       return false;
     }
     if (search) {
@@ -50,7 +50,7 @@ export default function Invoices() {
       );
     }
     return true;
-  }) || [];
+  }) : [];
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Not specified";
@@ -383,7 +383,7 @@ export default function Invoices() {
               <div className="ml-4">
                 <p className="text-sm font-medium text-gray-600">Total Invoices</p>
                 <p className="text-2xl font-semibold text-gray-900">
-                  {invoices?.length || 0}
+                  {Array.isArray(invoices) ? invoices.length : 0}
                 </p>
               </div>
             </div>
@@ -408,7 +408,7 @@ export default function Invoices() {
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Statuses</SelectItem>
+            <SelectItem value="all">All Statuses</SelectItem>
             <SelectItem value="pending">Pending</SelectItem>
             <SelectItem value="paid">Paid</SelectItem>
             <SelectItem value="overdue">Overdue</SelectItem>
@@ -451,7 +451,7 @@ export default function Invoices() {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredInvoices.map((invoice: InvoiceWithDetails) => (
+                  {filteredInvoices.map((invoice: any) => (
                     <tr key={invoice.id} className="border-b hover:bg-gray-50">
                       <td className="py-4 px-4">
                         <div className="text-sm font-medium text-gray-900">
