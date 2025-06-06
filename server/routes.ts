@@ -4,6 +4,13 @@ import session from "express-session";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
 import { authenticateCredentials, requireAuth, requireAdmin, requireParentOrAdmin, requireFamilyAccess, type AuthUser } from "./auth";
+
+// Extend session data interface
+declare module 'express-session' {
+  interface SessionData {
+    authUser?: AuthUser;
+  }
+}
 import {
   insertFamilySchema,
   insertStudentSchema,
@@ -15,20 +22,85 @@ import {
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Session middleware for credential-based auth
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'dev-secret-key',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 24 hours
+    },
+  }));
+
+  // Auth middleware for session management
+  app.use((req, res, next) => {
+    if (req.session && req.session.authUser) {
+      req.authUser = req.session.authUser as AuthUser;
+    }
+    next();
+  });
+
   // Auth middleware
   await setupAuth(app);
+
+  // Authentication routes
+  app.post('/api/login', async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ error: "Username and password required" });
+      }
+
+      const user = await authenticateCredentials(username, password);
+      if (!user) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      req.session.authUser = user;
+      res.json({ 
+        success: true, 
+        user: {
+          id: user.id,
+          username: user.username,
+          role: user.role,
+          email: user.email,
+          firstName: user.firstName,
+          lastName: user.lastName,
+          familyId: user.familyId
+        }
+      });
+    } catch (error) {
+      console.error("Login error:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  app.post('/api/logout', (req, res) => {
+    req.session.destroy((err) => {
+      if (err) {
+        return res.status(500).json({ error: "Could not log out" });
+      }
+      res.json({ success: true });
+    });
+  });
+
+  app.get('/api/auth/me', (req, res) => {
+    if (req.authUser) {
+      res.json(req.authUser);
+    } else {
+      res.status(401).json({ error: "Not authenticated" });
+    }
+  });
 
   // Auth routes - temporarily disabled for testing
   app.get('/api/auth/user', async (req: any, res) => {
     try {
-      // Return a mock user for testing purposes
-      const mockUser = {
-        id: "test-user",
-        email: "test@example.com",
-        firstName: "Test",
-        lastName: "User"
-      };
-      res.json(mockUser);
+      const userId = req.user.claims.sub;
+      const user = await storage.getUser(userId);
+      res.json(user);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
