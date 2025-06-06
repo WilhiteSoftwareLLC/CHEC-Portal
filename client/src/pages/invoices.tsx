@@ -238,6 +238,9 @@ export default function Invoices() {
         { hour: 2, field: 'secondHour', hourName: '2nd' },
         { hour: 3, field: 'thirdHour', hourName: '3rd' },
         { hour: 4, field: 'fourthHour', hourName: '4th' },
+        { hour: 5, field: 'fifthHourFall', hourName: '5th Fall' },
+        { hour: 5, field: 'fifthHourSpring', hourName: '5th Spring' },
+        { hour: 6, field: 'fridayScience', hourName: 'Friday' },
       ];
 
       // Process courses in hour order, only include those with fees
@@ -256,6 +259,19 @@ export default function Invoices() {
               fee: courseFee
             });
             total += courseFee;
+
+            // Add book rental fee immediately after course fee if it exists
+            if (course.bookRental && parseFloat(course.bookRental) > 0) {
+              const bookRentalFee = parseFloat(course.bookRental);
+              invoiceRows.push({
+                name: student.firstName,
+                grade: currentGrade,
+                hour: mapping.hourName,
+                item: `${courseName} - Book Rental`,
+                fee: bookRentalFee
+              });
+              total += bookRentalFee;
+            }
           }
         }
       });
