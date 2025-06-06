@@ -20,11 +20,7 @@ export default function Import() {
 
   const importFamilies = useMutation({
     mutationFn: async (data: any[]) => {
-      await apiRequest("/api/import/families", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" }
-      });
+      return await apiRequest("/api/import/families", "POST", data);
     },
     onSuccess: (response: any) => {
       toast({
@@ -43,11 +39,7 @@ export default function Import() {
 
   const importStudents = useMutation({
     mutationFn: async (data: any[]) => {
-      await apiRequest("/api/import/students", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" }
-      });
+      return await apiRequest("/api/import/students", "POST", data);
     },
     onSuccess: (response: any) => {
       toast({
@@ -66,11 +58,7 @@ export default function Import() {
 
   const importCourses = useMutation({
     mutationFn: async (data: any[]) => {
-      await apiRequest("/api/import/courses", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" }
-      });
+      return await apiRequest("/api/import/courses", "POST", data);
     },
     onSuccess: (response: any) => {
       toast({
@@ -89,11 +77,7 @@ export default function Import() {
 
   const importClasses = useMutation({
     mutationFn: async (data: any[]) => {
-      await apiRequest("/api/import/classes", {
-        method: "POST",
-        body: JSON.stringify(data),
-        headers: { "Content-Type": "application/json" }
-      });
+      return await apiRequest("/api/import/classes", "POST", data);
     },
     onSuccess: (response: any) => {
       toast({

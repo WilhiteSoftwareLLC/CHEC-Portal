@@ -12,6 +12,7 @@ import Students from "@/pages/students";
 import Courses from "@/pages/courses";
 import Schedules from "@/pages/schedules";
 import Invoices from "@/pages/invoices";
+import Import from "@/pages/import";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
@@ -29,6 +30,7 @@ function Router() {
           <Route path="/courses" component={Courses} />
           <Route path="/schedules" component={Schedules} />
           <Route path="/invoices" component={Invoices} />
+          <Route path="/import" component={Import} />
         </MainLayout>
       )}
       <Route component={NotFound} />

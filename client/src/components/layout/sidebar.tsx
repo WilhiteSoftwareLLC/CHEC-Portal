@@ -13,6 +13,7 @@ import {
   FileText,
   Settings,
   Download,
+  Upload,
   X,
 } from "lucide-react";
 
