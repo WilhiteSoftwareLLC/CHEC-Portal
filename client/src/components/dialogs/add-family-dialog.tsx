@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import FamilyForm from "@/components/forms/family-form";
 import type { InsertFamily } from "@shared/schema";
 
@@ -18,6 +18,9 @@ export default function AddFamilyDialog({ open, onOpenChange }: AddFamilyDialogP
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add New Family</DialogTitle>
+          <DialogDescription>
+            Add a new family to the homeschool cooperative with contact information.
+          </DialogDescription>
         </DialogHeader>
         <FamilyForm 
           onSubmit={handleSubmit}

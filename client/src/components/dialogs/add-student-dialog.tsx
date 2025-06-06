@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import StudentForm from "@/components/forms/student-form";
 import type { InsertStudent } from "@shared/schema";
 
@@ -18,6 +18,9 @@ export default function AddStudentDialog({ open, onOpenChange }: AddStudentDialo
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add New Student</DialogTitle>
+          <DialogDescription>
+            Register a new student with their family and grade information.
+          </DialogDescription>
         </DialogHeader>
         <StudentForm 
           onSubmit={handleSubmit}

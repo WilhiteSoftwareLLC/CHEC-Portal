@@ -1,4 +1,4 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import CourseForm from "@/components/forms/course-form";
 import type { InsertCourse } from "@shared/schema";
 
@@ -18,6 +18,9 @@ export default function AddCourseDialog({ open, onOpenChange }: AddCourseDialogP
       <DialogContent className="max-w-2xl">
         <DialogHeader>
           <DialogTitle>Add New Course</DialogTitle>
+          <DialogDescription>
+            Create a new course with instructor details, schedule, and enrollment information.
+          </DialogDescription>
         </DialogHeader>
         <CourseForm 
           onSubmit={handleSubmit}

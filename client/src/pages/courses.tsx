@@ -102,18 +102,26 @@ export default function Courses() {
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg">{course.name}</CardTitle>
+                      <CardTitle className="text-lg">{course.courseName}</CardTitle>
                       <div className="flex items-center space-x-2 mt-1">
-                        {course.subject && (
+                        {course.hour && (
                           <Badge variant="outline" className="text-xs">
-                            {course.subject}
+                            Hour {course.hour}
                           </Badge>
                         )}
-                        {course.gradeLevel && (
+                        {course.offeredFall && course.offeredSpring ? (
                           <Badge variant="outline" className="text-xs">
-                            {course.gradeLevel}
+                            Fall & Spring
                           </Badge>
-                        )}
+                        ) : course.offeredFall ? (
+                          <Badge variant="outline" className="text-xs">
+                            Fall Only
+                          </Badge>
+                        ) : course.offeredSpring ? (
+                          <Badge variant="outline" className="text-xs">
+                            Spring Only
+                          </Badge>
+                        ) : null}
                       </div>
                     </div>
                     <div className="flex space-x-1">
@@ -128,20 +136,6 @@ export default function Courses() {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
-                    {course.instructor && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <User className="mr-2 h-4 w-4" />
-                        {course.instructor}
-                      </div>
-                    )}
-                    
-                    {course.schedule && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Calendar className="mr-2 h-4 w-4" />
-                        {course.schedule}
-                      </div>
-                    )}
-
                     {course.location && (
                       <div className="flex items-center text-sm text-gray-600">
                         <MapPin className="mr-2 h-4 w-4" />
@@ -152,35 +146,18 @@ export default function Courses() {
                     <div className="grid grid-cols-2 gap-2 text-sm">
                       <div className="flex items-center text-gray-600">
                         <DollarSign className="mr-1 h-4 w-4" />
-                        {formatCurrency(course.cost)}
+                        {formatCurrency(course.fee)}
                       </div>
-                      {course.maxStudents && (
+                      {course.bookRental && (
                         <div className="flex items-center text-gray-600">
-                          <Users className="mr-1 h-4 w-4" />
-                          Max {course.maxStudents}
+                          <BookOpen className="mr-1 h-4 w-4" />
+                          Book: {formatCurrency(course.bookRental)}
                         </div>
                       )}
                     </div>
 
-                    {(course.startDate || course.endDate) && (
-                      <div className="pt-2 border-t border-gray-100">
-                        <p className="text-xs text-gray-500 font-medium mb-1">Duration:</p>
-                        <p className="text-xs text-gray-600">
-                          {formatDate(course.startDate)} - {formatDate(course.endDate)}
-                        </p>
-                      </div>
-                    )}
-
-                    {course.description && (
-                      <div className="pt-2 border-t border-gray-100">
-                        <p className="text-xs text-gray-600 line-clamp-2">
-                          {course.description}
-                        </p>
-                      </div>
-                    )}
-
                     <div className="pt-2">
-                      {getStatusBadge(course.active)}
+                      <Badge className="bg-green-100 text-green-800">Active</Badge>
                     </div>
                   </div>
                 </CardContent>
