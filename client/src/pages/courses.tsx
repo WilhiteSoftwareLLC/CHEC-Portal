@@ -1,6 +1,8 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { PrinterCheck } from "lucide-react";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddCourseDialog from "@/components/dialogs/add-course-dialog";
 import { useDialogs } from "@/contexts/dialog-context";
@@ -34,6 +36,16 @@ export default function Courses() {
     queryKey: ["/api/classes"],
     queryFn: async () => {
       const response = await fetch("/api/classes", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
+  });
+
+  const { data: students } = useQuery({
+    queryKey: ["/api/students"],
+    queryFn: async () => {
+      const response = await fetch("/api/students", { credentials: "include" });
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
       return response.json();
     },
@@ -123,6 +135,145 @@ export default function Courses() {
     }))
   ];
 
+  const handlePrintCourseRosters = () => {
+    if (!courses || !students) return;
+    
+    // Generate roster HTML for all courses
+    const rosterHTML = generateAllRostersHTML();
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(rosterHTML);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const generateAllRostersHTML = () => {
+    const sortedCourses = [...(courses || [])].sort((a, b) => 
+      a.courseName.localeCompare(b.courseName)
+    );
+    
+    const courseRosters = sortedCourses.map((course, index) => 
+      generateSingleRosterHTML(course, index > 0)
+    ).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Course Rosters</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              color: #333;
+            }
+            .page-break { 
+              page-break-before: always; 
+            }
+            .course-header {
+              font-size: 18px;
+              font-weight: bold;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #000;
+              padding-bottom: 10px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 40px;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px 12px;
+              text-align: left;
+            }
+            th {
+              background-color: #f5f5f5;
+              font-weight: bold;
+            }
+            .number-column { width: 5%; text-align: center; }
+            .grade-column { width: 8%; text-align: center; }
+            .name-column { width: 15%; }
+            .birth-column { width: 12%; text-align: center; }
+            .parent-column { width: 15%; }
+            .phone-column { width: 15%; }
+            .email-column { width: 30%; }
+          </style>
+        </head>
+        <body>
+          ${courseRosters}
+        </body>
+      </html>
+    `;
+  };
+
+  const generateSingleRosterHTML = (course: any, addPageBreak: boolean = false) => {
+    // Get students enrolled in this course
+    const enrolledStudents = (students || []).filter((student: any) => {
+      return student.mathHour === course.courseName ||
+             student.firstHour === course.courseName ||
+             student.secondHour === course.courseName ||
+             student.thirdHour === course.courseName ||
+             student.fourthHour === course.courseName ||
+             student.fifthHourFall === course.courseName ||
+             student.fifthHourSpring === course.courseName ||
+             student.fridayScience === course.courseName;
+    });
+
+    // Sort students by last name, then first name
+    const sortedStudents = enrolledStudents.sort((a: any, b: any) => {
+      const lastNameCompare = a.lastName.localeCompare(b.lastName);
+      if (lastNameCompare !== 0) return lastNameCompare;
+      return a.firstName.localeCompare(b.firstName);
+    });
+
+    const rowsHTML = sortedStudents.map((student: any, index: number) => {
+      const birthDate = student.birthdate ? new Date(student.birthdate).toLocaleDateString() : '';
+      const gradeCode = student.gradYear ? new Date().getFullYear() - parseInt(student.gradYear) + 13 : '';
+      
+      return `
+        <tr>
+          <td class="number-column">${index + 1}.</td>
+          <td class="grade-column">${gradeCode}th</td>
+          <td class="name-column">${student.lastName}</td>
+          <td class="name-column">${student.firstName}</td>
+          <td class="birth-column">${birthDate}</td>
+          <td class="parent-column">${student.family?.mother || ''}</td>
+          <td class="parent-column">${student.family?.father || ''}</td>
+          <td class="phone-column">${student.family?.parentCell || ''}</td>
+          <td class="email-column">${student.family?.email || ''}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      ${addPageBreak ? '<div class="page-break"></div>' : ''}
+      <div class="course-header">${course.courseName}</div>
+      <table>
+        <thead>
+          <tr>
+            <th class="number-column"></th>
+            <th class="grade-column">Grade</th>
+            <th class="name-column">Last Name</th>
+            <th class="name-column">First Name</th>
+            <th class="birth-column">Birth Date</th>
+            <th class="parent-column">Mother</th>
+            <th class="parent-column">Father</th>
+            <th class="phone-column">Parent's Cell</th>
+            <th class="email-column">Email</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHTML}
+        </tbody>
+      </table>
+    `;
+  };
+
   const columns: GridColumn[] = [
     { key: "courseName", label: "Course Name", sortable: true, editable: true, width: "48" },
     { key: "classId", label: "Class", sortable: true, editable: false, width: "32", type: "dropdown", options: classOptions },
@@ -133,6 +284,16 @@ export default function Courses() {
 
   return (
     <div className="p-6">
+      <div className="flex justify-end mb-4">
+        <Button 
+          variant="outline" 
+          onClick={handlePrintCourseRosters}
+        >
+          <PrinterCheck className="mr-2 h-4 w-4" />
+          Print Course Rosters
+        </Button>
+      </div>
+      
       <EditableGrid
         data={courses || []}
         columns={columns}
