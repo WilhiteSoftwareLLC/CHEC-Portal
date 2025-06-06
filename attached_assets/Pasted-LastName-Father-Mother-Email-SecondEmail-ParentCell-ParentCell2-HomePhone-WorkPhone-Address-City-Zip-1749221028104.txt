@@ -1,0 +1,65 @@
+LastName,Father,Mother,Email,SecondEmail,ParentCell,ParentCell2,HomePhone,WorkPhone,Address,City,Zip,Church,PastorName,PastorPhone
+Anderson,Anthony,Shana,mathtutorshana@yahoo.com,,903-434-2841,903-434-2840,903-762-6518,903-572-1741,10898 HW 271 N,Gilmer,75644,Willow Oak Baptist Church,,
+Anderson,Daniel,Allison,allieanders.0@gmail.com,,903 285-7181,903-801-1965,,,10761 FM 557,Pittsburg,75686,Brumley Baptist,,
+Binns,Bernie,Rebecca,rbinns5f@ymail.com,,903-946-6504,903-946-6505,,,952 CR 4135,Clarksville,75426,"South Union, Dangerfield",,
+Brown,Eric,Angie,angmbrown05@gmail.com,,682-225-6424,469-223-9476,,,1608 CR SE 3285,Mt. Vernon,75457,FBC - Mt. Vernon,Pepper Puryear/Chris Wigley,817-995-7999
+Carlisle,Chas,Amy,ladycarlisle03@gmail.com,,903-799-9646,903-650-1952,,,P.O. Box 162,Marietta,75566,"Oak Ridge Baptist, Marietta",,
+Carpenter,Keith,Elibeth,erawac@protonmail.com,,469-265-6403,469-243-3578,,,188 CR 4583,Winnsboro,75494,Perryville Baptist Church,John Burk,903-285-5270
+Chandler,Richard,Crystal,cchandler777@gmail.com,,903-434-2678,903-285-5539,903-577-8781,903-572-3605,1401 S. Lide Ave.,Mt. Pleasant,75455,First Baptist Church Mt. Pleasant,,
+Clayton,Todd,Ginger,gsclytn@yahoo.com,,903-853-0999,903-850-2441,,,14603 FM 115,Scroggins,75480,FBC Winsboro,David Rose,903-342-3538
+Cole,Michael,Cryste,cryste.cole@gmail.com,,903-752-8846,903-810-8550,,,1555 CR 3265,Mineola,75773,Garden Valley Bible,,
+Coleman,Matthew,Emily,emily@thecolemans.ca,,903-434-6908,903-219-1814,,,2636 US Hwy 271 S.,Pittsburg,75686,Trinity,,817-995-7999
+Corbin,Danny,Toni,tonicorbin@aol.com ,,903-790-1452,903-790-0931,,,249 FM 1519 N.,Leesburg,75451,Wood County Cowboy Church,,
+DeLisi,Craig,Tonya,craigdelisi@gmail.com,,903-918-9205,903-918-9204,,903-946-5442,194 CR 4210,Mt. Pleasant,75455,Calvary Bible Church,Daniel Souza,
+Deornellis,Tony,Amy,ardeornellis@gmail.com,twd1072@gmail.com,903-563-2156,903-563-2253,,,267 CR 1311,Pittsburg,75686,Emmanuel Baptist,,
+Dickson,Robert,Tabitha,dicksonfamily1996@gmail.com,,903-285-3339,903-285-3339,,,327 Quitman St.,Pittsburg,75686,"Victory Baptist Church, Cox Community",,
+Dublin,Donovan,Karla,karladublin@gmail.com,,903-238-3210,903-285-7375,,,872 CR 3311,Omaha,75571,Dangerfield Church of Christ,,
+Fein,Bradley,Lisa,lisaramseyfein@yahoo.com,,903-204-9567,817-584-2216,,,1166 CR 3350,Cookville,75558,Trinity Baptist,Mike Kessler,903-572-1959
+Frazier,Eric,Misty,ejfrazier@hotmail.com,,903-590-7888,903-975-4064,,,1200 N Main Street,Winnsboro,75494,1st Baptist Winnsboro,David Rose,9033423538
+Friberg,Erickk,Sarah,sarey717@gmail.com,,903-285-1926,903-767-6753,,,353 CR 1336,Pittsburg,75686,"Victory Baptist Church, Cox Community",Anthony Anderson,903-767-6824
+Fulton,John,Cindy,cindyfulton7@gmail.com,johnfulton7@gmail.com,214-770-6600,214-505-9700,,,118 Deer Cove Rd,Scroggins,75480,Calvary Bible Church,Daniel Souza,903-466-4803
+Gaertner,Michael,Chauna,gaertnergang@gmail.com,,573-614-2094,573-614-2034,,,1200 Alexander Rd.,Mt. Pleasant,75455,Trinity,,
+Glanzer,Mark,Christie,christie.glanzer@icloud.com,,918-760-0957,903-204-3717,,,1108 S Florey,Mt. Pleasant,75455,Calvary Bible Church,Daniel Souza,903-466-4803
+Gressley,Randy,Harmoni,thegressleys@gmail.com,,660-281-1766,660-281-6491,,,4721 Lakeside Dr.,Mt. Pleasant,75455,Trinity,,
+Griffin,Joshua,Macy,macywgriffin@gmail.com,,706-273-8134,706-818-1173,,,345 Private road 54166,Pittsburg,75686,Trinity Baptist,Chris Wigley,817-995-7999
+Hall,Michael,Emily,emilyrhall1986@gmail.com,,903-235-7429,903-916-0059,,,681 CR 1233,Omaha,75571,Church on the Rock ,Randy Seybert,903-238-5079
+Hall,Scott,Johnette,johnettehall8@gmail.com,,903-767-9441,903-767-7702,903-856-7085,,482 FM 1519 N,Leesburg,75451,New Beginnings SS,,
+Hampton,Jeremy,Laura,hampton.laura07@gmail.com,,979-218-8328,903-575-8005,,,1750 CR 4875,Pittsburg,75686,Trinity,Chris Wigley,817-995-7999
+Harrison,Will ,Nancy,nancycharrison@yahoo.com,,903-850-1998,903-850-1997,903-365-2212,903-342-0117,1868 E. FM 515,Winnsboro,75494,FBC Winnsboro,,
+Hefner,Cole,Kerri,kerrihefner@yahoo.com,,903-855-2252,903-855-2251,,,806 CR 4510,Mt. Pleasant,75455,,,
+Hefner,Jed,RaeLynn,rae@hefcoservices.com,,903-204-3407,903-855-2900,,,3558 FM 3384,Pittsburg,75686,Trinity Baptist,Chris Wigley,817-995-7999
+Higginbotham,Brandon,Laura,lehigginbotham@gmail.com,,903-960-0056,903-285-8353,,,4228 FM 2348,Mt. Pleasant,75455,South Jefferson Baptist,,
+Huddleston,Mark,Amy,mamahuddle@yahoo.com,,903-243-2413,903-348-0930,,,208 Turner St.,Mt. Vernon,75457,FBC - Mt. Vernon,Pepper Puryear,903-537-2322
+Kilburn,John,Aliza,alizashier@gmail.com,,214-450-3764,903-767-6855,,,1399 CR 4240,Pittsburg,75686,Calvary,,
+Knight,,Melanie,melne131126@gmail.com,,903-466-4192,903-466-4188,,,103 Sweet Pea Ct.,Mt. Pleasant,75455,,,
+McCraw,Robby,Amy,amymccraw5@gmail.com,,214-218-7044,214 726 2989,903 860 7622,903 860 3043,5064 FM 115,Mt. Vernon,75457,FBC Winnsboro,,
+Merritt,Jase,Marissa,marissamphotos@gmail.com,,806-292-9572,806-548-4562,,,942 CR 1330,Mt. Pleasant,75455,Outpost Church,,
+Morris,Shane,Ashley,ashleydmorris31@gmail.com,,210-677-2670,210-254-5733,,,206 Bluebird St.,Mt. Pleasant,75455,FBC Pittsburg,,
+Mullins,Aaron,Tonya,tonyanrcoc@gmail.com,,903-238-7341,903-946-6486,,,214 White St.,Mt. Pleasant,75455,North Ridge Church of Christ,Derek McNamara,903-572-3202
+Neely,Cory,Lori,l.ellenneely@yahoo.com,cory1228@hotmail.com,214-502-7704,214-502-7726,,,298 CR 3341 North,Sulphur Springs,75482,Shannon Oaks,,
+Nelson,Drew,Meagan,meaganclaire@gmail.com,,214-335-8131,254-541-3815,,,1805 Hogan Lane,Mount Pleasant,75455,Southside Church of Christ,Drew Nelson,254-541-3815
+Nuss,Chad,Kaley,mnuss240@gmail.com,knuss873@gmail.com,903-343-3031,903-343-2061,,,20 CR 3204,Naples,75568,"Oak Ridge Baptist, Marietta",,
+O'Rand,Phillip,Kitty,kittyorand@yahoo.com,,903 366-1254,,,75455,662 CR 2412,Leesburg,75451,Impact Church,,
+Orr,Michael,Loretta,loretta.lynn.orr@gmail.com,,972-804-2712,972-948-6344,,,2824 FM 1402,Mt. Pleasant,75455,North Ridge Church of Christ,Michael Orr,972-948-6344
+Pedersen,Ryan,Katrina,katrinamarta@protonmail.com,,903-449-9410,775-303-9354,,,2723 CR 1127,Daingerfield,75638,Church on the Rock - Daingerfield,Randy Seybert,903-238-5079
+Pickens,Travis,Valerie,averybows@gmail.com,,903-573-4336,,,,55 Piney Wood Drive,Mt. Vernon,75457,Macon Baptist,,
+Quinn,Lloyd,Elissa,quinnmom823@gmail.com,,903-767-8023,903-767-2421,,,155 CR 2605,Pittsburg,75688,South Jefferson Baptist Church,,
+Randolph,Jeremy,Trisha,trisha050600@yahoo.com,randolphs@pobox.com,205-527-5927,205-405-4734,,,101 Princedale Dr.,Pittsburg,75686,FBC MP,,
+Rawlings,Anthony,Steffenie,steffenie.rawlings@gmail.com,,903-305-4813,903-305-3682,,,690 CR 3210,Mt. Pleasant,75455,FBCMP,Dr. Clint Davis,903-572-3605
+Reed,Eric,Karen,edktreed@gmail.com,,903-563-2228,903-563-2808,,903-577-1101,2954 FM 1402,Mt. Pleasant,75455,NR Church of Christ,Derek McNamara,903-572-3202
+Rogers,Dave,Bethany,rogers0531@gmail.com,,903-767-5891,903-767-1303,,,580 CR 1070,Mt. Pleasant,75455,Calvary Bible Church,Daniel Souza,903-466-4803
+Shipley,Michael,Aimee,shipleyfarms2022@gmail.com,,903-867-0240,9038670242,,,1764 Lavender Road,Gilmer,75644,Willow Oak,Anthony Anderson,903-434-2840
+Smith,Thomas,Kim,kimsmithketo58@gmail.com,,903-261-8276,903-241-8284,,,320 Jefferson St.,Lone Star,75668,Church on the Rock ,Randy Seybert,903-238-5079
+Souza,Daniel,Jessica,jessicaksouza@yahoo.com,danielaggie02@gmail.com,903-466-4860,903-466-4803,,,4552 FM 2348,Mt. Pleasant,75455,Calvary Bible Church,Daniel Souza,903-466-4803
+Tagg,Barry,Brandi,branditagg@yahoo.com,,940-765-1391,940-391-7556,,,2465 N. Jefferson,Mt. Pleasant,75455,Calvary Bible Church,Daniel Souza,903-466-4803
+Tallant,Jeff,Haylee,godshaylo@yahoo.com,,979-575-0187,979-575-6969,,,7439 Highway 67 East,Cookville,75558,Calvary Bible Church,Daniel Souza,903-466-4803
+Taylor,James,K'Lee,taylorhomeschool21@gmail.com,,903-790-1250,903-738-1041,,,4486 SE CR 3470,winnsboro,75494,The Church at West Mountain,Aeron Wallace,903-734-3775
+Villone,Joshua,Heather,havillone@gmail.com,,903-767-6064,903-853-0574,,,634 CR 1070,Mt. Pleasant,75455,Calvary Bible Church,Daniel Souza,903-466-4803
+Wheeler,Tandy,Melinda,loblolly70@gmail.com,,903-841-2756,,,,10772 Cactus Road,Pittsburg,75686,Midway Baptist Church,Johnny Simmons,903-918-4623
+Wigley,Chris,Cathy,cathywigley@hotmail.com,,817-995-7305,,,,306 Delwood,Mt. Pleasant,75455,Trinity,Chris Wigley,817-995-7999
+Wilhite,Jeff,Katherine,mathteacher18@yahoo.com,jwilhite@acm.org,325-260-8926,903-573-0715,,,357 CR 3265,Mt. Pleasant,75455,Calvary Bible Church,Daniel Souza,903-466-4803
+Wilson,Billy,Cristen,wilsoncristen@gmail.coom,bjwiltrack@hotmail.com,713-201-6123,903-814-0387,903-201-6123,,586 CR 4135 SE,Mt. Vernon,75457,FBC Mt. Vernon,,
+Wisner,Steven,Dawn,dmc51676@hotmail.com,,903-285-9979,210-326-5710,,,280 CR 2718,Mt. Pleasant,75455,Highland Park Baptist Church,,
+Woods,James,Kayla,kayla.lynne.woods@gmail.com,,903-931-1396,903-806-9420,,,806 CR 3375,Cookville,75558,Calvary Bible Church,Daniel Souza,903-466-4803
+Wyatt,Brandon,J'Lae,jlae.dependent@gmail.com,,806-240-1087,,,,1416 CR 3218,DeKalb,75559,"Christ Community Church, TXK",,
+Yarbrough,Corey,Sarah,sarah.yarbrough90@gmail.com,,903-720-0739,903-931-7319,,,199 CR 2211,Daingerfield,75638,Daingerfield Church of Christ,Tim Gibbs,903-645-2896

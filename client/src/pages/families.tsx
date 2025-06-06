@@ -1,17 +1,20 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Edit, Trash2, Users, Phone, Mail } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import AddFamilyDialog from "@/components/dialogs/add-family-dialog";
 import type { Family } from "@shared/schema";
 
 export default function Families() {
   const [search, setSearch] = useState("");
   const [addFamilyOpen, setAddFamilyOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: families, isLoading } = useQuery({
     queryKey: ["/api/families", search],
@@ -23,6 +26,32 @@ export default function Families() {
     },
     retry: false,
   });
+
+  const deleteFamilyMutation = useMutation({
+    mutationFn: async (familyId: number) => {
+      await apiRequest(`/api/families/${familyId}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+      toast({
+        title: "Family Deleted",
+        description: "Family has been successfully deleted.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteFamily = (familyId: number) => {
+    if (confirm("Are you sure you want to delete this family?")) {
+      deleteFamilyMutation.mutate(familyId);
+    }
+  };
 
   return (
     <div className="p-6">
@@ -80,14 +109,22 @@ export default function Families() {
                 <CardHeader className="pb-4">
                   <div className="flex items-start justify-between">
                     <div>
-                      <CardTitle className="text-lg">{family.name}</CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">{family.primaryContact}</p>
+                      <CardTitle className="text-lg">{family.lastName} Family</CardTitle>
+                      <p className="text-sm text-gray-600 mt-1">
+                        {[family.father, family.mother].filter(Boolean).join(" & ")}
+                      </p>
                     </div>
                     <div className="flex space-x-1">
                       <Button variant="ghost" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteFamily(family.id)}
+                        disabled={deleteFamilyMutation.isPending}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
@@ -101,15 +138,15 @@ export default function Families() {
                         {family.email}
                       </div>
                     )}
-                    {family.phone && (
+                    {(family.parentCell || family.homePhone) && (
                       <div className="flex items-center text-sm text-gray-600">
                         <Phone className="mr-2 h-4 w-4" />
-                        {family.phone}
+                        {family.parentCell || family.homePhone}
                       </div>
                     )}
                     {family.address && (
                       <p className="text-sm text-gray-600 line-clamp-2">
-                        {family.address}
+                        {[family.address, family.city, family.zip].filter(Boolean).join(", ")}
                       </p>
                     )}
                     <div className="pt-2">
