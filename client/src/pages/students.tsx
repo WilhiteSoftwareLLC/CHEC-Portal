@@ -16,7 +16,7 @@ export default function Students() {
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const { toast } = useToast();
 
-  const { data: students, isLoading } = useQuery({
+  const { data: students, isLoading: studentsLoading } = useQuery({
     queryKey: ["/api/students", search],
     queryFn: async () => {
       const url = search ? `/api/students?search=${encodeURIComponent(search)}` : "/api/students";
@@ -25,6 +25,14 @@ export default function Students() {
       return response.json();
     },
     retry: false,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ["/api/settings"],
+  });
+
+  const { data: grades } = useQuery({
+    queryKey: ["/api/grades"],
   });
 
   const deleteStudentMutation = useMutation({
@@ -71,6 +79,17 @@ export default function Students() {
     );
   };
 
+  const getCurrentGrade = (gradYear: string | null) => {
+    if (!gradYear || !settings || !grades) return "Unknown";
+    
+    const schoolYear = parseInt((settings as any).SchoolYear || "2024");
+    const graduationYear = parseInt(gradYear);
+    const gradeCode = schoolYear - graduationYear + 13;
+    
+    const grade = Array.isArray(grades) ? grades.find((g: any) => g.code === gradeCode) : null;
+    return grade ? grade.gradeName : "Unknown";
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
@@ -101,7 +120,7 @@ export default function Students() {
       </div>
 
       {/* Students Grid */}
-      {isLoading ? (
+      {studentsLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {[1, 2, 3, 4, 5, 6].map((i) => (
             <Card key={i}>
@@ -158,12 +177,10 @@ export default function Students() {
                 <CardContent>
                   <div className="space-y-3">
                     <div className="grid grid-cols-2 gap-2 text-sm">
-                      {student.gradYear && (
-                        <div className="flex items-center text-gray-600">
-                          <GraduationCap className="mr-2 h-4 w-4" />
-                          Class of {student.gradYear}
-                        </div>
-                      )}
+                      <div className="flex items-center text-gray-600">
+                        <GraduationCap className="mr-2 h-4 w-4" />
+                        {getCurrentGrade(student.gradYear)}
+                      </div>
                       {student.birthdate && (
                         <div className="flex items-center text-gray-600">
                           <Calendar className="mr-2 h-4 w-4" />
