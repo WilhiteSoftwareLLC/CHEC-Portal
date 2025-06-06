@@ -407,13 +407,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Expected array of families" });
       }
 
-      // First, mark all existing families as inactive
-      await storage.markAllFamiliesInactive();
-
       const results = [];
       let newFamilies = 0;
       let modifiedFamilies = 0;
+      const importedFamilyIds = new Set<number>();
 
+      // First pass: Check which families are new vs existing, and process them
       for (const familyRow of families) {
         try {
           // Map MS Access Family table columns to our schema
@@ -437,17 +436,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
             active: true, // Mark families in import file as active
           };
 
-          const result = await storage.upsertFamily(familyData);
-          if (result.isNew) {
+          importedFamilyIds.add(familyData.id);
+          
+          // Check if family exists before inserting/updating
+          const existingFamily = await storage.getFamily(familyData.id);
+          const isNew = !existingFamily;
+
+          if (isNew) {
+            const family = await storage.createFamily(familyData);
             newFamilies++;
+            results.push({ success: true, family, isNew: true });
           } else {
+            const family = await storage.updateFamily(familyData.id, familyData);
             modifiedFamilies++;
+            results.push({ success: true, family, isNew: false });
           }
-          results.push({ success: true, family: result.family, isNew: result.isNew });
         } catch (error) {
           results.push({ success: false, error: (error as Error).message, data: familyRow });
         }
       }
+
+      // Mark families not in import as inactive
+      await storage.markFamiliesInactiveExcept(Array.from(importedFamilyIds));
 
       // Count inactive families after processing
       const inactiveFamilies = await storage.getInactiveFamiliesCount();

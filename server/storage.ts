@@ -43,6 +43,7 @@ export interface IStorage {
   searchFamilies(query: string): Promise<Family[]>;
   upsertFamily(family: InsertFamily): Promise<{ family: Family; isNew: boolean }>;
   markAllFamiliesInactive(): Promise<void>;
+  markFamiliesInactiveExcept(familyIds: number[]): Promise<void>;
 
   // Student operations
   getStudents(): Promise<StudentWithFamily[]>;
@@ -185,6 +186,17 @@ export class DatabaseStorage implements IStorage {
 
   async markAllFamiliesInactive(): Promise<void> {
     await db.update(families).set({ active: false });
+  }
+
+  async markFamiliesInactiveExcept(familyIds: number[]): Promise<void> {
+    if (familyIds.length === 0) {
+      await db.update(families).set({ active: false });
+    } else {
+      await db
+        .update(families)
+        .set({ active: false })
+        .where(sql`${families.id} NOT IN (${familyIds.join(',')})`);
+    }
   }
 
   async getInactiveFamiliesCount(): Promise<number> {
