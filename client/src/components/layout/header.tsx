@@ -4,6 +4,9 @@ import { useLocation } from "wouter";
 
 interface HeaderProps {
   onMenuClick: () => void;
+  onAddFamily?: () => void;
+  onAddStudent?: () => void;
+  onAddCourse?: () => void;
 }
 
 const pageLabels: Record<string, { title: string; description: string }> = {
@@ -15,9 +18,46 @@ const pageLabels: Record<string, { title: string; description: string }> = {
   "/invoices": { title: "Invoices", description: "Manage billing and payments" },
 };
 
-export default function Header({ onMenuClick }: HeaderProps) {
+export default function Header({ onMenuClick, onAddFamily, onAddStudent, onAddCourse }: HeaderProps) {
   const [location] = useLocation();
   const pageInfo = pageLabels[location] || { title: "Page", description: "Homeschool Cooperative" };
+
+  const getActionButton = () => {
+    switch (location) {
+      case "/families":
+        return onAddFamily ? (
+          <Button 
+            onClick={onAddFamily}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Family
+          </Button>
+        ) : null;
+      case "/students":
+        return onAddStudent ? (
+          <Button 
+            onClick={onAddStudent}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Student
+          </Button>
+        ) : null;
+      case "/courses":
+        return onAddCourse ? (
+          <Button 
+            onClick={onAddCourse}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Course
+          </Button>
+        ) : null;
+      default:
+        return null;
+    }
+  };
 
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
@@ -37,6 +77,7 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          {getActionButton()}
           <Button variant="ghost" size="sm">
             <Bell className="h-5 w-5" />
           </Button>
