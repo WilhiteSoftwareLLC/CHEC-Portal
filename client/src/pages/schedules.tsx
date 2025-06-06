@@ -2,17 +2,16 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Calendar, Search, Save, User, BookOpen, Clock, GraduationCap } from "lucide-react";
+import { Calendar, Save, User, BookOpen, Clock, GraduationCap } from "lucide-react";
 import type { StudentWithFamily, Course } from "@shared/schema";
 
 export default function Schedules() {
-  const [search, setSearch] = useState("");
   const [scheduleChanges, setScheduleChanges] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
@@ -82,17 +81,7 @@ export default function Schedules() {
     return gradeCode !== null && gradeCode >= 7;
   }) : [];
 
-  const filteredStudents = eligibleStudents.filter((student: StudentWithFamily) => {
-    if (search) {
-      const searchLower = search.toLowerCase();
-      return (
-        student.firstName.toLowerCase().includes(searchLower) ||
-        student.lastName.toLowerCase().includes(searchLower) ||
-        student.family.lastName.toLowerCase().includes(searchLower)
-      );
-    }
-    return true;
-  });
+  const filteredStudents = eligibleStudents;
 
   // Get courses by hour and student class
   const getCoursesByHour = (hour: number, studentGradYear: string | null) => {
@@ -208,8 +197,7 @@ export default function Schedules() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Student Schedules</h1>
-          <p className="text-sm text-gray-600 mt-1">Assign courses to students (7th grade and older)</p>
+          <p className="text-sm text-gray-600">Assign courses to students (7th grade and older)</p>
         </div>
         {hasChanges && (
           <Button 
@@ -221,19 +209,6 @@ export default function Schedules() {
             Save Changes
           </Button>
         )}
-      </div>
-
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative w-96">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search students..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
       </div>
 
       {/* Students Schedule Grid */}
@@ -339,7 +314,7 @@ export default function Schedules() {
                 <GraduationCap className="mx-auto h-12 w-12 text-gray-400" />
                 <h3 className="mt-2 text-sm font-medium text-gray-900">No eligible students found</h3>
                 <p className="mt-1 text-sm text-gray-500">
-                  {search ? "Try adjusting your search terms." : "Only students in 7th grade and older can be scheduled for courses."}
+                  Only students in 7th grade and older can be scheduled for courses.
                 </p>
               </CardContent>
             </Card>
