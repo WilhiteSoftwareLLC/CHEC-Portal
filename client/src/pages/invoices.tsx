@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -10,6 +10,9 @@ import type { Family } from "@shared/schema";
 export default function Invoices() {
   const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoicePaymentStatus, setInvoicePaymentStatus] = useState<Record<number, boolean>>({});
+  
+  const queryClient = useQueryClient();
 
   const { data: families } = useQuery({
     queryKey: ["/api/families"],
@@ -95,7 +98,7 @@ export default function Invoices() {
       id: family.id,
       family,
       total,
-      paid: false, // Default to unpaid - could be stored in database later
+      paid: invoicePaymentStatus[family.id] || false,
       students: sortedStudents
     };
   };
@@ -334,6 +337,13 @@ export default function Invoices() {
     return grade ? grade.gradeName : "Unknown";
   };
 
+  const togglePaymentStatus = (familyId: number) => {
+    setInvoicePaymentStatus(prev => ({
+      ...prev,
+      [familyId]: !prev[familyId]
+    }));
+  };
+
   const handleViewInvoice = (family: Family) => {
     // Cache data for invoice generation
     (window as any).cachedSettings = settings;
@@ -349,8 +359,7 @@ export default function Invoices() {
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Invoices</h1>
-          <p className="text-sm text-gray-600 mt-1">Automatically computed from family and student data</p>
+          <p className="text-sm text-gray-600">Automatically computed from family and student data</p>
         </div>
         <div className="flex space-x-2">
           <Button variant="outline" onClick={handlePrintAllInvoices}>
@@ -451,6 +460,13 @@ export default function Invoices() {
                           onClick={() => handleViewInvoice(invoice.family)}
                         >
                           <Eye className="h-4 w-4" />
+                        </Button>
+                        <Button 
+                          variant={invoice.paid ? "outline" : "default"}
+                          size="sm"
+                          onClick={() => togglePaymentStatus(invoice.family.id)}
+                        >
+                          {invoice.paid ? "Mark Unpaid" : "Mark Paid"}
                         </Button>
                       </div>
                     </td>
