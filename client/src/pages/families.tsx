@@ -1,13 +1,11 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, Users, Phone, Mail } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddFamilyDialog from "@/components/dialogs/add-family-dialog";
 import type { Family } from "@shared/schema";
 
@@ -25,6 +23,26 @@ export default function Families() {
       return response.json();
     },
     retry: false,
+  });
+
+  const updateFamilyMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: Record<string, any> }) => {
+      await apiRequest(`/api/families/${id}`, "PATCH", updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+      toast({
+        title: "Family Updated",
+        description: "Family information has been saved.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteFamilyMutation = useMutation({
@@ -47,18 +65,37 @@ export default function Families() {
     },
   });
 
-  const handleDeleteFamily = (familyId: number) => {
+  const handleUpdateFamily = async (id: number, updates: Record<string, any>) => {
+    await updateFamilyMutation.mutateAsync({ id, updates });
+  };
+
+  const handleDeleteFamily = async (familyId: number) => {
     if (confirm("Are you sure you want to delete this family?")) {
-      deleteFamilyMutation.mutate(familyId);
+      await deleteFamilyMutation.mutateAsync(familyId);
     }
   };
+
+  const columns: GridColumn[] = [
+    { key: "lastName", label: "Last Name", sortable: true, editable: true, width: "48" },
+    { key: "father", label: "Father", sortable: true, editable: true, width: "48" },
+    { key: "mother", label: "Mother", sortable: true, editable: true, width: "48" },
+    { key: "email", label: "Email", sortable: true, editable: true, type: "email", width: "64" },
+    { key: "secondEmail", label: "Second Email", sortable: true, editable: true, type: "email", width: "64" },
+    { key: "parentCell", label: "Parent Cell", sortable: true, editable: true, type: "tel", width: "40" },
+    { key: "parentCell2", label: "Parent Cell 2", sortable: true, editable: true, type: "tel", width: "40" },
+    { key: "homePhone", label: "Home Phone", sortable: true, editable: true, type: "tel", width: "40" },
+    { key: "workPhone", label: "Work Phone", sortable: true, editable: true, type: "tel", width: "40" },
+    { key: "address", label: "Address", sortable: true, editable: true, width: "64" },
+    { key: "city", label: "City", sortable: true, editable: true, width: "40" },
+    { key: "zip", label: "ZIP", sortable: true, editable: true, width: "32" },
+  ];
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Families</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage family information and contacts</p>
+          <h1 className="text-2xl font-semibold text-gray-900 dark:text-gray-100">Families</h1>
+          <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">Manage family information and contacts</p>
         </div>
         <Button 
           onClick={() => setAddFamilyOpen(true)}
@@ -83,109 +120,19 @@ export default function Families() {
       </div>
 
       {/* Families Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-8 w-20" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {families?.length > 0 ? (
-            families.map((family: Family) => (
-              <Card key={family.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{family.lastName} Family</CardTitle>
-                      <p className="text-sm text-gray-600 mt-1">
-                        {[family.father, family.mother].filter(Boolean).join(" & ")}
-                      </p>
-                    </div>
-                    <div className="flex space-x-1">
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleDeleteFamily(family.id)}
-                        disabled={deleteFamilyMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {family.email && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Mail className="mr-2 h-4 w-4" />
-                        {family.email}
-                      </div>
-                    )}
-                    {(family.parentCell || family.homePhone) && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <Phone className="mr-2 h-4 w-4" />
-                        {family.parentCell || family.homePhone}
-                      </div>
-                    )}
-                    {family.address && (
-                      <p className="text-sm text-gray-600 line-clamp-2">
-                        {[family.address, family.city, family.zip].filter(Boolean).join(", ")}
-                      </p>
-                    )}
-                    <div className="pt-2">
-                      <Badge 
-                        variant="secondary" 
-                        className={family.active 
-                          ? "bg-green-100 text-green-800" 
-                          : "bg-gray-100 text-gray-600"
-                        }
-                      >
-                        <Users className="mr-1 h-3 w-3" />
-                        {family.active ? "Active Family" : "Inactive Family"}
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-12">
-              <Users className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No families found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {search ? "Try adjusting your search terms." : "Get started by adding a new family."}
-              </p>
-              {!search && (
-                <div className="mt-6">
-                  <Button onClick={() => setAddFamilyOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Family
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
+      <EditableGrid
+        data={families || []}
+        columns={columns}
+        onRowUpdate={handleUpdateFamily}
+        onRowDelete={handleDeleteFamily}
+        isLoading={isLoading}
+        className="mb-6"
+      />
 
-      <AddFamilyDialog open={addFamilyOpen} onOpenChange={setAddFamilyOpen} />
+      <AddFamilyDialog 
+        open={addFamilyOpen} 
+        onOpenChange={setAddFamilyOpen} 
+      />
     </div>
   );
 }
