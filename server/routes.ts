@@ -594,22 +594,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       for (const courseRow of courses) {
         try {
+          // Helper function to parse currency values
+          const parseCurrency = (value: any): string | null => {
+            if (!value || value === '') return null;
+            const cleanValue = String(value).replace(/[$,]/g, '');
+            const parsed = parseFloat(cleanValue);
+            return isNaN(parsed) ? null : parsed.toFixed(2);
+          };
+
+          // Helper function to parse boolean values
+          const parseBoolean = (value: any): boolean => {
+            if (typeof value === 'boolean') return value;
+            if (typeof value === 'string') {
+              return value.toLowerCase() === 'true' || value === '1';
+            }
+            return Boolean(value);
+          };
+
           // Map MS Access Course table columns to our schema
           const courseData = {
             courseName: courseRow.CourseName || courseRow.courseName || '',
-            offeredFall: courseRow.OfferedFall !== undefined ? Boolean(courseRow.OfferedFall) : true,
-            offeredSpring: courseRow.OfferedSpring !== undefined ? Boolean(courseRow.OfferedSpring) : true,
-            hour: courseRow.Hour || courseRow.hour || 1,
-            fee: courseRow.Fee ? String(courseRow.Fee) : null,
-            bookRental: courseRow.BookRental ? String(courseRow.BookRental) : null,
+            offeredFall: courseRow.OfferedFall !== undefined ? parseBoolean(courseRow.OfferedFall) : true,
+            offeredSpring: courseRow.OfferedSpring !== undefined ? parseBoolean(courseRow.OfferedSpring) : true,
+            hour: courseRow.Hour !== undefined ? parseInt(courseRow.Hour) || 0 : 0,
+            fee: parseCurrency(courseRow.Fee),
+            bookRental: parseCurrency(courseRow.BookRental),
             location: courseRow.Location || courseRow.location || null,
+            classId: null, // Will be assigned later based on course assignments
           };
 
-          const course = await storage.createCourse(courseData);
+          // Validate using the schema before creating
+          const validatedCourseData = insertCourseSchema.parse(courseData);
+          
+          const course = await storage.createCourse(validatedCourseData);
           newCourses++;
           console.log(`New course created: ${courseData.courseName}, newCourses count: ${newCourses}`);
           results.push({ success: true, course, isNew: true });
         } catch (error) {
+          console.error(`Failed to create course ${courseRow.CourseName || 'unknown'}:`, error);
           results.push({ success: false, error: (error as Error).message, data: courseRow });
         }
       }

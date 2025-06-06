@@ -1,0 +1,69 @@
+CourseName,OfferedFall,OfferedSpring,Hour,Fee,BookRental,Location
+3rd/4th History,TRUE,TRUE,3,$3.00,,
+3rd/4th Music,FALSE,FALSE,4,$6.00,,
+5th Art,TRUE,TRUE,5,$10.00,,
+5th/6th Chimes,TRUE,TRUE,2,$12.00,,
+5th/6th History,TRUE,TRUE,4,$3.00,,
+5th/6th Science,TRUE,TRUE,3,$12.00,,
+Algebra I,TRUE,TRUE,0,,$8.00,A201
+Algebra II,TRUE,TRUE,0,,$10.00,B109
+Anatomy & Physiology,TRUE,TRUE,4,$80.00,$15.00,B201
+Art - 3rd Hour,TRUE,TRUE,3,$20.00,$10.00,B112
+Art - 5th Hour,TRUE,TRUE,5,$20.00,$10.00,B112
+ASL 1 - 3rd Hour,TRUE,TRUE,3,,,B109
+ASL 1 - 5th Hour,TRUE,TRUE,5,,,B109
+ASL 2,TRUE,TRUE,5,,,B206
+Automotive,FALSE,FALSE,3,,,B204/205
+Biology,TRUE,TRUE,4,$65.00,$10.00,B204/205
+Chemistry,TRUE,TRUE,4,$25.00,$20.00,Southside
+Children of Math Teachers,TRUE,TRUE,0,,,
+Computer Applications - 3rd Hour,FALSE,FALSE,3,,,B114
+Computer Applications - 5th Hour,TRUE,TRUE,5,,,B114
+Creative and Technical Writing,TRUE,TRUE,1,,,B207
+Drama (9-12),TRUE,TRUE,5,$75.00,,Worship Center
+General Science (7),TRUE,TRUE,2,$10.00,$15.00,A201
+Geometry,TRUE,TRUE,0,,$10.00,B204/205
+Health & Nutrition,FALSE,FALSE,5,,,B204
+History of Western Philosophy,FALSE,FALSE,2,,,B204/205
+Home Improvement - 3rd Hour,TRUE,TRUE,3,,,B204/205
+Home Improvement - 5th Hour,TRUE,TRUE,5,,,B204/205
+HS Writing Part I,TRUE,TRUE,1,,$3.00,Southside
+HS Writing Part II,TRUE,TRUE,1,,,B114
+Intro to Drama (7-8),TRUE,TRUE,3,,,Worship Center
+JH Math,TRUE,TRUE,0,,$5.00,B114
+Logic,FALSE,FALSE,0,,,B207
+Math Tutoring,TRUE,TRUE,3,,,B107
+MS Excel (Fall),FALSE,FALSE,5,,,B109
+Personal Finance,TRUE,TRUE,0,,,B112
+Physical Science (8),TRUE,TRUE,1,$10.00,$15.00,A201
+Physics,TRUE,TRUE,4,$10.00,$20.00,B107
+Pre-Algebra,TRUE,TRUE,0,,$5.00,B207
+SAT Prep,TRUE,TRUE,5,,,B207
+SAT Prep (Fall) - Math Hour,FALSE,FALSE,0,,,B206
+Spanish I - 3rd Hour,FALSE,FALSE,3,,,B109
+Spanish II,TRUE,TRUE,5,,,B209
+Speech & Career,FALSE,FALSE,5,,,B107
+Speech (HS),TRUE,TRUE,5,,,B107
+Speech/Mock Trial,TRUE,TRUE,5,$18.00,,A201
+Student Volunteer - 1st Hour,TRUE,TRUE,1,,,
+Student Volunteer - 2nd Hour,TRUE,TRUE,2,,,
+Student Volunteer - 3rd Hour,TRUE,TRUE,3,,,
+Student Volunteer - 4th Hour,TRUE,TRUE,4,,,
+Student Volunteer - 5th Hour,TRUE,TRUE,5,,,
+Student Volunteer - Math Hour,TRUE,TRUE,0,,,
+Study Hall - 1st Hour,TRUE,TRUE,1,,,
+Study Hall - 2nd Hour,TRUE,TRUE,2,,,
+Study Hall - 3rd Hour,TRUE,TRUE,3,,,
+Study Hall - 4th Hour,TRUE,TRUE,4,,,
+Study Hall - 5th Hour,TRUE,TRUE,5,,,
+Study Hall - Lit,TRUE,TRUE,3,,,Southside
+Trigonometry & Precalculus,TRUE,TRUE,0,,$10.00,B206/209
+US Government with Economics,FALSE,FALSE,2,,,B109
+US History (7),TRUE,TRUE,4,,,B109
+US History (8),TRUE,TRUE,2,,,B109
+US History (HS),TRUE,TRUE,2,,$5.00,B204/205
+Will Not Attend Math Hour,TRUE,TRUE,0,,,
+World Geography,FALSE,FALSE,2,,,Southside
+World History,TRUE,TRUE,2,,,Southside
+Writeshop I,TRUE,TRUE,1,,,B109
+Writeshop II,TRUE,TRUE,4,,,B114
