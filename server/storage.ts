@@ -41,7 +41,7 @@ export interface IStorage {
   updateFamily(id: number, family: Partial<InsertFamily>): Promise<Family>;
   deleteFamily(id: number): Promise<void>;
   searchFamilies(query: string): Promise<Family[]>;
-  upsertFamily(family: InsertFamily): Promise<Family>;
+  upsertFamily(family: InsertFamily): Promise<{ family: Family; isNew: boolean }>;
   markAllFamiliesInactive(): Promise<void>;
 
   // Student operations
@@ -155,7 +155,16 @@ export class DatabaseStorage implements IStorage {
       .orderBy(families.lastName);
   }
 
-  async upsertFamily(family: InsertFamily): Promise<Family> {
+  async upsertFamily(family: InsertFamily): Promise<{ family: Family; isNew: boolean }> {
+    // Check if family exists first
+    const existingFamily = await db
+      .select()
+      .from(families)
+      .where(eq(families.id, family.id))
+      .limit(1);
+
+    const isNew = existingFamily.length === 0;
+
     // Use PostgreSQL ON CONFLICT with FamilyID as the unique key
     const [upsertedFamily] = await db
       .insert(families)
@@ -165,11 +174,20 @@ export class DatabaseStorage implements IStorage {
         set: family,
       })
       .returning();
-    return upsertedFamily;
+    
+    return { family: upsertedFamily, isNew };
   }
 
   async markAllFamiliesInactive(): Promise<void> {
     await db.update(families).set({ active: false });
+  }
+
+  async getInactiveFamiliesCount(): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(families)
+      .where(eq(families.active, false));
+    return result[0]?.count || 0;
   }
 
   // Student operations

@@ -28,7 +28,7 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Families Imported",
-        description: `Successfully imported ${response.successful || 0} families. ${response.failed || 0} failed.`,
+        description: `New: ${response.newFamilies || 0}, Modified: ${response.modifiedFamilies || 0}, Inactive: ${response.inactiveFamilies || 0}. ${response.failed || 0} failed.`,
       });
     },
     onError: (error) => {

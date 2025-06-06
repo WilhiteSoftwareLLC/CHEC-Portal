@@ -411,6 +411,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.markAllFamiliesInactive();
 
       const results = [];
+      let newFamilies = 0;
+      let modifiedFamilies = 0;
+
       for (const familyRow of families) {
         try {
           // Map MS Access Family table columns to our schema
@@ -434,18 +437,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
             active: true, // Mark families in import file as active
           };
 
-          const family = await storage.upsertFamily(familyData);
-          results.push({ success: true, family });
+          const result = await storage.upsertFamily(familyData);
+          if (result.isNew) {
+            newFamilies++;
+          } else {
+            modifiedFamilies++;
+          }
+          results.push({ success: true, family: result.family, isNew: result.isNew });
         } catch (error) {
           results.push({ success: false, error: (error as Error).message, data: familyRow });
         }
       }
 
+      // Count inactive families after processing
+      const inactiveFamilies = await storage.getInactiveFamiliesCount();
+
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+
       res.json({ 
         message: `Processed ${families.length} families`, 
         results,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length
+        successful,
+        failed,
+        newFamilies,
+        modifiedFamilies,
+        inactiveFamilies
       });
     } catch (error) {
       console.error("Error importing families:", error);
