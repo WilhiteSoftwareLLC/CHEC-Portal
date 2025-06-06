@@ -11,6 +11,7 @@ import Dashboard from "@/pages/dashboard";
 import Families from "@/pages/families";
 import Students from "@/pages/students";
 import Courses from "@/pages/courses";
+import Classes from "@/pages/classes";
 import Schedules from "@/pages/schedules";
 import Invoices from "@/pages/invoices";
 import Import from "@/pages/import";
@@ -31,6 +32,7 @@ function Router() {
             <Route path="/families" component={Families} />
             <Route path="/students" component={Students} />
             <Route path="/courses" component={Courses} />
+            <Route path="/classes" component={Classes} />
             <Route path="/schedules" component={Schedules} />
             <Route path="/invoices" component={Invoices} />
             <Route path="/import" component={Import} />
