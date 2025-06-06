@@ -7,6 +7,7 @@ interface HeaderProps {
   onAddFamily?: () => void;
   onAddStudent?: () => void;
   onAddCourse?: () => void;
+  onAddClass?: () => void;
 }
 
 const pageLabels: Record<string, { title: string; description: string }> = {
@@ -21,7 +22,7 @@ const pageLabels: Record<string, { title: string; description: string }> = {
   "/settings": { title: "Settings", description: "Configure system settings" },
 };
 
-export default function Header({ onMenuClick, onAddFamily, onAddStudent, onAddCourse }: HeaderProps) {
+export default function Header({ onMenuClick, onAddFamily, onAddStudent, onAddCourse, onAddClass }: HeaderProps) {
   const [location] = useLocation();
   const pageInfo = pageLabels[location] || { title: "Page", description: "Homeschool Cooperative" };
 
@@ -55,6 +56,16 @@ export default function Header({ onMenuClick, onAddFamily, onAddStudent, onAddCo
           >
             <Plus className="mr-2 h-4 w-4" />
             Add Course
+          </Button>
+        ) : null;
+      case "/classes":
+        return onAddClass ? (
+          <Button 
+            onClick={onAddClass}
+            className="bg-blue-600 hover:bg-blue-700"
+          >
+            <Plus className="mr-2 h-4 w-4" />
+            Add Class
           </Button>
         ) : null;
       default:
