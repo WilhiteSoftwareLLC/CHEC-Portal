@@ -156,7 +156,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertFamily(family: InsertFamily): Promise<{ family: Family; isNew: boolean }> {
-    // Check if family exists first
+    // Check if family exists (inactive families count as existing)
     const existingFamily = await db
       .select()
       .from(families)
@@ -165,17 +165,22 @@ export class DatabaseStorage implements IStorage {
 
     const isNew = existingFamily.length === 0;
 
-    // Use PostgreSQL ON CONFLICT with FamilyID as the unique key
-    const [upsertedFamily] = await db
-      .insert(families)
-      .values(family)
-      .onConflictDoUpdate({
-        target: families.id,
-        set: family,
-      })
-      .returning();
-    
-    return { family: upsertedFamily, isNew };
+    if (isNew) {
+      // Insert new family
+      const [newFamily] = await db
+        .insert(families)
+        .values(family)
+        .returning();
+      return { family: newFamily, isNew: true };
+    } else {
+      // Update existing family
+      const [updatedFamily] = await db
+        .update(families)
+        .set(family)
+        .where(eq(families.id, family.id))
+        .returning();
+      return { family: updatedFamily, isNew: false };
+    }
   }
 
   async markAllFamiliesInactive(): Promise<void> {

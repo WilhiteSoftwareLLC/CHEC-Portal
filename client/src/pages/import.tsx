@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -30,6 +30,11 @@ export default function Import() {
         title: "Families Imported",
         description: `New: ${response.newFamilies || 0}, Modified: ${response.modifiedFamilies || 0}, Inactive: ${response.inactiveFamilies || 0}. ${response.failed || 0} failed.`,
       });
+      // Clear the form data after successful import
+      setCsvData({ ...csvData, families: "" });
+      // Invalidate cache to refresh families list
+      queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error) => {
       toast({
