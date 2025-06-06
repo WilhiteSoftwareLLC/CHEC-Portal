@@ -2,16 +2,22 @@ import bcrypt from "bcryptjs";
 import type { Request, Response, NextFunction } from "express";
 import { storage } from "./storage";
 
+// Define authentication user type
+export interface AuthUser {
+  id: number;
+  username: string;
+  role: string;
+  familyId?: number;
+  email?: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 // Extend Express Request type to include user
 declare global {
   namespace Express {
     interface Request {
-      user?: {
-        id: number;
-        username: string;
-        role: string;
-        familyId?: number;
-      };
+      authUser?: AuthUser;
     }
   }
 }
@@ -25,21 +31,21 @@ export async function verifyPassword(password: string, hash: string): Promise<bo
 }
 
 export function requireAuth(req: Request, res: Response, next: NextFunction) {
-  if (!req.user) {
+  if (!req.authUser) {
     return res.status(401).json({ error: "Authentication required" });
   }
   next();
 }
 
 export function requireAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!req.user || req.user.role !== "admin") {
+  if (!req.authUser || req.authUser.role !== "admin") {
     return res.status(403).json({ error: "Admin access required" });
   }
   next();
 }
 
 export function requireParentOrAdmin(req: Request, res: Response, next: NextFunction) {
-  if (!req.user || (req.user.role !== "admin" && req.user.role !== "parent")) {
+  if (!req.authUser || (req.authUser.role !== "admin" && req.authUser.role !== "parent")) {
     return res.status(403).json({ error: "Parent or admin access required" });
   }
   next();
@@ -49,11 +55,11 @@ export function requireParentOrAdmin(req: Request, res: Response, next: NextFunc
 export function requireFamilyAccess(req: Request, res: Response, next: NextFunction) {
   const familyId = parseInt(req.params.familyId || req.body.familyId);
   
-  if (req.user?.role === "admin") {
+  if (req.authUser?.role === "admin") {
     return next(); // Admins can access all families
   }
   
-  if (req.user?.role === "parent" && req.user.familyId === familyId) {
+  if (req.authUser?.role === "parent" && req.authUser.familyId === familyId) {
     return next(); // Parents can access their own family
   }
   

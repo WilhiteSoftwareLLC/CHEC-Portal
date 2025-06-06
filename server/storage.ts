@@ -145,6 +145,86 @@ export class DatabaseStorage implements IStorage {
     return user;
   }
 
+  // Admin user operations
+  async getAdminUsers(): Promise<AdminUser[]> {
+    return await db.select().from(adminUsers).orderBy(desc(adminUsers.createdAt));
+  }
+
+  async getAdminUser(id: number): Promise<AdminUser | undefined> {
+    const [user] = await db.select().from(adminUsers).where(eq(adminUsers.id, id));
+    return user;
+  }
+
+  async getAdminUserByUsername(username: string): Promise<AdminUser | undefined> {
+    const [user] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
+    return user;
+  }
+
+  async getAdminUserByEmail(email: string): Promise<AdminUser | undefined> {
+    const [user] = await db.select().from(adminUsers).where(eq(adminUsers.email, email));
+    return user;
+  }
+
+  async createAdminUser(userData: InsertAdminUser): Promise<AdminUser> {
+    const [user] = await db.insert(adminUsers).values(userData).returning();
+    return user;
+  }
+
+  async updateAdminUser(id: number, userData: Partial<InsertAdminUser>): Promise<AdminUser> {
+    const [user] = await db
+      .update(adminUsers)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(adminUsers.id, id))
+      .returning();
+    return user;
+  }
+
+  async deleteAdminUser(id: number): Promise<void> {
+    await db.delete(adminUsers).where(eq(adminUsers.id, id));
+  }
+
+  // Parent user operations
+  async getParentUsers(): Promise<ParentUser[]> {
+    return await db.select().from(parentUsers).orderBy(desc(parentUsers.createdAt));
+  }
+
+  async getParentUser(id: number): Promise<ParentUser | undefined> {
+    const [user] = await db.select().from(parentUsers).where(eq(parentUsers.id, id));
+    return user;
+  }
+
+  async getParentUserByUsername(username: string): Promise<ParentUser | undefined> {
+    const [user] = await db.select().from(parentUsers).where(eq(parentUsers.username, username));
+    return user;
+  }
+
+  async getParentUserByEmail(email: string): Promise<ParentUser | undefined> {
+    const [user] = await db.select().from(parentUsers).where(eq(parentUsers.email, email));
+    return user;
+  }
+
+  async getParentUsersByFamily(familyId: number): Promise<ParentUser[]> {
+    return await db.select().from(parentUsers).where(eq(parentUsers.familyId, familyId));
+  }
+
+  async createParentUser(userData: InsertParentUser): Promise<ParentUser> {
+    const [user] = await db.insert(parentUsers).values(userData).returning();
+    return user;
+  }
+
+  async updateParentUser(id: number, userData: Partial<InsertParentUser>): Promise<ParentUser> {
+    const [user] = await db
+      .update(parentUsers)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(parentUsers.id, id))
+      .returning();
+    return user;
+  }
+
+  async deleteParentUser(id: number): Promise<void> {
+    await db.delete(parentUsers).where(eq(parentUsers.id, id));
+  }
+
   // Family operations
   async getFamilies(): Promise<Family[]> {
     return await db.select().from(families).orderBy(families.lastName);
