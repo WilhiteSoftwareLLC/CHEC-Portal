@@ -128,12 +128,25 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
   });
 
   const handleSubmit = (data: InsertStudent) => {
+    // Convert "NO_COURSE" values to null for database storage
+    const processedData = {
+      ...data,
+      mathHour: data.mathHour === "NO_COURSE" ? null : data.mathHour,
+      firstHour: data.firstHour === "NO_COURSE" ? null : data.firstHour,
+      secondHour: data.secondHour === "NO_COURSE" ? null : data.secondHour,
+      thirdHour: data.thirdHour === "NO_COURSE" ? null : data.thirdHour,
+      fourthHour: data.fourthHour === "NO_COURSE" ? null : data.fourthHour,
+      fifthHourFall: data.fifthHourFall === "NO_COURSE" ? null : data.fifthHourFall,
+      fifthHourSpring: data.fifthHourSpring === "NO_COURSE" ? null : data.fifthHourSpring,
+      fridayScience: data.fridayScience === "NO_COURSE" ? null : data.fridayScience,
+    };
+    
     if (student) {
-      updateMutation.mutate(data);
+      updateMutation.mutate(processedData);
     } else {
-      createMutation.mutate(data);
+      createMutation.mutate(processedData);
     }
-    onSubmit(data);
+    onSubmit(processedData);
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
@@ -377,7 +390,7 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">No course selected</SelectItem>
+                      <SelectItem value="NO_COURSE">No course selected</SelectItem>
                       {(hour6Courses as Course[]).map((course) => (
                         <SelectItem key={course.id} value={course.courseName}>
                           {course.courseName} - {course.location}
@@ -403,7 +416,7 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">No course selected</SelectItem>
+                      <SelectItem value="NO_COURSE">No course selected</SelectItem>
                       {(hour7Courses as Course[]).map((course) => (
                         <SelectItem key={course.id} value={course.courseName}>
                           {course.courseName} - {course.location}
@@ -429,7 +442,7 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="">No course selected</SelectItem>
+                      <SelectItem value="NO_COURSE">No course selected</SelectItem>
                       {(hour8Courses as Course[]).map((course) => (
                         <SelectItem key={course.id} value={course.courseName}>
                           {course.courseName} - {course.location}
