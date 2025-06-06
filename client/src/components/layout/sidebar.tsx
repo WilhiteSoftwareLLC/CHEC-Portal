@@ -33,8 +33,7 @@ const navigation = [
 ];
 
 const settingsNavigation = [
-  { name: "User Management", href: "/settings/users", icon: Settings },
-  { name: "Data Export", href: "/settings/export", icon: Download },
+  { name: "Settings", href: "/settings", icon: Settings },
 ];
 
 function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {

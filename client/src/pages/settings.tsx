@@ -32,10 +32,7 @@ export default function Settings() {
   // Mutation to update a setting
   const updateSettingMutation = useMutation({
     mutationFn: async ({ key, value, description }: { key: string; value: string; description?: string }) => {
-      await apiRequest(`/api/settings/${key}`, {
-        method: "PUT",
-        body: { value, description },
-      });
+      await apiRequest(`/api/settings/${key}`, "PUT", { value, description });
     },
     onSuccess: (_, { key }) => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
@@ -61,10 +58,7 @@ export default function Settings() {
   // Mutation to add a new setting
   const addSettingMutation = useMutation({
     mutationFn: async ({ key, value, description }: { key: string; value: string; description?: string }) => {
-      await apiRequest(`/api/settings/${key}`, {
-        method: "PUT",
-        body: { value, description },
-      });
+      await apiRequest(`/api/settings/${key}`, "PUT", { value, description });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
@@ -89,9 +83,7 @@ export default function Settings() {
   // Mutation to delete a setting
   const deleteSettingMutation = useMutation({
     mutationFn: async (key: string) => {
-      await apiRequest(`/api/settings/${key}`, {
-        method: "DELETE",
-      });
+      await apiRequest(`/api/settings/${key}`, "DELETE");
     },
     onSuccess: (_, key) => {
       queryClient.invalidateQueries({ queryKey: ["/api/settings"] });

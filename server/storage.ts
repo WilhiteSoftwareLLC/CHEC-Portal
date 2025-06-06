@@ -185,7 +185,7 @@ export class DatabaseStorage implements IStorage {
       // Update existing family
       const [updatedFamily] = await db
         .update(families)
-        .set({ ...familyData, updatedAt: new Date() })
+        .set(familyData)
         .where(eq(families.id, id))
         .returning();
       return { family: updatedFamily, isNew: false };
