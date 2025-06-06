@@ -114,7 +114,7 @@ export default function Students() {
   const createCourseOptions = (hour: number) => {
     const hourCourses = hour === 0 ? getMathHourCourses() : getCoursesByHour(hour);
     return [
-      { value: "", label: "No Course" },
+      { value: "NO_COURSE", label: "No Course" },
       ...hourCourses.map((course: any) => ({
         value: course.courseName,
         label: course.courseName

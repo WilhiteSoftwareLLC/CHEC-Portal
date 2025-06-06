@@ -180,10 +180,15 @@ export default function EditableGrid({
                           </div>
                         ) : column.type === "dropdown" ? (
                           <Select
-                            value={String(value ?? "")}
+                            value={value === null || value === "" ? "NO_COURSE" : String(value)}
                             onValueChange={async (newValue) => {
                               try {
-                                const parsedValue = isNaN(Number(newValue)) ? newValue : Number(newValue);
+                                let parsedValue: any;
+                                if (newValue === "NO_COURSE") {
+                                  parsedValue = null;
+                                } else {
+                                  parsedValue = isNaN(Number(newValue)) ? newValue : Number(newValue);
+                                }
                                 await onRowUpdate(row.id, { [column.key]: parsedValue });
                               } catch (error) {
                                 console.error("Failed to update dropdown:", error);
@@ -192,7 +197,8 @@ export default function EditableGrid({
                           >
                             <SelectTrigger className="h-8 text-sm">
                               <SelectValue placeholder="Select...">
-                                {column.options?.find(opt => String(opt.value) === String(value))?.label || "Select..."}
+                                {value === null || value === "" ? "No Course" : 
+                                 column.options?.find(opt => String(opt.value) === String(value))?.label || "Select..."}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
