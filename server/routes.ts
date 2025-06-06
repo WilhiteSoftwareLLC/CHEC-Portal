@@ -445,10 +445,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           if (isNew) {
             const family = await storage.createFamily(familyData);
             newFamilies++;
+            console.log(`New family created: ID ${familyData.id}, newFamilies count: ${newFamilies}`);
             results.push({ success: true, family, isNew: true });
           } else {
             const family = await storage.updateFamily(familyData.id, familyData);
             modifiedFamilies++;
+            console.log(`Family updated: ID ${familyData.id}, modifiedFamilies count: ${modifiedFamilies}`);
             results.push({ success: true, family, isNew: false });
           }
         } catch (error) {
@@ -464,6 +466,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const successful = results.filter(r => r.success).length;
       const failed = results.filter(r => !r.success).length;
+
+      console.log(`Final counts - New: ${newFamilies}, Modified: ${modifiedFamilies}, Inactive: ${inactiveFamilies}`);
 
       res.json({ 
         message: `Processed ${families.length} families`, 
