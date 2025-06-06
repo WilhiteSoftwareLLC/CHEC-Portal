@@ -8,9 +8,9 @@ export interface AuthUser {
   username: string;
   role: string;
   familyId?: number;
-  email?: string;
-  firstName?: string;
-  lastName?: string;
+  email?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
 }
 
 // Extend Express Request type to include user

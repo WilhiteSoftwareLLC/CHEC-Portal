@@ -20,9 +20,10 @@ export function useCredentialAuth() {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      return await apiRequest("/api/logout", {
+      const response = await fetch("/api/logout", {
         method: "POST",
       });
+      return response.json();
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/auth/me"], null);
@@ -39,8 +40,8 @@ export function useCredentialAuth() {
     user: user as AuthUser | null,
     isLoading,
     isAuthenticated: !!user,
-    isAdmin: user?.role === "admin",
-    isParent: user?.role === "parent",
+    isAdmin: (user as AuthUser)?.role === "admin",
+    isParent: (user as AuthUser)?.role === "parent",
     logout,
     error,
   };

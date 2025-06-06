@@ -8,6 +8,7 @@ import { useCredentialAuth } from "@/hooks/useCredentialAuth";
 import { DialogProvider } from "@/contexts/dialog-context";
 import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
+import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Families from "@/pages/families";
 import Students from "@/pages/students";
@@ -20,11 +21,27 @@ import Settings from "@/pages/settings";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated: replitAuth, isLoading: replitLoading } = useAuth();
+  const { isAuthenticated: credentialAuth, isLoading: credentialLoading, user } = useCredentialAuth();
+
+  const isLoading = replitLoading || credentialLoading;
+  const isAuthenticated = replitAuth || credentialAuth;
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <Switch>
-      {isLoading || !isAuthenticated ? (
+      <Route path="/login" component={Login} />
+      {!isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
         <DialogProvider>
