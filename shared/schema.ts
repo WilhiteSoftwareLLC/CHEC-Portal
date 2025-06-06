@@ -61,7 +61,7 @@ export const hours = pgTable("hours", {
 
 // Family table - matches your existing structure
 export const families = pgTable("families", {
-  id: serial("id").primaryKey(),
+  id: integer("id").primaryKey(),
   lastName: varchar("last_name", { length: 255 }).notNull(),
   father: varchar("father", { length: 255 }),
   mother: varchar("mother", { length: 255 }),

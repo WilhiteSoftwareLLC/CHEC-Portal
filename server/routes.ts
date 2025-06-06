@@ -415,6 +415,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         try {
           // Map MS Access Family table columns to our schema
           const familyData = {
+            id: parseInt(familyRow.FamilyID || familyRow.familyID || familyRow.id),
             lastName: familyRow.LastName || familyRow.lastName || '',
             father: familyRow.Father || familyRow.father || null,
             mother: familyRow.Mother || familyRow.mother || null,

@@ -251,7 +251,7 @@ export default function Import() {
             <CardHeader>
               <CardTitle>Import Families</CardTitle>
               <CardDescription>
-                Expected fields: LastName, Father, Mother, Email, SecondEmail, ParentCell, ParentCell2, 
+                Expected fields: FamilyID, LastName, Father, Mother, Email, SecondEmail, ParentCell, ParentCell2, 
                 HomePhone, WorkPhone, Address, City, Zip, Church, PastorName, PastorPhone
               </CardDescription>
             </CardHeader>

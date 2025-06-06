@@ -156,35 +156,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertFamily(family: InsertFamily): Promise<Family> {
-    // Check for existing family using LastName, Father, Mother combination
-    const existingFamily = await db
-      .select()
-      .from(families)
-      .where(
-        and(
-          eq(families.lastName, family.lastName),
-          family.father ? eq(families.father, family.father) : sql`${families.father} IS NULL`,
-          family.mother ? eq(families.mother, family.mother) : sql`${families.mother} IS NULL`
-        )
-      )
-      .limit(1);
-
-    if (existingFamily.length > 0) {
-      // Update existing family
-      const [updatedFamily] = await db
-        .update(families)
-        .set(family)
-        .where(eq(families.id, existingFamily[0].id))
-        .returning();
-      return updatedFamily;
-    } else {
-      // Create new family
-      const [newFamily] = await db
-        .insert(families)
-        .values(family)
-        .returning();
-      return newFamily;
-    }
+    // Use PostgreSQL ON CONFLICT with FamilyID as the unique key
+    const [upsertedFamily] = await db
+      .insert(families)
+      .values(family)
+      .onConflictDoUpdate({
+        target: families.id,
+        set: family,
+      })
+      .returning();
+    return upsertedFamily;
   }
 
   async markAllFamiliesInactive(): Promise<void> {
