@@ -28,6 +28,16 @@ export default function Students() {
     queryKey: ["/api/grades"],
   });
 
+  const { data: courses } = useQuery({
+    queryKey: ["/api/courses"],
+    queryFn: async () => {
+      const response = await fetch("/api/courses", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
+  });
+
   const updateStudentMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Record<string, any> }) => {
       await apiRequest(`/api/students/${id}`, "PATCH", updates);
@@ -88,6 +98,30 @@ export default function Students() {
     return grade ? grade.gradeName : "Unknown";
   };
 
+  // Get courses for specific hour
+  const getCoursesByHour = (hour: number) => {
+    if (!courses) return [];
+    return (courses as any[]).filter((course: any) => course.hour === hour);
+  };
+
+  // Get Math Hour courses (hour = 0)
+  const getMathHourCourses = () => {
+    if (!courses) return [];
+    return (courses as any[]).filter((course: any) => course.hour === 0);
+  };
+
+  // Create course options for dropdowns
+  const createCourseOptions = (hour: number) => {
+    const hourCourses = hour === 0 ? getMathHourCourses() : getCoursesByHour(hour);
+    return [
+      { value: "", label: "No Course" },
+      ...hourCourses.map((course: any) => ({
+        value: course.courseName,
+        label: course.courseName
+      }))
+    ];
+  };
+
   // Prepare data with computed grade
   const studentsWithGrade = students?.map((student: StudentWithFamily) => ({
     ...student,
@@ -101,11 +135,11 @@ export default function Students() {
     { key: "familyName", label: "Family", sortable: true, editable: false, width: "40" },
     { key: "currentGrade", label: "Current Grade", sortable: true, editable: false, width: "32" },
     { key: "gradYear", label: "Grad Year", sortable: true, editable: true, type: "number", width: "28" },
-    { key: "mathHour", label: "Math Hour", sortable: true, editable: true, width: "40" },
-    { key: "firstHour", label: "1st Hour", sortable: true, editable: true, width: "40" },
-    { key: "secondHour", label: "2nd Hour", sortable: true, editable: true, width: "40" },
-    { key: "thirdHour", label: "3rd Hour", sortable: true, editable: true, width: "40" },
-    { key: "fourthHour", label: "4th Hour", sortable: true, editable: true, width: "40" },
+    { key: "mathHour", label: "Math Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(0) },
+    { key: "firstHour", label: "1st Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(1) },
+    { key: "secondHour", label: "2nd Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(2) },
+    { key: "thirdHour", label: "3rd Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(3) },
+    { key: "fourthHour", label: "4th Hour", sortable: true, editable: false, width: "40", type: "dropdown", options: createCourseOptions(4) },
     { key: "fifthHourFall", label: "5th Hour (Fall)", sortable: true, editable: true, width: "48" },
     { key: "fifthHourSpring", label: "5th Hour (Spring)", sortable: true, editable: true, width: "48" },
   ];
