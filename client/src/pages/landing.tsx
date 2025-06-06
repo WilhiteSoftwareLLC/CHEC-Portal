@@ -19,12 +19,12 @@ export default function Landing() {
           <div className="flex items-center justify-center mb-6">
             <GraduationCap className="h-16 w-16 text-blue-600 mr-4" />
             <div>
-              <h1 className="text-4xl font-bold text-gray-900">Homeschool Co-op</h1>
+              <h1 className="text-4xl font-bold text-gray-900">CHEC Portal</h1>
               <p className="text-xl text-gray-600 mt-2">Management System</p>
             </div>
           </div>
           <p className="text-lg text-gray-700 max-w-2xl mx-auto">
-            Streamline your homeschool cooperative with comprehensive family, student, and course management tools.
+            Streamline your CHEC Portal with comprehensive family, student, and course management tools.
           </p>
         </div>
 
@@ -96,7 +96,7 @@ export default function Landing() {
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Ready to Get Started?</CardTitle>
             <CardDescription className="text-lg">
-              Sign in to access your homeschool cooperative management dashboard
+              Sign in to access your CHEC Portal management dashboard
             </CardDescription>
           </CardHeader>
           <CardContent className="text-center">

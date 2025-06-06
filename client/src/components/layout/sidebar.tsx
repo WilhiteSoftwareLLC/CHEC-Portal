@@ -50,10 +50,7 @@ function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
     <div className="flex h-full flex-col">
       {/* Header */}
       <div className="flex h-16 items-center px-6 border-b border-gray-200">
-        <h1 className="text-xl font-semibold text-gray-900">Homeschool Co-op</h1>
-      </div>
-      <div className="px-6 py-2">
-        <p className="text-sm text-gray-600">Management System</p>
+        <h1 className="text-xl font-semibold text-gray-900">CHEC Portal</h1>
       </div>
 
       {/* Navigation */}

@@ -11,7 +11,7 @@ interface HeaderProps {
 }
 
 const pageLabels: Record<string, { title: string; description: string }> = {
-  "/": { title: "Dashboard", description: "Homeschool Cooperative Overview" },
+  "/": { title: "Dashboard", description: "CHEC Portal Overview" },
   "/families": { title: "Families", description: "Manage family information and contacts" },
   "/students": { title: "Students", description: "Manage student records and enrollment" },
   "/courses": { title: "Courses", description: "Manage courses and instructors" },
@@ -24,7 +24,7 @@ const pageLabels: Record<string, { title: string; description: string }> = {
 
 export default function Header({ onMenuClick, onAddFamily, onAddStudent, onAddCourse, onAddClass }: HeaderProps) {
   const [location] = useLocation();
-  const pageInfo = pageLabels[location] || { title: "Page", description: "Homeschool Cooperative" };
+  const pageInfo = pageLabels[location] || { title: "Page", description: "CHEC Portal" };
 
   const getActionButton = () => {
     switch (location) {

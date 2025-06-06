@@ -19,7 +19,7 @@ export default function AddFamilyDialog({ open, onOpenChange }: AddFamilyDialogP
         <DialogHeader>
           <DialogTitle>Add New Family</DialogTitle>
           <DialogDescription>
-            Add a new family to the homeschool cooperative with contact information.
+            Add a new family to CHEC Portal with contact information.
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[calc(90vh-120px)] overflow-y-auto">
