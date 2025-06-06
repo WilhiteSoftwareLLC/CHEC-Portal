@@ -429,7 +429,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             pastorPhone: familyRow.PastorPhone || familyRow.pastorPhone || null,
           };
 
-          const family = await storage.createFamily(familyData);
+          const family = await storage.upsertFamily(familyData);
           results.push({ success: true, family });
         } catch (error) {
           results.push({ success: false, error: (error as Error).message, data: familyRow });

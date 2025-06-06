@@ -26,7 +26,7 @@ import {
   type InsertSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, like, count, sql, and } from "drizzle-orm";
+import { eq, desc, like, count, sql, and, isNull } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -162,8 +162,8 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(families.lastName, family.lastName),
-          family.father ? eq(families.father, family.father) : isNull(families.father),
-          family.mother ? eq(families.mother, family.mother) : isNull(families.mother)
+          family.father ? eq(families.father, family.father) : sql`${families.father} IS NULL`,
+          family.mother ? eq(families.mother, family.mother) : sql`${families.mother} IS NULL`
         )
       )
       .limit(1);
@@ -172,10 +172,7 @@ export class DatabaseStorage implements IStorage {
       // Update existing family
       const [updatedFamily] = await db
         .update(families)
-        .set({
-          ...family,
-          updatedAt: new Date(),
-        })
+        .set(family)
         .where(eq(families.id, existingFamily[0].id))
         .returning();
       return updatedFamily;
