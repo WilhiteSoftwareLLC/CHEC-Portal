@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Search, Edit, Trash2, FileText, Download, PrinterCheck, DollarSign, Calendar, Users } from "lucide-react";
-import type { InvoiceWithDetails, Family } from "@shared/schema";
+import type { Family } from "@shared/schema";
 
 export default function Invoices() {
   const [search, setSearch] = useState("");
@@ -23,19 +23,34 @@ export default function Invoices() {
     retry: false,
   });
 
-  const filteredInvoices = invoices?.filter((invoice: InvoiceWithDetails) => {
+  const { data: students } = useQuery({
+    queryKey: ["/api/students"],
+    retry: false,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ["/api/settings"],
+    retry: false,
+  });
+
+  const { data: grades } = useQuery({
+    queryKey: ["/api/grades"],
+    retry: false,
+  });
+
+  const filteredInvoices = invoices?.filter((invoice: any) => {
     if (statusFilter && invoice.status !== statusFilter) {
       return false;
     }
     if (search) {
       const searchLower = search.toLowerCase();
       return (
-        invoice.invoiceNumber.toLowerCase().includes(searchLower) ||
-        invoice.family.name.toLowerCase().includes(searchLower)
+        invoice.invoiceNumber?.toLowerCase().includes(searchLower) ||
+        invoice.family?.name?.toLowerCase().includes(searchLower)
       );
     }
     return true;
-  });
+  }) || [];
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Not specified";
@@ -67,21 +82,21 @@ export default function Invoices() {
   };
 
   const calculateTotalRevenue = () => {
-    return invoices?.reduce((total: number, invoice: InvoiceWithDetails) => {
+    return Array.isArray(invoices) ? invoices.reduce((total: number, invoice: any) => {
       if (invoice.status === 'paid') {
         return total + parseFloat(invoice.total || "0");
       }
       return total;
-    }, 0) || 0;
+    }, 0) : 0;
   };
 
   const calculatePendingAmount = () => {
-    return invoices?.reduce((total: number, invoice: InvoiceWithDetails) => {
+    return Array.isArray(invoices) ? invoices.reduce((total: number, invoice: any) => {
       if (invoice.status === 'pending') {
         return total + parseFloat(invoice.total || "0");
       }
       return total;
-    }, 0) || 0;
+    }, 0) : 0;
   };
 
   const handleExportInvoices = () => {
@@ -92,6 +107,214 @@ export default function Invoices() {
   const handlePrintInvoice = (invoiceId: number) => {
     // TODO: Implement invoice printing functionality
     console.log("Printing invoice:", invoiceId);
+  };
+
+  const handlePrintAllInvoices = () => {
+    if (!families || !students || !settings || !grades) return;
+    
+    // Cache data for invoice generation
+    (window as any).cachedSettings = settings;
+    (window as any).cachedStudents = students;
+    (window as any).cachedGrades = grades;
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    // Generate invoice HTML for all families
+    const invoiceHTML = generateAllInvoicesHTML();
+    
+    printWindow.document.write(invoiceHTML);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const generateAllInvoicesHTML = () => {
+    if (!families) return '';
+
+    const invoicePages = (families as Family[]).map((family, index) => 
+      generateSingleInvoiceHTML(family, index > 0)
+    ).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>CHEC Invoices</title>
+          <style>
+            @media print {
+              .page-break { page-break-before: always; }
+            }
+            body { font-family: Arial, sans-serif; margin: 20px; }
+            .invoice-header { text-align: center; margin-bottom: 30px; }
+            .invoice-header h1 { font-size: 24px; margin: 0; color: #333; }
+            .family-name { font-size: 18px; margin: 20px 0; font-weight: bold; color: #555; }
+            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+            th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            th { background-color: #f5f5f5; font-weight: bold; }
+            .fee-column { text-align: right; }
+            .total-row { border-top: 2px solid #333; font-weight: bold; }
+            .total-row td { padding-top: 15px; }
+          </style>
+        </head>
+        <body>
+          ${invoicePages}
+        </body>
+      </html>
+    `;
+  };
+
+  const generateSingleInvoiceHTML = (family: Family, addPageBreak: boolean = false) => {
+    // Get settings for fees
+    const familyFee = parseFloat((window as any).cachedSettings?.FamilyFee || "20");
+    const backgroundFee = parseFloat((window as any).cachedSettings?.BackgroundFee || "0");
+    const studentFee = parseFloat((window as any).cachedSettings?.StudentFee || "20");
+
+    // Get students for this family
+    const familyStudents = (window as any).cachedStudents?.filter((s: any) => s.familyId === family.id) || [];
+
+    let invoiceRows = [];
+    let total = 0;
+
+    // Add family fee
+    invoiceRows.push({
+      name: `${family.father || ''} & ${family.mother || ''}`.trim() || family.lastName,
+      grade: '',
+      hour: '',
+      item: 'Family Fee',
+      fee: familyFee
+    });
+    total += familyFee;
+
+    // Add background check fee
+    invoiceRows.push({
+      name: `${family.father || ''} & ${family.mother || ''}`.trim() || family.lastName,
+      grade: '',
+      hour: '',
+      item: 'Background Check',
+      fee: backgroundFee
+    });
+    total += backgroundFee;
+
+    // Add student fees and course fees
+    familyStudents.forEach((student: any) => {
+      const currentGrade = getCurrentGradeForStudent(student);
+      
+      // Student fee
+      invoiceRows.push({
+        name: student.firstName,
+        grade: currentGrade,
+        hour: '',
+        item: 'Student Fee',
+        fee: studentFee
+      });
+      total += studentFee;
+
+      // Course fees (placeholder - would need actual course fee data)
+      if (student.mathHour) {
+        invoiceRows.push({
+          name: student.firstName,
+          grade: currentGrade,
+          hour: 'Math',
+          item: student.mathHour,
+          fee: 15 // placeholder fee
+        });
+        total += 15;
+      }
+
+      if (student.firstHour) {
+        invoiceRows.push({
+          name: student.firstName,
+          grade: currentGrade,
+          hour: '1st',
+          item: student.firstHour,
+          fee: 25 // placeholder fee
+        });
+        total += 25;
+      }
+
+      if (student.secondHour) {
+        invoiceRows.push({
+          name: student.firstName,
+          grade: currentGrade,
+          hour: '2nd',
+          item: student.secondHour,
+          fee: 25 // placeholder fee
+        });
+        total += 25;
+      }
+
+      if (student.thirdHour) {
+        invoiceRows.push({
+          name: student.firstName,
+          grade: currentGrade,
+          hour: '3rd',
+          item: student.thirdHour,
+          fee: 25 // placeholder fee
+        });
+        total += 25;
+      }
+
+      if (student.fourthHour) {
+        invoiceRows.push({
+          name: student.firstName,
+          grade: currentGrade,
+          hour: '4th',
+          item: student.fourthHour,
+          fee: 25 // placeholder fee
+        });
+        total += 25;
+      }
+    });
+
+    const rowsHTML = invoiceRows.map(row => `
+      <tr>
+        <td>${row.name}</td>
+        <td>${row.grade}</td>
+        <td>${row.hour}</td>
+        <td>${row.item}</td>
+        <td class="fee-column">$${row.fee}</td>
+      </tr>
+    `).join('');
+
+    return `
+      ${addPageBreak ? '<div class="page-break"></div>' : ''}
+      <div class="invoice-header">
+        <h1>CHEC Fees</h1>
+      </div>
+      <div class="family-name">${family.lastName}, ${family.father || ''} & ${family.mother || ''}</div>
+      <table>
+        <thead>
+          <tr>
+            <th>First Name</th>
+            <th>Grade</th>
+            <th>Hour</th>
+            <th>Item</th>
+            <th class="fee-column">Fee</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHTML}
+          <tr class="total-row">
+            <td colspan="4"><strong>Total Fees Due</strong></td>
+            <td class="fee-column"><strong>$${total}</strong></td>
+          </tr>
+        </tbody>
+      </table>
+    `;
+  };
+
+  const getCurrentGradeForStudent = (student: any) => {
+    const settings = (window as any).cachedSettings;
+    const grades = (window as any).cachedGrades;
+    
+    if (!settings || !grades || !student.gradYear) return "Unknown";
+    
+    const schoolYear = parseInt(settings.SchoolYear || "2024");
+    const gradeCode = schoolYear - parseInt(student.gradYear) + 13;
+    const grade = grades.find((g: any) => g.code === gradeCode);
+    return grade ? grade.gradeName : "Unknown";
   };
 
   return (
@@ -105,6 +328,10 @@ export default function Invoices() {
           <Button variant="outline" onClick={handleExportInvoices}>
             <Download className="mr-2 h-4 w-4" />
             Export
+          </Button>
+          <Button variant="outline" onClick={handlePrintAllInvoices}>
+            <PrinterCheck className="mr-2 h-4 w-4" />
+            Print All Invoices
           </Button>
           <Button className="bg-blue-600 hover:bg-blue-700">
             <Plus className="mr-2 h-4 w-4" />
