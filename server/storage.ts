@@ -41,6 +41,7 @@ export interface IStorage {
   updateFamily(id: number, family: Partial<InsertFamily>): Promise<Family>;
   deleteFamily(id: number): Promise<void>;
   searchFamilies(query: string): Promise<Family[]>;
+  upsertFamily(family: InsertFamily): Promise<Family>;
 
   // Student operations
   getStudents(): Promise<StudentWithFamily[]>;
@@ -151,6 +152,41 @@ export class DatabaseStorage implements IStorage {
             LOWER(${families.mother}) LIKE LOWER(${'%' + query + '%'})`
       )
       .orderBy(families.lastName);
+  }
+
+  async upsertFamily(family: InsertFamily): Promise<Family> {
+    // Check for existing family using LastName, Father, Mother combination
+    const existingFamily = await db
+      .select()
+      .from(families)
+      .where(
+        and(
+          eq(families.lastName, family.lastName),
+          family.father ? eq(families.father, family.father) : isNull(families.father),
+          family.mother ? eq(families.mother, family.mother) : isNull(families.mother)
+        )
+      )
+      .limit(1);
+
+    if (existingFamily.length > 0) {
+      // Update existing family
+      const [updatedFamily] = await db
+        .update(families)
+        .set({
+          ...family,
+          updatedAt: new Date(),
+        })
+        .where(eq(families.id, existingFamily[0].id))
+        .returning();
+      return updatedFamily;
+    } else {
+      // Create new family
+      const [newFamily] = await db
+        .insert(families)
+        .values(family)
+        .returning();
+      return newFamily;
+    }
   }
 
   // Student operations
