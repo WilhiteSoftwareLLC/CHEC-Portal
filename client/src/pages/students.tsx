@@ -218,8 +218,51 @@ export default function Students() {
       type: "dropdown", 
       options: (row: any) => createCourseOptions(4, row.gradYear)
     },
-    { key: "fifthHourFall", label: "5th Hour (Fall)", sortable: true, editable: true, width: "48" },
-    { key: "fifthHourSpring", label: "5th Hour (Spring)", sortable: true, editable: true, width: "48" },
+    { 
+      key: "fifthHourFall", 
+      label: "5th Hour (Fall)", 
+      sortable: true, 
+      editable: false, 
+      width: "48", 
+      type: "dropdown", 
+      options: (row: any) => createCourseOptions(5, row.gradYear)
+    },
+    { 
+      key: "fifthHourSpring", 
+      label: "5th Hour (Spring)", 
+      sortable: true, 
+      editable: false, 
+      width: "48", 
+      type: "dropdown", 
+      options: (row: any) => createCourseOptions(5, row.gradYear)
+    },
+    { 
+      key: "fridayScience", 
+      label: "Friday Science", 
+      sortable: true, 
+      editable: false, 
+      width: "40", 
+      type: "dropdown", 
+      options: (row: any) => {
+        if (!courses) return [{ value: "NO_COURSE", label: "No Course" }];
+        const studentClass = getStudentClass(row.gradYear);
+        
+        // Filter courses for Friday Science or science-related courses
+        const fridayCourses = (courses as any[]).filter((course: any) => 
+          (course.location?.toLowerCase().includes('friday') || 
+           course.courseName?.toLowerCase().includes('science')) &&
+          (course.classId === studentClass?.id || course.classId === null)
+        );
+        
+        return [
+          { value: "NO_COURSE", label: "No Course" },
+          ...fridayCourses.map((course: any) => ({
+            value: course.courseName,
+            label: course.courseName
+          }))
+        ];
+      }
+    },
   ];
 
   return (
