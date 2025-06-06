@@ -407,6 +407,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Expected array of families" });
       }
 
+      // First, mark all existing families as inactive
+      await storage.markAllFamiliesInactive();
+
       const results = [];
       for (const familyRow of families) {
         try {
@@ -427,6 +430,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             church: familyRow.Church || familyRow.church || null,
             pastorName: familyRow.PastorName || familyRow.pastorName || null,
             pastorPhone: familyRow.PastorPhone || familyRow.pastorPhone || null,
+            active: true, // Mark families in import file as active
           };
 
           const family = await storage.upsertFamily(familyData);

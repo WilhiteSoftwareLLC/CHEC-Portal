@@ -42,6 +42,7 @@ export interface IStorage {
   deleteFamily(id: number): Promise<void>;
   searchFamilies(query: string): Promise<Family[]>;
   upsertFamily(family: InsertFamily): Promise<Family>;
+  markAllFamiliesInactive(): Promise<void>;
 
   // Student operations
   getStudents(): Promise<StudentWithFamily[]>;
@@ -184,6 +185,10 @@ export class DatabaseStorage implements IStorage {
         .returning();
       return newFamily;
     }
+  }
+
+  async markAllFamiliesInactive(): Promise<void> {
+    await db.update(families).set({ active: false });
   }
 
   // Student operations

@@ -77,6 +77,7 @@ export const families = pgTable("families", {
   church: varchar("church", { length: 255 }),
   pastorName: varchar("pastor_name", { length: 255 }),
   pastorPhone: varchar("pastor_phone", { length: 20 }),
+  active: boolean("active").default(true),
 });
 
 // Former Families table - families no longer part of co-op
