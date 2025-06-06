@@ -144,6 +144,7 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
       fifthHourFall: student?.fifthHourFall || "",
       fifthHourSpring: student?.fifthHourSpring || "",
       fridayScience: student?.fridayScience || "",
+      inactive: student?.inactive || false,
     },
   });
 
@@ -184,6 +185,7 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
       fifthHourFall: data.fifthHourFall === "NO_COURSE" ? null : data.fifthHourFall,
       fifthHourSpring: data.fifthHourSpring === "NO_COURSE" ? null : data.fifthHourSpring,
       fridayScience: data.fridayScience === "NO_COURSE" ? null : data.fridayScience,
+      inactive: data.inactive,
     };
     
     if (student) {
@@ -284,6 +286,29 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
                   />
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="inactive"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormControl>
+                  <Checkbox
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+                <div className="space-y-1 leading-none">
+                  <FormLabel>
+                    Mark as Inactive
+                  </FormLabel>
+                  <FormDescription>
+                    Inactive students will be excluded from certain reports and calculations.
+                  </FormDescription>
+                </div>
               </FormItem>
             )}
           />

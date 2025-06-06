@@ -181,6 +181,7 @@ export default function Students() {
     { key: "familyName", label: "Family", sortable: true, editable: false, width: "40" },
     { key: "currentGrade", label: "Current Grade", sortable: true, editable: false, width: "32" },
     { key: "gradYear", label: "Grad Year", sortable: true, editable: true, type: "number", width: "28" },
+    { key: "inactive", label: "Inactive", sortable: true, editable: false, type: "checkbox", width: "24" },
     { 
       key: "mathHour", 
       label: "Math Hour", 
