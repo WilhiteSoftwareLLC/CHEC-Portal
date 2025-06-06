@@ -1,15 +1,27 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { insertStudentSchema, type InsertStudent, type Student } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
+import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { insertStudentSchema, type Family, type Student, type InsertStudent } from "@shared/schema";
 
 interface StudentFormProps {
   student?: Student;
@@ -21,66 +33,27 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: families } = useQuery({
+  // Fetch families for the dropdown
+  const { data: families = [] } = useQuery({
     queryKey: ["/api/families"],
-    retry: false,
-  });
-
-  const form = useForm<InsertStudent>({
-    resolver: zodResolver(insertStudentSchema),
-    defaultValues: student ? {
-      familyId: student.familyId,
-      firstName: student.firstName,
-      lastName: student.lastName,
-      dateOfBirth: student.dateOfBirth || "",
-      grade: student.grade || "",
-      allergies: student.allergies || "",
-      medicalConditions: student.medicalConditions || "",
-      specialNeeds: student.specialNeeds || "",
-      notes: student.notes || "",
-      active: student.active ?? true,
-    } : {
-      familyId: 0,
-      firstName: "",
-      lastName: "",
-      dateOfBirth: "",
-      grade: "",
-      allergies: "",
-      medicalConditions: "",
-      specialNeeds: "",
-      notes: "",
-      active: true,
-    },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
-      await apiRequest("POST", "/api/students", data);
+      const response = await apiRequest("/api/students", "POST", data);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Success",
         description: "Student created successfully",
       });
-      onSubmit(form.getValues());
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
-        description: "Failed to create student",
+        description: error.message || "Failed to create student",
         variant: "destructive",
       });
     },
@@ -88,33 +61,43 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
 
   const updateMutation = useMutation({
     mutationFn: async (data: InsertStudent) => {
-      await apiRequest("PUT", `/api/students/${student!.id}`, data);
+      const response = await apiRequest(`/api/students/${student!.id}`, "PATCH", data);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/students", student!.id] });
       toast({
         title: "Success",
         description: "Student updated successfully",
       });
-      onSubmit(form.getValues());
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
-        description: "Failed to update student",
+        description: error.message || "Failed to update student",
         variant: "destructive",
       });
+    },
+  });
+
+  const form = useForm<InsertStudent>({
+    resolver: zodResolver(insertStudentSchema),
+    defaultValues: {
+      familyId: student?.familyId || 0,
+      lastName: student?.lastName || "",
+      firstName: student?.firstName || "",
+      birthdate: student?.birthdate ? new Date(student.birthdate) : undefined,
+      gradYear: student?.gradYear || "",
+      comment1: student?.comment1 || "",
+      mathHour: student?.mathHour || "",
+      firstHour: student?.firstHour || "",
+      secondHour: student?.secondHour || "",
+      thirdHour: student?.thirdHour || "",
+      fourthHour: student?.fourthHour || "",
+      fifthHourFall: student?.fifthHourFall || "",
+      fifthHourSpring: student?.fifthHourSpring || "",
+      fridayScience: student?.fridayScience || "",
     },
   });
 
@@ -124,30 +107,34 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
     } else {
       createMutation.mutate(data);
     }
+    onSubmit(data);
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
             name="familyId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Family</FormLabel>
-                <Select onValueChange={(value) => field.onChange(parseInt(value))} value={field.value?.toString()}>
+                <FormLabel>Family *</FormLabel>
+                <Select
+                  onValueChange={(value) => field.onChange(parseInt(value))}
+                  value={field.value?.toString()}
+                >
                   <FormControl>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a family" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {families?.map((family: any) => (
+                    {families.map((family: Family) => (
                       <SelectItem key={family.id} value={family.id.toString()}>
-                        {family.name}
+                        {family.lastName}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -159,24 +146,10 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
 
           <FormField
             control={form.control}
-            name="grade"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Grade</FormLabel>
-                <FormControl>
-                  <Input placeholder="Enter grade level" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-
-          <FormField
-            control={form.control}
             name="firstName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>First Name</FormLabel>
+                <FormLabel>First Name *</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter first name" {...field} />
                 </FormControl>
@@ -190,7 +163,7 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
             name="lastName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Last Name</FormLabel>
+                <FormLabel>Last Name *</FormLabel>
                 <FormControl>
                   <Input placeholder="Enter last name" {...field} />
                 </FormControl>
@@ -201,12 +174,30 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
 
           <FormField
             control={form.control}
-            name="dateOfBirth"
+            name="gradYear"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Date of Birth</FormLabel>
+                <FormLabel>Graduation Year</FormLabel>
                 <FormControl>
-                  <Input type="date" {...field} />
+                  <Input placeholder="Enter graduation year" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="birthdate"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Birth Date</FormLabel>
+                <FormControl>
+                  <Input
+                    type="date"
+                    value={field.value ? field.value.toISOString().split('T')[0] : ''}
+                    onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -214,68 +205,146 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
           />
         </div>
 
+        <div className="space-y-4">
+          <h3 className="text-lg font-semibold">Schedule</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="mathHour"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Math Hour</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter math hour assignment" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="firstHour"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>1st Hour</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter 1st hour assignment" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="secondHour"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>2nd Hour</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter 2nd hour assignment" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="thirdHour"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>3rd Hour</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter 3rd hour assignment" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="fourthHour"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>4th Hour</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter 4th hour assignment" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="fifthHourFall"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>5th Hour (Fall)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter 5th hour fall assignment" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="fifthHourSpring"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>5th Hour (Spring)</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter 5th hour spring assignment" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="fridayScience"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Friday Science</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter Friday science assignment" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+        </div>
+
         <FormField
           control={form.control}
-          name="allergies"
+          name="comment1"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Allergies</FormLabel>
+              <FormLabel>Comments</FormLabel>
               <FormControl>
-                <Textarea placeholder="Enter any allergies" {...field} />
+                <Textarea
+                  placeholder="Enter any additional comments about the student"
+                  {...field}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
 
-        <FormField
-          control={form.control}
-          name="medicalConditions"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Medical Conditions</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter any medical conditions" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="specialNeeds"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Special Needs</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter any special needs" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter any additional notes" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-
-        <div className="flex justify-end space-x-3 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
-            {isLoading ? "Saving..." : student ? "Update Student" : "Add Student"}
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Saving..." : student ? "Update Student" : "Create Student"}
           </Button>
         </div>
       </form>

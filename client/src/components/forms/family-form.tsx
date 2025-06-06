@@ -1,14 +1,20 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { insertFamilySchema, type InsertFamily, type Family } from "@shared/schema";
-import { apiRequest } from "@/lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { isUnauthorizedError } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import { insertFamilySchema, type Family, type InsertFamily } from "@shared/schema";
 
 interface FamilyFormProps {
   family?: Family;
@@ -20,57 +26,22 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const form = useForm<InsertFamily>({
-    resolver: zodResolver(insertFamilySchema),
-    defaultValues: family ? {
-      name: family.name,
-      primaryContact: family.primaryContact,
-      email: family.email || "",
-      phone: family.phone || "",
-      address: family.address || "",
-      emergencyContact: family.emergencyContact || "",
-      emergencyPhone: family.emergencyPhone || "",
-      notes: family.notes || "",
-    } : {
-      name: "",
-      primaryContact: "",
-      email: "",
-      phone: "",
-      address: "",
-      emergencyContact: "",
-      emergencyPhone: "",
-      notes: "",
-    },
-  });
-
   const createMutation = useMutation({
     mutationFn: async (data: InsertFamily) => {
-      await apiRequest("POST", "/api/families", data);
+      const response = await apiRequest("/api/families", "POST", data);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/families"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
       toast({
         title: "Success",
         description: "Family created successfully",
       });
-      onSubmit(form.getValues());
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
-        description: "Failed to create family",
+        description: error.message || "Failed to create family",
         variant: "destructive",
       });
     },
@@ -78,33 +49,44 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
 
   const updateMutation = useMutation({
     mutationFn: async (data: InsertFamily) => {
-      await apiRequest("PUT", `/api/families/${family!.id}`, data);
+      const response = await apiRequest(`/api/families/${family!.id}`, "PATCH", data);
+      return response;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/families", family!.id] });
       toast({
         title: "Success",
         description: "Family updated successfully",
       });
-      onSubmit(form.getValues());
     },
     onError: (error) => {
-      if (isUnauthorizedError(error)) {
-        toast({
-          title: "Unauthorized",
-          description: "You are logged out. Logging in again...",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          window.location.href = "/api/login";
-        }, 500);
-        return;
-      }
       toast({
         title: "Error",
-        description: "Failed to update family",
+        description: error.message || "Failed to update family",
         variant: "destructive",
       });
+    },
+  });
+
+  const form = useForm<InsertFamily>({
+    resolver: zodResolver(insertFamilySchema),
+    defaultValues: {
+      lastName: family?.lastName || "",
+      father: family?.father || "",
+      mother: family?.mother || "",
+      parentCell: family?.parentCell || "",
+      email: family?.email || "",
+      address: family?.address || "",
+      city: family?.city || "",
+      zip: family?.zip || "",
+      homePhone: family?.homePhone || "",
+      parentCell2: family?.parentCell2 || "",
+      secondEmail: family?.secondEmail || "",
+      workPhone: family?.workPhone || "",
+      church: family?.church || "",
+      pastorName: family?.pastorName || "",
+      pastorPhone: family?.pastorPhone || "",
     },
   });
 
@@ -114,22 +96,23 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
     } else {
       createMutation.mutate(data);
     }
+    onSubmit(data);
   };
 
   const isLoading = createMutation.isPending || updateMutation.isPending;
 
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+      <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <FormField
             control={form.control}
-            name="name"
+            name="lastName"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Family Name</FormLabel>
+                <FormLabel>Last Name *</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter family name" {...field} />
+                  <Input placeholder="Enter last name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -138,12 +121,26 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
 
           <FormField
             control={form.control}
-            name="primaryContact"
+            name="father"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Primary Contact</FormLabel>
+                <FormLabel>Father's Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter primary contact name" {...field} />
+                  <Input placeholder="Enter father's name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="mother"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Mother's Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter mother's name" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -155,9 +152,9 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>Primary Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="Enter email address" {...field} />
+                  <Input type="email" placeholder="Enter primary email" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -166,12 +163,12 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
 
           <FormField
             control={form.control}
-            name="phone"
+            name="secondEmail"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Phone</FormLabel>
+                <FormLabel>Secondary Email</FormLabel>
                 <FormControl>
-                  <Input type="tel" placeholder="Enter phone number" {...field} />
+                  <Input type="email" placeholder="Enter secondary email" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -180,12 +177,12 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
 
           <FormField
             control={form.control}
-            name="emergencyContact"
+            name="parentCell"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Emergency Contact</FormLabel>
+                <FormLabel>Primary Cell Phone</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter emergency contact name" {...field} />
+                  <Input placeholder="Enter primary cell phone" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -194,12 +191,40 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
 
           <FormField
             control={form.control}
-            name="emergencyPhone"
+            name="parentCell2"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Emergency Phone</FormLabel>
+                <FormLabel>Secondary Cell Phone</FormLabel>
                 <FormControl>
-                  <Input type="tel" placeholder="Enter emergency phone number" {...field} />
+                  <Input placeholder="Enter secondary cell phone" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="homePhone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Home Phone</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter home phone" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="workPhone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Work Phone</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter work phone" {...field} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -207,40 +232,102 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
           />
         </div>
 
-        <FormField
-          control={form.control}
-          name="address"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Address</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter family address" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Address</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Enter address" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
 
-        <FormField
-          control={form.control}
-          name="notes"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Notes</FormLabel>
-              <FormControl>
-                <Textarea placeholder="Enter any additional notes" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+          <FormField
+            control={form.control}
+            name="city"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>City</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter city" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-        <div className="flex justify-end space-x-3 pt-4">
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <FormField
+            control={form.control}
+            name="zip"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Zip Code</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter zip code" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <FormField
+            control={form.control}
+            name="church"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Church</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter church name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="pastorName"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Pastor's Name</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter pastor's name" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="pastorPhone"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Pastor's Phone</FormLabel>
+                <FormControl>
+                  <Input placeholder="Enter pastor's phone" {...field} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+        </div>
+
+        <div className="flex justify-end space-x-2">
+          <Button type="button" variant="outline" onClick={onCancel} disabled={isLoading}>
             Cancel
           </Button>
-          <Button type="submit" disabled={isLoading} className="bg-blue-600 hover:bg-blue-700">
-            {isLoading ? "Saving..." : family ? "Update Family" : "Add Family"}
+          <Button type="submit" disabled={isLoading}>
+            {isLoading ? "Saving..." : family ? "Update Family" : "Create Family"}
           </Button>
         </div>
       </form>
