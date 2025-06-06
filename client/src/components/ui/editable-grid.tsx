@@ -106,17 +106,16 @@ export default function EditableGrid({
   };
 
   return (
-    <div className={cn("border rounded-lg flex flex-col", className)}>
-      {/* Fixed Header */}
-      <div className="bg-gray-50 dark:bg-gray-800 border-b overflow-x-auto">
+    <div className={cn("border rounded-lg", className)}>
+      <div className="overflow-auto max-h-[70vh]">
         <table className="w-full">
-          <thead>
+          <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column.key}
                   className={cn(
-                    "px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap",
+                    "px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b",
                     column.sortable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700",
                     column.width && `w-${column.width}`
                   )}
@@ -129,18 +128,12 @@ export default function EditableGrid({
                 </th>
               ))}
               {onRowDelete && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20 whitespace-nowrap">
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20 whitespace-nowrap border-b">
                   Actions
                 </th>
               )}
             </tr>
           </thead>
-        </table>
-      </div>
-
-      {/* Scrollable Body */}
-      <div className="flex-1 overflow-auto max-h-[70vh]">
-        <table className="w-full">
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {isLoading ? (
               <tr>
