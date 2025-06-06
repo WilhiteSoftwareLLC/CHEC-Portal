@@ -197,16 +197,22 @@ export default function EditableGrid({
                           >
                             <SelectTrigger className="h-8 text-sm">
                               <SelectValue placeholder="Select...">
-                                {value === null || value === "" ? "No Course" : 
-                                 column.options?.find(opt => String(opt.value) === String(value))?.label || "Select..."}
+                                {(() => {
+                                  const options = typeof column.options === 'function' ? column.options(row) : (column.options || []);
+                                  return value === null || value === "" ? "No Course" : 
+                                    options.find((opt: any) => String(opt.value) === String(value))?.label || "Select...";
+                                })()}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                              {column.options?.map((option) => (
-                                <SelectItem key={String(option.value)} value={String(option.value)}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
+                              {(() => {
+                                const options = typeof column.options === 'function' ? column.options(row) : (column.options || []);
+                                return options.map((option: any) => (
+                                  <SelectItem key={String(option.value)} value={String(option.value)}>
+                                    {option.label}
+                                  </SelectItem>
+                                ));
+                              })()}
                             </SelectContent>
                           </Select>
                         ) : isEditing ? (
