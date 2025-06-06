@@ -26,7 +26,7 @@ import {
   type InsertSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, like, count, sql, and, isNull } from "drizzle-orm";
+import { eq, desc, like, count, sql, and, isNull, not, inArray } from "drizzle-orm";
 
 // Interface for storage operations
 export interface IStorage {
@@ -192,10 +192,19 @@ export class DatabaseStorage implements IStorage {
     if (familyIds.length === 0) {
       await db.update(families).set({ active: false });
     } else {
-      await db
-        .update(families)
-        .set({ active: false })
-        .where(sql`${families.id} NOT IN (${familyIds.join(',')})`);
+      // Get all families that are not in the imported list
+      const allFamilies = await db.select({ id: families.id }).from(families);
+      const familiesToDeactivate = allFamilies
+        .filter(family => !familyIds.includes(family.id))
+        .map(family => family.id);
+      
+      // Update each family to inactive
+      for (const familyId of familiesToDeactivate) {
+        await db
+          .update(families)
+          .set({ active: false })
+          .where(eq(families.id, familyId));
+      }
     }
   }
 
