@@ -1,24 +1,19 @@
-import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Search, Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddFamilyDialog from "@/components/dialogs/add-family-dialog";
+import { useDialogs } from "@/contexts/dialog-context";
 import type { Family } from "@shared/schema";
 
 export default function Families() {
-  const [search, setSearch] = useState("");
-  const [addFamilyOpen, setAddFamilyOpen] = useState(false);
   const { toast } = useToast();
+  const { addFamilyOpen, setAddFamilyOpen } = useDialogs();
 
   const { data: families, isLoading } = useQuery({
-    queryKey: ["/api/families", search],
+    queryKey: ["/api/families"],
     queryFn: async () => {
-      const url = search ? `/api/families?search=${encodeURIComponent(search)}` : "/api/families";
-      const response = await fetch(url, { credentials: "include" });
+      const response = await fetch("/api/families", { credentials: "include" });
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
       return response.json();
     },
@@ -92,17 +87,6 @@ export default function Families() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <Button 
-          onClick={() => setAddFamilyOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Family
-        </Button>
-      </div>
-
-      {/* Families Grid */}
       <EditableGrid
         data={families || []}
         columns={columns}

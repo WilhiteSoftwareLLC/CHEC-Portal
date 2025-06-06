@@ -1,16 +1,14 @@
-import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddStudentDialog from "@/components/dialogs/add-student-dialog";
+import { useDialogs } from "@/contexts/dialog-context";
 import type { StudentWithFamily } from "@shared/schema";
 
 export default function Students() {
-  const [addStudentOpen, setAddStudentOpen] = useState(false);
   const { toast } = useToast();
+  const { addStudentOpen, setAddStudentOpen } = useDialogs();
 
   const { data: students, isLoading: studentsLoading } = useQuery({
     queryKey: ["/api/students"],
@@ -114,16 +112,6 @@ export default function Students() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <Button 
-          onClick={() => setAddStudentOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Student
-        </Button>
-      </div>
-
       <EditableGrid
         data={studentsWithGrade}
         columns={columns}

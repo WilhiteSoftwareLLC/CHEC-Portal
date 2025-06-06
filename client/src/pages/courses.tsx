@@ -1,16 +1,14 @@
-import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddCourseDialog from "@/components/dialogs/add-course-dialog";
+import { useDialogs } from "@/contexts/dialog-context";
 import type { Course } from "@shared/schema";
 
 export default function Courses() {
-  const [addCourseOpen, setAddCourseOpen] = useState(false);
   const { toast } = useToast();
+  const { addCourseOpen, setAddCourseOpen } = useDialogs();
 
   const { data: courses, isLoading } = useQuery({
     queryKey: ["/api/courses"],
@@ -104,16 +102,6 @@ export default function Courses() {
 
   return (
     <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <Button 
-          onClick={() => setAddCourseOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700"
-        >
-          <Plus className="mr-2 h-4 w-4" />
-          Add Course
-        </Button>
-      </div>
-
       <EditableGrid
         data={coursesWithDisplay}
         columns={columns}

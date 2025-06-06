@@ -25,16 +25,18 @@ function Router() {
       {isLoading || !isAuthenticated ? (
         <Route path="/" component={Landing} />
       ) : (
-        <MainLayout>
-          <Route path="/" component={Dashboard} />
-          <Route path="/families" component={Families} />
-          <Route path="/students" component={Students} />
-          <Route path="/courses" component={Courses} />
-          <Route path="/schedules" component={Schedules} />
-          <Route path="/invoices" component={Invoices} />
-          <Route path="/import" component={Import} />
-          <Route path="/settings" component={Settings} />
-        </MainLayout>
+        <DialogProvider>
+          <MainLayout>
+            <Route path="/" component={Dashboard} />
+            <Route path="/families" component={Families} />
+            <Route path="/students" component={Students} />
+            <Route path="/courses" component={Courses} />
+            <Route path="/schedules" component={Schedules} />
+            <Route path="/invoices" component={Invoices} />
+            <Route path="/import" component={Import} />
+            <Route path="/settings" component={Settings} />
+          </MainLayout>
+        </DialogProvider>
       )}
       <Route component={NotFound} />
     </Switch>
@@ -45,10 +47,8 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <DialogProvider>
-          <Toaster />
-          <Router />
-        </DialogProvider>
+        <Toaster />
+        <Router />
       </TooltipProvider>
     </QueryClientProvider>
   );
