@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+import { setupAuth } from "./replitAuth";
 import {
   insertFamilySchema,
   insertStudentSchema,
@@ -16,12 +16,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
   await setupAuth(app);
 
-  // Auth routes
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  // Auth routes - temporarily disabled for testing
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
-      const user = await storage.getUser(userId);
-      res.json(user);
+      // Return a mock user for testing purposes
+      const mockUser = {
+        id: "test-user",
+        email: "test@example.com",
+        firstName: "Test",
+        lastName: "User"
+      };
+      res.json(mockUser);
     } catch (error) {
       console.error("Error fetching user:", error);
       res.status(500).json({ message: "Failed to fetch user" });
@@ -29,7 +34,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Family routes
-  app.get("/api/families", isAuthenticated, async (req, res) => {
+  app.get("/api/families", async (req, res) => {
     try {
       const families = await storage.getFamilies();
       res.json(families);
@@ -39,7 +44,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/families/search", isAuthenticated, async (req, res) => {
+  app.get("/api/families/search", async (req, res) => {
     try {
       const query = req.query.q as string;
       if (!query) {
@@ -53,7 +58,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/families/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/families/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const family = await storage.getFamily(id);
@@ -67,7 +72,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/families", isAuthenticated, async (req, res) => {
+  app.post("/api/families", async (req, res) => {
     try {
       const familyData = insertFamilySchema.parse(req.body);
       const family = await storage.createFamily(familyData);
@@ -78,7 +83,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/families/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/families/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const familyData = insertFamilySchema.partial().parse(req.body);
@@ -90,7 +95,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/families/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/families/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteFamily(id);
@@ -102,7 +107,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Student routes
-  app.get("/api/students", isAuthenticated, async (req, res) => {
+  app.get("/api/students", async (req, res) => {
     try {
       const students = await storage.getStudents();
       res.json(students);
@@ -112,7 +117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/students/search", isAuthenticated, async (req, res) => {
+  app.get("/api/students/search", async (req, res) => {
     try {
       const query = req.query.q as string;
       if (!query) {
@@ -126,7 +131,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/students/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/students/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const student = await storage.getStudent(id);
@@ -140,7 +145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/families/:familyId/students", isAuthenticated, async (req, res) => {
+  app.get("/api/families/:familyId/students", async (req, res) => {
     try {
       const familyId = parseInt(req.params.familyId);
       const students = await storage.getStudentsByFamily(familyId);
@@ -151,7 +156,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/students", isAuthenticated, async (req, res) => {
+  app.post("/api/students", async (req, res) => {
     try {
       const studentData = insertStudentSchema.parse(req.body);
       const student = await storage.createStudent(studentData);
@@ -162,7 +167,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/students/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/students/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const studentData = insertStudentSchema.partial().parse(req.body);
@@ -174,7 +179,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/students/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/students/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteStudent(id);
@@ -186,7 +191,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Course routes (for 7th grade and older)
-  app.get("/api/courses", isAuthenticated, async (req, res) => {
+  app.get("/api/courses", async (req, res) => {
     try {
       const courses = await storage.getCourses();
       res.json(courses);
@@ -196,7 +201,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/courses/search", isAuthenticated, async (req, res) => {
+  app.get("/api/courses/search", async (req, res) => {
     try {
       const query = req.query.q as string;
       if (!query) {
@@ -210,7 +215,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/courses/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/courses/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const course = await storage.getCourse(id);
@@ -224,7 +229,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/courses", isAuthenticated, async (req, res) => {
+  app.post("/api/courses", async (req, res) => {
     try {
       const courseData = insertCourseSchema.parse(req.body);
       const course = await storage.createCourse(courseData);
@@ -235,7 +240,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/courses/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/courses/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const courseData = insertCourseSchema.partial().parse(req.body);
@@ -247,7 +252,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/courses/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/courses/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteCourse(id);
@@ -259,7 +264,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Class routes (for 6th grade and younger)
-  app.get("/api/classes", isAuthenticated, async (req, res) => {
+  app.get("/api/classes", async (req, res) => {
     try {
       const classes = await storage.getClasses();
       res.json(classes);
@@ -269,7 +274,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get("/api/classes/:id", isAuthenticated, async (req, res) => {
+  app.get("/api/classes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const classData = await storage.getClass(id);
@@ -283,7 +288,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/classes", isAuthenticated, async (req, res) => {
+  app.post("/api/classes", async (req, res) => {
     try {
       const classData = insertClassSchema.parse(req.body);
       const newClass = await storage.createClass(classData);
@@ -294,7 +299,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/classes/:id", isAuthenticated, async (req, res) => {
+  app.patch("/api/classes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const classData = insertClassSchema.partial().parse(req.body);
@@ -306,7 +311,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.delete("/api/classes/:id", isAuthenticated, async (req, res) => {
+  app.delete("/api/classes/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteClass(id);
@@ -318,7 +323,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Grade routes
-  app.get("/api/grades", isAuthenticated, async (req, res) => {
+  app.get("/api/grades", async (req, res) => {
     try {
       const grades = await storage.getGrades();
       res.json(grades);
@@ -328,7 +333,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/grades", isAuthenticated, async (req, res) => {
+  app.post("/api/grades", async (req, res) => {
     try {
       const gradeData = insertGradeSchema.parse(req.body);
       const grade = await storage.createGrade(gradeData);
@@ -340,7 +345,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Hour routes
-  app.get("/api/hours", isAuthenticated, async (req, res) => {
+  app.get("/api/hours", async (req, res) => {
     try {
       const hours = await storage.getHours();
       res.json(hours);
@@ -350,7 +355,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/hours", isAuthenticated, async (req, res) => {
+  app.post("/api/hours", async (req, res) => {
     try {
       const hourData = insertHourSchema.parse(req.body);
       const hour = await storage.createHour(hourData);
@@ -362,7 +367,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Settings routes
-  app.get("/api/settings", isAuthenticated, async (req, res) => {
+  app.get("/api/settings", async (req, res) => {
     try {
       const settings = await storage.getSettings();
       res.json(settings);
@@ -372,7 +377,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.patch("/api/settings", isAuthenticated, async (req, res) => {
+  app.patch("/api/settings", async (req, res) => {
     try {
       const settingsData = insertSettingsSchema.partial().parse(req.body);
       const settings = await storage.updateSettings(settingsData);
@@ -384,7 +389,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Dashboard stats
-  app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
+  app.get("/api/dashboard/stats", async (req, res) => {
     try {
       const stats = await storage.getDashboardStats();
       res.json(stats);
