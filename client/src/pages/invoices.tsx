@@ -68,6 +68,9 @@ export default function Invoices() {
         { hour: 2, field: 'secondHour' },
         { hour: 3, field: 'thirdHour' },
         { hour: 4, field: 'fourthHour' },
+        { hour: 5, field: 'fifthHourFall' },
+        { hour: 5, field: 'fifthHourSpring' },
+        { hour: 6, field: 'fridayScience' },
       ];
 
       // Process courses in hour order
@@ -78,6 +81,11 @@ export default function Invoices() {
           const course = coursesData?.find((c: any) => c.courseName === courseName);
           if (course && course.fee && parseFloat(course.fee) > 0) {
             total += parseFloat(course.fee);
+            
+            // Add book rental fee if it exists
+            if (course.bookRental && parseFloat(course.bookRental) > 0) {
+              total += parseFloat(course.bookRental);
+            }
           }
         }
       });
