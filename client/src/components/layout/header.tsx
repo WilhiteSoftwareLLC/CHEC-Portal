@@ -14,8 +14,11 @@ const pageLabels: Record<string, { title: string; description: string }> = {
   "/families": { title: "Families", description: "Manage family information and contacts" },
   "/students": { title: "Students", description: "Manage student records and enrollment" },
   "/courses": { title: "Courses", description: "Manage courses and instructors" },
+  "/classes": { title: "Classes", description: "Manage grade-based class groupings" },
   "/schedules": { title: "Schedules", description: "Generate and view student schedules" },
   "/invoices": { title: "Invoices", description: "Manage billing and payments" },
+  "/import": { title: "Import", description: "Import data from spreadsheets" },
+  "/settings": { title: "Settings", description: "Configure system settings" },
 };
 
 export default function Header({ onMenuClick, onAddFamily, onAddStudent, onAddCourse }: HeaderProps) {

@@ -9,11 +9,21 @@ export default function Classes() {
 
   const { data: classes, isLoading: classesLoading } = useQuery({
     queryKey: ["/api/classes"],
+    queryFn: async () => {
+      const response = await fetch("/api/classes", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 
   const { data: grades } = useQuery({
     queryKey: ["/api/grades"],
+    queryFn: async () => {
+      const response = await fetch("/api/grades", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 
@@ -78,10 +88,10 @@ export default function Classes() {
   };
 
   // Create grade options for dropdown
-  const gradeOptions = (grades || []).map((grade: Grade) => ({
+  const gradeOptions = Array.isArray(grades) ? grades.map((grade: Grade) => ({
     value: grade.code,
     label: grade.gradeName
-  }));
+  })) : [];
 
   const columns: GridColumn[] = [
     { key: "className", label: "Class Name", sortable: true, editable: true, width: "50" },
@@ -92,13 +102,11 @@ export default function Classes() {
   return (
     <div className="p-6">
       <EditableGrid
-        data={classes || []}
+        data={Array.isArray(classes) ? classes : []}
         columns={columns}
-        onUpdate={handleUpdateClass}
-        onDelete={handleDeleteClass}
+        onRowUpdate={handleUpdateClass}
+        onRowDelete={handleDeleteClass}
         isLoading={classesLoading}
-        emptyMessage="No classes found"
-        showAddButton={false}
       />
     </div>
   );
