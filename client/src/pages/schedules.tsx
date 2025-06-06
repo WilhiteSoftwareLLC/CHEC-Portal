@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Calendar, Save, User, BookOpen, Clock, GraduationCap } from "lucide-react";
+import { Calendar, Save, User, BookOpen, Clock, GraduationCap, PrinterCheck } from "lucide-react";
 import type { StudentWithFamily, Course } from "@shared/schema";
 
 export default function Schedules() {
@@ -193,22 +193,172 @@ export default function Schedules() {
 
   const hasChanges = Object.keys(scheduleChanges).length > 0;
 
+  const handlePrintAllSchedules = () => {
+    if (!students || !courses || !settings || !grades) return;
+    
+    // Sort students by family name
+    const sortedStudents = [...filteredStudents].sort((a, b) => 
+      a.family.lastName.localeCompare(b.family.lastName)
+    );
+    
+    // Generate schedule HTML for all students
+    const scheduleHTML = generateAllSchedulesHTML(sortedStudents);
+    
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    if (!printWindow) return;
+
+    printWindow.document.write(scheduleHTML);
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+
+  const generateAllSchedulesHTML = (sortedStudents: StudentWithFamily[]) => {
+    const studentSchedules = sortedStudents.map((student, index) => 
+      generateSingleScheduleHTML(student, index > 0)
+    ).join('');
+
+    return `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <title>Student Schedules</title>
+          <style>
+            body { 
+              font-family: Arial, sans-serif; 
+              margin: 20px; 
+              color: #333;
+            }
+            .page-break { 
+              page-break-before: always; 
+            }
+            .student-header {
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 20px;
+              border-bottom: 2px solid #000;
+              padding-bottom: 10px;
+            }
+            .student-name {
+              font-size: 18px;
+              font-weight: bold;
+            }
+            .student-grade {
+              font-size: 16px;
+              color: #666;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-bottom: 40px;
+            }
+            th, td {
+              border: 1px solid #000;
+              padding: 8px 12px;
+              text-align: left;
+            }
+            th {
+              background-color: #f5f5f5;
+              font-weight: bold;
+            }
+            .hour-column { width: 15%; }
+            .room-column { width: 20%; }
+            .course-column { width: 65%; }
+          </style>
+        </head>
+        <body>
+          ${studentSchedules}
+        </body>
+      </html>
+    `;
+  };
+
+  const generateSingleScheduleHTML = (student: StudentWithFamily, addPageBreak: boolean = false) => {
+    const currentGrade = getCurrentGradeName(student.gradYear);
+    
+    // Define schedule rows in order
+    const scheduleRows = [
+      { hour: "Math", field: "mathHour" },
+      { hour: "1st", field: "firstHour" },
+      { hour: "2nd", field: "secondHour" },
+      { hour: "3rd", field: "thirdHour" },
+      { hour: "4th", field: "fourthHour" },
+      { hour: "5th", field: "fifthHourFall" },
+      { hour: "5th", field: "fifthHourSpring" }
+    ];
+
+    const rowsHTML = scheduleRows.map(row => {
+      const courseName = student[row.field as keyof StudentWithFamily] as string;
+      let courseDisplay = courseName || "";
+      let roomDisplay = "";
+
+      if (courseName && courseName !== "NO_COURSE") {
+        // Find the course to get location
+        const course = Array.isArray(courses) ? courses.find((c: any) => c.courseName === courseName) : null;
+        if (course && course.location) {
+          roomDisplay = course.location;
+        }
+      } else {
+        courseDisplay = courseName === "NO_COURSE" ? "Will Not Attend " + row.hour + " Hour" : "";
+      }
+
+      return `
+        <tr>
+          <td class="hour-column">${row.hour}</td>
+          <td class="room-column">${roomDisplay}</td>
+          <td class="course-column">${courseDisplay}</td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      ${addPageBreak ? '<div class="page-break"></div>' : ''}
+      <div class="student-header">
+        <div class="student-name">${student.firstName} ${student.lastName}</div>
+        <div class="student-grade">${currentGrade}</div>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th class="hour-column">Hour</th>
+            <th class="room-column">Room</th>
+            <th class="course-column">Course</th>
+          </tr>
+        </thead>
+        <tbody>
+          ${rowsHTML}
+        </tbody>
+      </table>
+    `;
+  };
+
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
         <div>
           <p className="text-sm text-gray-600">Assign courses to students (7th grade and older)</p>
         </div>
-        {hasChanges && (
+        <div className="flex space-x-2">
           <Button 
-            onClick={() => saveSchedulesMutation.mutate()}
-            disabled={saveSchedulesMutation.isPending}
-            className="bg-blue-600 hover:bg-blue-700"
+            variant="outline" 
+            onClick={handlePrintAllSchedules}
           >
-            <Save className="mr-2 h-4 w-4" />
-            Save Changes
+            <PrinterCheck className="mr-2 h-4 w-4" />
+            Print All Schedules
           </Button>
-        )}
+          {hasChanges && (
+            <Button 
+              onClick={() => saveSchedulesMutation.mutate()}
+              disabled={saveSchedulesMutation.isPending}
+              className="bg-blue-600 hover:bg-blue-700"
+            >
+              <Save className="mr-2 h-4 w-4" />
+              Save Changes
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Students Schedule Grid */}
