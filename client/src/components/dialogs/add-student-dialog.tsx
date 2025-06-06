@@ -15,17 +15,19 @@ export default function AddStudentDialog({ open, onOpenChange }: AddStudentDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Student</DialogTitle>
           <DialogDescription>
             Register a new student with their family and grade information.
           </DialogDescription>
         </DialogHeader>
-        <StudentForm 
-          onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
-        />
+        <div className="max-h-[calc(90vh-120px)] overflow-y-auto">
+          <StudentForm 
+            onSubmit={handleSubmit}
+            onCancel={() => onOpenChange(false)}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

@@ -15,17 +15,19 @@ export default function AddFamilyDialog({ open, onOpenChange }: AddFamilyDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Family</DialogTitle>
           <DialogDescription>
             Add a new family to the homeschool cooperative with contact information.
           </DialogDescription>
         </DialogHeader>
-        <FamilyForm 
-          onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
-        />
+        <div className="max-h-[calc(90vh-120px)] overflow-y-auto">
+          <FamilyForm 
+            onSubmit={handleSubmit}
+            onCancel={() => onOpenChange(false)}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );

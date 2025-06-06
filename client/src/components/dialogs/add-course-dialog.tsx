@@ -15,17 +15,19 @@ export default function AddCourseDialog({ open, onOpenChange }: AddCourseDialogP
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Add New Course</DialogTitle>
           <DialogDescription>
             Create a new course with instructor details, schedule, and enrollment information.
           </DialogDescription>
         </DialogHeader>
-        <CourseForm 
-          onSubmit={handleSubmit}
-          onCancel={() => onOpenChange(false)}
-        />
+        <div className="max-h-[calc(90vh-120px)] overflow-y-auto">
+          <CourseForm 
+            onSubmit={handleSubmit}
+            onCancel={() => onOpenChange(false)}
+          />
+        </div>
       </DialogContent>
     </Dialog>
   );
