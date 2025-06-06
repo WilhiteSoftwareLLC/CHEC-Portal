@@ -108,7 +108,7 @@ export const families = pgTable("families", {
   active: boolean("active").default(true),
 });
 
-// Former Families table - families no longer part of co-op
+// Former Families table - families no longer part of CHEC Portal
 export const formerFamilies = pgTable("former_families", {
   id: serial("id").primaryKey(),
   lastName: varchar("last_name", { length: 255 }).notNull(),
