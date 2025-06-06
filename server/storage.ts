@@ -1,5 +1,7 @@
 import {
   users,
+  adminUsers,
+  parentUsers,
   families,
   students,
   courses,
@@ -9,6 +11,10 @@ import {
   settings,
   type User,
   type UpsertUser,
+  type AdminUser,
+  type InsertAdminUser,
+  type ParentUser,
+  type InsertParentUser,
   type Family,
   type InsertFamily,
   type Student,
@@ -33,6 +39,25 @@ export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
   upsertUser(user: UpsertUser): Promise<User>;
+
+  // Admin user operations
+  getAdminUsers(): Promise<AdminUser[]>;
+  getAdminUser(id: number): Promise<AdminUser | undefined>;
+  getAdminUserByUsername(username: string): Promise<AdminUser | undefined>;
+  getAdminUserByEmail(email: string): Promise<AdminUser | undefined>;
+  createAdminUser(user: InsertAdminUser): Promise<AdminUser>;
+  updateAdminUser(id: number, user: Partial<InsertAdminUser>): Promise<AdminUser>;
+  deleteAdminUser(id: number): Promise<void>;
+
+  // Parent user operations
+  getParentUsers(): Promise<ParentUser[]>;
+  getParentUser(id: number): Promise<ParentUser | undefined>;
+  getParentUserByUsername(username: string): Promise<ParentUser | undefined>;
+  getParentUserByEmail(email: string): Promise<ParentUser | undefined>;
+  getParentUsersByFamily(familyId: number): Promise<ParentUser[]>;
+  createParentUser(user: InsertParentUser): Promise<ParentUser>;
+  updateParentUser(id: number, user: Partial<InsertParentUser>): Promise<ParentUser>;
+  deleteParentUser(id: number): Promise<void>;
 
   // Family operations
   getFamilies(): Promise<Family[]>;

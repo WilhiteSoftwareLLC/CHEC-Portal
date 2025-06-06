@@ -37,6 +37,33 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// Admin users table for credential-based authentication
+export const adminUsers = pgTable("admin_users", {
+  id: serial("id").primaryKey(),
+  username: varchar("username").unique().notNull(),
+  passwordHash: varchar("password_hash").notNull(),
+  email: varchar("email").unique().notNull(),
+  firstName: varchar("first_name"),
+  lastName: varchar("last_name"),
+  role: varchar("role").notNull().default("admin"),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Parent users table to link families with authentication
+export const parentUsers = pgTable("parent_users", {
+  id: serial("id").primaryKey(),
+  familyId: integer("family_id").notNull().references(() => families.id),
+  username: varchar("username").unique().notNull(),
+  passwordHash: varchar("password_hash").notNull(),
+  email: varchar("email").unique().notNull(),
+  role: varchar("role").notNull().default("parent"),
+  active: boolean("active").default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
 // Settings table - key-value pairs for better extensibility
 export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
@@ -210,6 +237,12 @@ export const insertSettingsSchema = createInsertSchema(settings).omit({
 // Types
 export type UpsertUser = typeof users.$inferInsert;
 export type User = typeof users.$inferSelect;
+
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertAdminUser = typeof adminUsers.$inferInsert;
+
+export type ParentUser = typeof parentUsers.$inferSelect;
+export type InsertParentUser = typeof parentUsers.$inferInsert;
 
 export type InsertFamily = z.infer<typeof insertFamilySchema>;
 export type Family = typeof families.$inferSelect;
