@@ -26,6 +26,7 @@ export default function Import() {
       return await apiRequest("/api/import/families", "POST", data);
     },
     onSuccess: (response: any) => {
+      console.log("Import response:", response);
       toast({
         title: "Families Imported",
         description: `New: ${response.newFamilies || 0}, Modified: ${response.modifiedFamilies || 0}, Inactive: ${response.inactiveFamilies || 0}. ${response.failed || 0} failed.`,
