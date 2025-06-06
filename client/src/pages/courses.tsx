@@ -156,7 +156,22 @@ export default function Courses() {
       a.courseName.localeCompare(b.courseName)
     );
     
-    const courseRosters = sortedCourses.map((course, index) => 
+    // Filter out courses with no enrolled students
+    const coursesWithStudents = sortedCourses.filter(course => {
+      const enrolledStudents = (students || []).filter((student: any) => {
+        return student.mathHour === course.courseName ||
+               student.firstHour === course.courseName ||
+               student.secondHour === course.courseName ||
+               student.thirdHour === course.courseName ||
+               student.fourthHour === course.courseName ||
+               student.fifthHourFall === course.courseName ||
+               student.fifthHourSpring === course.courseName ||
+               student.fridayScience === course.courseName;
+      });
+      return enrolledStudents.length > 0;
+    });
+    
+    const courseRosters = coursesWithStudents.map((course, index) => 
       generateSingleRosterHTML(course, index > 0)
     ).join('');
 
