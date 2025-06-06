@@ -29,6 +29,7 @@ const navigation = [
   { name: "Courses", href: "/courses", icon: BookOpen },
   { name: "Schedules", href: "/schedules", icon: Calendar },
   { name: "Invoices", href: "/invoices", icon: FileText },
+  { name: "Import Data", href: "/import", icon: Upload },
 ];
 
 const settingsNavigation = [
