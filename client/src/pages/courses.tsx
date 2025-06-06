@@ -200,7 +200,7 @@ export default function Courses() {
             .name-column { width: 15%; }
             .birth-column { width: 12%; text-align: center; }
             .parent-column { width: 15%; }
-            .phone-column { width: 15%; }
+            .phone-column { width: 15%; white-space: nowrap; }
             .email-column { width: 30%; }
           </style>
         </head>
@@ -209,6 +209,17 @@ export default function Courses() {
         </body>
       </html>
     `;
+  };
+
+  const formatPhoneNumber = (phone: string) => {
+    if (!phone) return '';
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, '');
+    // Format as XXX-XXX-XXXX if we have 10 digits
+    if (digits.length === 10) {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    }
+    return phone; // Return original if not 10 digits
   };
 
   const generateSingleRosterHTML = (course: any, addPageBreak: boolean = false) => {
@@ -234,6 +245,7 @@ export default function Courses() {
     const rowsHTML = sortedStudents.map((student: any, index: number) => {
       const birthDate = student.birthdate ? new Date(student.birthdate).toLocaleDateString() : '';
       const gradeCode = student.gradYear ? new Date().getFullYear() - parseInt(student.gradYear) + 13 : '';
+      const formattedPhone = formatPhoneNumber(student.family?.parentCell || '');
       
       return `
         <tr>
@@ -244,7 +256,7 @@ export default function Courses() {
           <td class="birth-column">${birthDate}</td>
           <td class="parent-column">${student.family?.mother || ''}</td>
           <td class="parent-column">${student.family?.father || ''}</td>
-          <td class="phone-column">${student.family?.parentCell || ''}</td>
+          <td class="phone-column">${formattedPhone}</td>
           <td class="email-column">${student.family?.email || ''}</td>
         </tr>
       `;

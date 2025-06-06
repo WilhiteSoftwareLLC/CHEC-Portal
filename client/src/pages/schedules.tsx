@@ -275,6 +275,17 @@ export default function Schedules() {
     `;
   };
 
+  const formatPhoneNumber = (phone: string) => {
+    if (!phone) return '';
+    // Remove all non-digits
+    const digits = phone.replace(/\D/g, '');
+    // Format as XXX-XXX-XXXX if we have 10 digits
+    if (digits.length === 10) {
+      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
+    }
+    return phone; // Return original if not 10 digits
+  };
+
   const generateSingleScheduleHTML = (student: StudentWithFamily, addPageBreak: boolean = false) => {
     const currentGrade = getCurrentGradeName(student.gradYear);
     
