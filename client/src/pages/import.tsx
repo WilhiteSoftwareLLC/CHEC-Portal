@@ -149,8 +149,13 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Hours Imported",
-        description: `Successfully imported ${response.successful || 0} hours. ${response.failed || 0} failed.`,
+        description: `New: ${response.newHours || 0} (replaced all previous). ${response.failed || 0} failed.`,
       });
+      // Clear the form data after successful import
+      setCsvData({ ...csvData, hours: "" });
+      // Invalidate cache to refresh hours list
+      queryClient.invalidateQueries({ queryKey: ["/api/hours"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error) => {
       toast({
@@ -168,8 +173,13 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Settings Imported",
-        description: "Settings imported successfully",
+        description: `New: ${response.newSettings || 0} (replaced all previous).`,
       });
+      // Clear the form data after successful import
+      setCsvData({ ...csvData, settings: "" });
+      // Invalidate cache to refresh settings
+      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error) => {
       toast({
