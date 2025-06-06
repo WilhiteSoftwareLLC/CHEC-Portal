@@ -15,7 +15,10 @@ export default function Import() {
     families: "",
     students: "",
     courses: "",
-    classes: ""
+    classes: "",
+    grades: "",
+    hours: "",
+    settings: ""
   });
 
   const importFamilies = useMutation({
@@ -94,6 +97,63 @@ export default function Import() {
     },
   });
 
+  const importGrades = useMutation({
+    mutationFn: async (data: any[]) => {
+      return await apiRequest("/api/import/grades", "POST", data);
+    },
+    onSuccess: (response: any) => {
+      toast({
+        title: "Grades Imported",
+        description: `Successfully imported ${response.successful} grades. ${response.failed} failed.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const importHours = useMutation({
+    mutationFn: async (data: any[]) => {
+      return await apiRequest("/api/import/hours", "POST", data);
+    },
+    onSuccess: (response: any) => {
+      toast({
+        title: "Hours Imported",
+        description: `Successfully imported ${response.successful} hours. ${response.failed} failed.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const importSettings = useMutation({
+    mutationFn: async (data: any) => {
+      return await apiRequest("/api/import/settings", "POST", data);
+    },
+    onSuccess: (response: any) => {
+      toast({
+        title: "Settings Imported",
+        description: "Settings imported successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Import Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const parseCsv = (csvText: string) => {
     const lines = csvText.trim().split('\n');
     if (lines.length < 2) return [];
@@ -148,6 +208,16 @@ export default function Import() {
       case 'classes':
         importClasses.mutate(data);
         break;
+      case 'grades':
+        importGrades.mutate(data);
+        break;
+      case 'hours':
+        importHours.mutate(data);
+        break;
+      case 'settings':
+        const settingsData = data[0]; // Settings is a single record
+        importSettings.mutate(settingsData);
+        break;
     }
   };
 
@@ -166,11 +236,14 @@ export default function Import() {
       </Alert>
 
       <Tabs defaultValue="families" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="families">Families</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
           <TabsTrigger value="courses">Courses</TabsTrigger>
           <TabsTrigger value="classes">Classes</TabsTrigger>
+          <TabsTrigger value="grades">Grades</TabsTrigger>
+          <TabsTrigger value="hours">Hours</TabsTrigger>
+          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="families">
@@ -178,8 +251,8 @@ export default function Import() {
             <CardHeader>
               <CardTitle>Import Families</CardTitle>
               <CardDescription>
-                Expected fields: lastNameFirst, father, mother, email, secondEmail, parentCell, parentCell2, 
-                homePhone, workPhone, address, city, zip, church, pastorName, pastorPhone
+                Expected fields: LastName, Father, Mother, Email, SecondEmail, ParentCell, ParentCell2, 
+                HomePhone, WorkPhone, Address, City, Zip, Church, PastorName, PastorPhone
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -204,8 +277,8 @@ export default function Import() {
             <CardHeader>
               <CardTitle>Import Students</CardTitle>
               <CardDescription>
-                Expected fields: familyId, firstName, lastName, birthdate, grade, firstHour, secondHour, 
-                thirdHour, fourthHour, fifthHour, sixthHour, seventhHour, eighthHour, comment1
+                Expected fields: FamilyID, LastName, FirstName, Birthdate, GradYear, Comment1, MathHour, 
+                1stHour, 2ndHour, 3rdHour, 4thHour, 5thHourFall, 5thHourSpring, FridayScience
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -230,7 +303,7 @@ export default function Import() {
             <CardHeader>
               <CardTitle>Import Courses</CardTitle>
               <CardDescription>
-                Expected fields: courseName, hour, location, fee, bookRental, openForRegistration, registrationClosed
+                Expected fields: CourseName, OfferedFall, OfferedSpring, Hour, Fee, BookRental, Location
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -255,7 +328,7 @@ export default function Import() {
             <CardHeader>
               <CardTitle>Import Classes</CardTitle>
               <CardDescription>
-                Expected fields: className, startGrade, endGrade, location, fee, bookRental, openForRegistration, registrationClosed
+                Expected fields: ClassName, StartCode, EndCode
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
