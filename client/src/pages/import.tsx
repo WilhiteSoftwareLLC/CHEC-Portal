@@ -28,7 +28,7 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Families Imported",
-        description: `Successfully imported ${response.successful} families. ${response.failed} failed.`,
+        description: `Successfully imported ${response.successful || 0} families. ${response.failed || 0} failed.`,
       });
     },
     onError: (error) => {
@@ -47,7 +47,7 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Students Imported",
-        description: `Successfully imported ${response.successful} students. ${response.failed} failed.`,
+        description: `Successfully imported ${response.successful || 0} students. ${response.failed || 0} failed.`,
       });
     },
     onError: (error) => {
@@ -66,7 +66,7 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Courses Imported",
-        description: `Successfully imported ${response.successful} courses. ${response.failed} failed.`,
+        description: `Successfully imported ${response.successful || 0} courses. ${response.failed || 0} failed.`,
       });
     },
     onError: (error) => {
@@ -85,7 +85,7 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Classes Imported",
-        description: `Successfully imported ${response.successful} classes. ${response.failed} failed.`,
+        description: `Successfully imported ${response.successful || 0} classes. ${response.failed || 0} failed.`,
       });
     },
     onError: (error) => {
@@ -104,7 +104,7 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Grades Imported",
-        description: `Successfully imported ${response.successful} grades. ${response.failed} failed.`,
+        description: `Successfully imported ${response.successful || 0} grades. ${response.failed || 0} failed.`,
       });
     },
     onError: (error) => {
@@ -123,7 +123,7 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Hours Imported",
-        description: `Successfully imported ${response.successful} hours. ${response.failed} failed.`,
+        description: `Successfully imported ${response.successful || 0} hours. ${response.failed || 0} failed.`,
       });
     },
     onError: (error) => {
