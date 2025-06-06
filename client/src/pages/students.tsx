@@ -1,5 +1,7 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +14,7 @@ import type { StudentWithFamily } from "@shared/schema";
 export default function Students() {
   const [search, setSearch] = useState("");
   const [addStudentOpen, setAddStudentOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: students, isLoading } = useQuery({
     queryKey: ["/api/students", search],
@@ -23,6 +26,32 @@ export default function Students() {
     },
     retry: false,
   });
+
+  const deleteStudentMutation = useMutation({
+    mutationFn: async (studentId: number) => {
+      await apiRequest(`/api/students/${studentId}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      toast({
+        title: "Student Deleted",
+        description: "Student has been successfully deleted.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleDeleteStudent = (studentId: number) => {
+    if (confirm("Are you sure you want to delete this student?")) {
+      deleteStudentMutation.mutate(studentId);
+    }
+  };
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "Not specified";
@@ -106,14 +135,20 @@ export default function Students() {
                         <CardTitle className="text-lg">
                           {student.firstName} {student.lastName}
                         </CardTitle>
-                        <p className="text-sm text-gray-600">{student.family.name}</p>
+                        <p className="text-sm text-gray-600">{student.family.lastName} Family</p>
                       </div>
                     </div>
                     <div className="flex space-x-1">
                       <Button variant="ghost" size="sm">
                         <Edit className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        className="text-red-600 hover:text-red-700"
+                        onClick={() => handleDeleteStudent(student.id)}
+                        disabled={deleteStudentMutation.isPending}
+                      >
                         <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
