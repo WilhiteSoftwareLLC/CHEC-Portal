@@ -258,6 +258,9 @@ export default function Schedules() {
               border: 1px solid #000;
               padding: 8px 12px;
               text-align: left;
+              white-space: nowrap;
+              height: 40px;
+              vertical-align: middle;
             }
             th {
               background-color: #f5f5f5;
