@@ -80,6 +80,12 @@ export default function Schedules() {
     return (courses as Course[]).filter(course => course.hour === hour);
   };
 
+  // Get courses for Math Hour (hour 0)
+  const getMathHourCourses = () => {
+    if (!courses) return [];
+    return (courses as Course[]).filter(course => course.hour === 0);
+  };
+
   // Get current course selection for a student and hour
   const getCurrentCourse = (studentId: number, hour: string) => {
     const student = students?.find((s: StudentWithFamily) => s.id === studentId);
@@ -164,7 +170,6 @@ export default function Schedules() {
     { key: "fourthHour", label: "4th Hour", hourNumber: 4 },
     { key: "fifthHourFall", label: "5th Hour (Fall)", hourNumber: 5 },
     { key: "fifthHourSpring", label: "5th Hour (Spring)", hourNumber: 5 },
-    { key: "fridayScience", label: "Friday Science" },
   ];
 
   const hasChanges = Object.keys(scheduleChanges).length > 0;
@@ -267,14 +272,20 @@ export default function Schedules() {
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">No Course</SelectItem>
-                            {hour.hourNumber ? (
+                            {hour.key === "mathHour" ? (
+                              getMathHourCourses().map((course: Course) => (
+                                <SelectItem key={course.id} value={course.courseName}>
+                                  {course.courseName}
+                                </SelectItem>
+                              ))
+                            ) : hour.hourNumber ? (
                               getCoursesByHour(hour.hourNumber).map((course: Course) => (
                                 <SelectItem key={course.id} value={course.courseName}>
                                   {course.courseName}
                                 </SelectItem>
                               ))
                             ) : (
-                              // For Math Hour and Friday Science, show all available courses
+                              // For any other special hours, show all available courses
                               (courses as Course[] || []).map((course: Course) => (
                                 <SelectItem key={course.id} value={course.courseName}>
                                   {course.courseName}

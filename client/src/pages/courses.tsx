@@ -104,9 +104,9 @@ export default function Courses() {
                     <div>
                       <CardTitle className="text-lg">{course.courseName}</CardTitle>
                       <div className="flex items-center space-x-2 mt-1">
-                        {course.hour && (
+                        {course.hour !== null && (
                           <Badge variant="outline" className="text-xs">
-                            Hour {course.hour}
+                            {course.hour === 0 ? "Math Hour" : `Hour ${course.hour}`}
                           </Badge>
                         )}
                         {course.offeredFall && course.offeredSpring ? (
