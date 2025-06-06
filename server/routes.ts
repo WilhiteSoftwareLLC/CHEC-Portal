@@ -190,6 +190,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/students/bulk-schedule-update", async (req, res) => {
+    try {
+      const { updates } = req.body;
+      if (!Array.isArray(updates)) {
+        return res.status(400).json({ message: "Expected array of updates" });
+      }
+
+      for (const update of updates) {
+        const { studentId, hour, courseName } = update;
+        const updateData = { [hour]: courseName === "none" ? null : courseName };
+        await storage.updateStudent(studentId, updateData);
+      }
+
+      res.json({ message: "Schedules updated successfully" });
+    } catch (error) {
+      console.error("Error updating student schedules:", error);
+      res.status(500).json({ message: "Failed to update schedules" });
+    }
+  });
+
   // Course routes (for 7th grade and older)
   app.get("/api/courses", async (req, res) => {
     try {
