@@ -1,26 +1,21 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, GraduationCap, User, Calendar } from "lucide-react";
+import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddStudentDialog from "@/components/dialogs/add-student-dialog";
 import type { StudentWithFamily } from "@shared/schema";
 
 export default function Students() {
-  const [search, setSearch] = useState("");
   const [addStudentOpen, setAddStudentOpen] = useState(false);
   const { toast } = useToast();
 
   const { data: students, isLoading: studentsLoading } = useQuery({
-    queryKey: ["/api/students", search],
+    queryKey: ["/api/students"],
     queryFn: async () => {
-      const url = search ? `/api/students?search=${encodeURIComponent(search)}` : "/api/students";
-      const response = await fetch(url, { credentials: "include" });
+      const response = await fetch("/api/students", { credentials: "include" });
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
       return response.json();
     },
@@ -33,6 +28,26 @@ export default function Students() {
 
   const { data: grades } = useQuery({
     queryKey: ["/api/grades"],
+  });
+
+  const updateStudentMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: Record<string, any> }) => {
+      await apiRequest(`/api/students/${id}`, "PATCH", updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      toast({
+        title: "Student Updated",
+        description: "Student information has been saved.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
   });
 
   const deleteStudentMutation = useMutation({
@@ -55,48 +70,51 @@ export default function Students() {
     },
   });
 
-  const handleDeleteStudent = (studentId: number) => {
+  const handleUpdateStudent = async (id: number, updates: Record<string, any>) => {
+    await updateStudentMutation.mutateAsync({ id, updates });
+  };
+
+  const handleDeleteStudent = async (studentId: number) => {
     if (confirm("Are you sure you want to delete this student?")) {
-      deleteStudentMutation.mutate(studentId);
+      await deleteStudentMutation.mutateAsync(studentId);
     }
   };
 
-  const formatDate = (date: Date | string | null) => {
-    if (!date) return "Not specified";
-    const dateObj = typeof date === 'string' ? new Date(date) : date;
-    return dateObj.toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-  };
-
-  const getStatusBadge = (active: boolean) => {
-    return active ? (
-      <Badge className="bg-green-100 text-green-800">Active</Badge>
-    ) : (
-      <Badge variant="secondary" className="bg-gray-100 text-gray-800">Inactive</Badge>
-    );
-  };
-
-  const getCurrentGrade = (gradYear: string | null) => {
-    if (!gradYear || !settings || !grades) return "Unknown";
+  // Calculate current grade for display
+  const getCurrentGrade = (gradYear: any) => {
+    if (!settings || !grades || !gradYear) return "Unknown";
     
     const schoolYear = parseInt((settings as any).SchoolYear || "2024");
-    const graduationYear = parseInt(gradYear);
-    const gradeCode = schoolYear - graduationYear + 13;
-    
-    const grade = Array.isArray(grades) ? grades.find((g: any) => g.code === gradeCode) : null;
+    const gradeCode = schoolYear - parseInt(gradYear) + 13;
+    const grade = (grades as any[]).find((g: any) => g.code === gradeCode);
     return grade ? grade.gradeName : "Unknown";
   };
+
+  // Prepare data with computed grade
+  const studentsWithGrade = students?.map((student: StudentWithFamily) => ({
+    ...student,
+    currentGrade: getCurrentGrade(student.gradYear),
+    familyName: student.family.lastName
+  })) || [];
+
+  const columns: GridColumn[] = [
+    { key: "lastName", label: "Last Name", sortable: true, editable: true, width: "40" },
+    { key: "firstName", label: "First Name", sortable: true, editable: true, width: "40" },
+    { key: "familyName", label: "Family", sortable: true, editable: false, width: "40" },
+    { key: "currentGrade", label: "Current Grade", sortable: true, editable: false, width: "32" },
+    { key: "gradYear", label: "Grad Year", sortable: true, editable: true, type: "number", width: "28" },
+    { key: "mathHour", label: "Math Hour", sortable: true, editable: true, width: "40" },
+    { key: "firstHour", label: "1st Hour", sortable: true, editable: true, width: "40" },
+    { key: "secondHour", label: "2nd Hour", sortable: true, editable: true, width: "40" },
+    { key: "thirdHour", label: "3rd Hour", sortable: true, editable: true, width: "40" },
+    { key: "fourthHour", label: "4th Hour", sortable: true, editable: true, width: "40" },
+    { key: "fifthHourFall", label: "5th Hour (Fall)", sortable: true, editable: true, width: "48" },
+    { key: "fifthHourSpring", label: "5th Hour (Spring)", sortable: true, editable: true, width: "48" },
+  ];
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Students</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage student records and enrollment</p>
-        </div>
         <Button 
           onClick={() => setAddStudentOpen(true)}
           className="bg-blue-600 hover:bg-blue-700"
@@ -106,129 +124,19 @@ export default function Students() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative w-96">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search students..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
+      <EditableGrid
+        data={studentsWithGrade}
+        columns={columns}
+        onRowUpdate={handleUpdateStudent}
+        onRowDelete={handleDeleteStudent}
+        isLoading={studentsLoading}
+        className="mb-6"
+      />
 
-      {/* Students Grid */}
-      {studentsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-8 w-20" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {students?.length > 0 ? (
-            students.map((student: StudentWithFamily) => (
-              <Card key={student.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-gray-600">
-                          {student.firstName[0]}{student.lastName[0]}
-                        </span>
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">
-                          {student.firstName} {student.lastName}
-                        </CardTitle>
-                        <p className="text-sm text-gray-600">{student.family.lastName} Family</p>
-                      </div>
-                    </div>
-                    <div className="flex space-x-1">
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        className="text-red-600 hover:text-red-700"
-                        onClick={() => handleDeleteStudent(student.id)}
-                        disabled={deleteStudentMutation.isPending}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center text-gray-600">
-                        <GraduationCap className="mr-2 h-4 w-4" />
-                        {getCurrentGrade(student.gradYear)}
-                      </div>
-                      {student.birthdate && (
-                        <div className="flex items-center text-gray-600">
-                          <Calendar className="mr-2 h-4 w-4" />
-                          {formatDate(student.birthdate)}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {student.comment1 && (
-                      <div className="pt-2 border-t border-gray-100">
-                        <p className="text-xs text-gray-500 font-medium mb-1">Notes:</p>
-                        <div className="text-xs text-gray-600">
-                          {student.comment1}
-                        </div>
-                      </div>
-                    )}
-
-                    <div className="pt-2">
-                      <Badge variant="secondary" className="bg-blue-100 text-blue-800">
-                        <User className="mr-1 h-3 w-3" />
-                        Active Student
-                      </Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-12">
-              <GraduationCap className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No students found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {search ? "Try adjusting your search terms." : "Get started by adding a new student."}
-              </p>
-              {!search && (
-                <div className="mt-6">
-                  <Button onClick={() => setAddStudentOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Student
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      <AddStudentDialog open={addStudentOpen} onOpenChange={setAddStudentOpen} />
+      <AddStudentDialog 
+        open={addStudentOpen} 
+        onOpenChange={setAddStudentOpen} 
+      />
     </div>
   );
 }

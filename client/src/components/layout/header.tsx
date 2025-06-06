@@ -37,10 +37,6 @@ export default function Header({ onMenuClick }: HeaderProps) {
           </div>
         </div>
         <div className="flex items-center space-x-4">
-          <Button className="bg-blue-600 hover:bg-blue-700 text-white">
-            <Plus className="mr-2 h-4 w-4" />
-            Quick Add
-          </Button>
           <Button variant="ghost" size="sm">
             <Bell className="h-5 w-5" />
           </Button>

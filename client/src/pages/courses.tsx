@@ -1,58 +1,110 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Search, Edit, Trash2, BookOpen, User, Calendar, MapPin, DollarSign, Users } from "lucide-react";
+import { Plus } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddCourseDialog from "@/components/dialogs/add-course-dialog";
 import type { Course } from "@shared/schema";
 
 export default function Courses() {
-  const [search, setSearch] = useState("");
   const [addCourseOpen, setAddCourseOpen] = useState(false);
+  const { toast } = useToast();
 
   const { data: courses, isLoading } = useQuery({
-    queryKey: ["/api/courses", search],
+    queryKey: ["/api/courses"],
     queryFn: async () => {
-      const url = search ? `/api/courses?search=${encodeURIComponent(search)}` : "/api/courses";
-      const response = await fetch(url, { credentials: "include" });
+      const response = await fetch("/api/courses", { credentials: "include" });
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
       return response.json();
     },
     retry: false,
   });
 
-  const formatDate = (dateString: string | null) => {
-    if (!dateString) return "Not specified";
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
+  const updateCourseMutation = useMutation({
+    mutationFn: async ({ id, updates }: { id: number; updates: Record<string, any> }) => {
+      await apiRequest(`/api/courses/${id}`, "PATCH", updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      toast({
+        title: "Course Updated",
+        description: "Course information has been saved.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteCourseMutation = useMutation({
+    mutationFn: async (courseId: number) => {
+      await apiRequest(`/api/courses/${courseId}`, "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      toast({
+        title: "Course Deleted",
+        description: "Course has been successfully deleted.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleUpdateCourse = async (id: number, updates: Record<string, any>) => {
+    // Convert boolean strings to actual booleans for offered fields
+    const processedUpdates = { ...updates };
+    if (updates.offeredFall === "true" || updates.offeredFall === "false") {
+      processedUpdates.offeredFall = updates.offeredFall === "true";
+    }
+    if (updates.offeredSpring === "true" || updates.offeredSpring === "false") {
+      processedUpdates.offeredSpring = updates.offeredSpring === "true";
+    }
+    if (updates.hour !== undefined) {
+      processedUpdates.hour = parseInt(updates.hour);
+    }
+    
+    await updateCourseMutation.mutateAsync({ id, updates: processedUpdates });
   };
 
-  const formatCurrency = (amount: string | null) => {
-    if (!amount) return "$0";
-    return `$${parseFloat(amount).toFixed(2)}`;
+  const handleDeleteCourse = async (courseId: number) => {
+    if (confirm("Are you sure you want to delete this course?")) {
+      await deleteCourseMutation.mutateAsync(courseId);
+    }
   };
 
-  const getStatusBadge = (active: boolean) => {
-    return active ? (
-      <Badge className="bg-green-100 text-green-800">Active</Badge>
-    ) : (
-      <Badge variant="secondary" className="bg-gray-100 text-gray-800">Inactive</Badge>
-    );
-  };
+  // Prepare data with computed display values
+  const coursesWithDisplay = courses?.map((course: Course) => ({
+    ...course,
+    hourDisplay: course.hour === 0 ? "Math Hour" : course.hour?.toString() || "",
+    offeredFallDisplay: course.offeredFall ? "Yes" : "No",
+    offeredSpringDisplay: course.offeredSpring ? "Yes" : "No"
+  })) || [];
+
+  const columns: GridColumn[] = [
+    { key: "courseName", label: "Course Name", sortable: true, editable: true, width: "64" },
+    { key: "hourDisplay", label: "Hour", sortable: true, editable: false, width: "24" },
+    { key: "hour", label: "Hour (Edit)", sortable: true, editable: true, type: "number", width: "32" },
+    { key: "offeredFallDisplay", label: "Fall", sortable: true, editable: false, width: "20" },
+    { key: "offeredFall", label: "Fall (Edit)", sortable: true, editable: true, width: "24" },
+    { key: "offeredSpringDisplay", label: "Spring", sortable: true, editable: false, width: "20" },
+    { key: "offeredSpring", label: "Spring (Edit)", sortable: true, editable: true, width: "24" },
+  ];
 
   return (
     <div className="p-6">
       <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-semibold text-gray-900">Courses</h1>
-          <p className="text-sm text-gray-600 mt-1">Manage courses and instructors</p>
-        </div>
         <Button 
           onClick={() => setAddCourseOpen(true)}
           className="bg-blue-600 hover:bg-blue-700"
@@ -62,128 +114,19 @@ export default function Courses() {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="mb-6">
-        <div className="relative w-96">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-          <Input
-            placeholder="Search courses..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-      </div>
+      <EditableGrid
+        data={coursesWithDisplay}
+        columns={columns}
+        onRowUpdate={handleUpdateCourse}
+        onRowDelete={handleDeleteCourse}
+        isLoading={isLoading}
+        className="mb-6"
+      />
 
-      {/* Courses Grid */}
-      {isLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-3/4" />
-                <Skeleton className="h-4 w-1/2" />
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-3">
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-2/3" />
-                  <Skeleton className="h-8 w-20" />
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {courses?.length > 0 ? (
-            courses.map((course: Course) => (
-              <Card key={course.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <CardTitle className="text-lg">{course.courseName}</CardTitle>
-                      <div className="flex items-center space-x-2 mt-1">
-                        {course.hour !== null && (
-                          <Badge variant="outline" className="text-xs">
-                            {course.hour === 0 ? "Math Hour" : `Hour ${course.hour}`}
-                          </Badge>
-                        )}
-                        {course.offeredFall && course.offeredSpring ? (
-                          <Badge variant="outline" className="text-xs">
-                            Fall & Spring
-                          </Badge>
-                        ) : course.offeredFall ? (
-                          <Badge variant="outline" className="text-xs">
-                            Fall Only
-                          </Badge>
-                        ) : course.offeredSpring ? (
-                          <Badge variant="outline" className="text-xs">
-                            Spring Only
-                          </Badge>
-                        ) : null}
-                      </div>
-                    </div>
-                    <div className="flex space-x-1">
-                      <Button variant="ghost" size="sm">
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="text-red-600 hover:text-red-700">
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="space-y-3">
-                    {course.location && (
-                      <div className="flex items-center text-sm text-gray-600">
-                        <MapPin className="mr-2 h-4 w-4" />
-                        {course.location}
-                      </div>
-                    )}
-
-                    <div className="grid grid-cols-2 gap-2 text-sm">
-                      <div className="flex items-center text-gray-600">
-                        <DollarSign className="mr-1 h-4 w-4" />
-                        {formatCurrency(course.fee)}
-                      </div>
-                      {course.bookRental && (
-                        <div className="flex items-center text-gray-600">
-                          <BookOpen className="mr-1 h-4 w-4" />
-                          Book: {formatCurrency(course.bookRental)}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="pt-2">
-                      <Badge className="bg-green-100 text-green-800">Active</Badge>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <div className="col-span-full text-center py-12">
-              <BookOpen className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No courses found</h3>
-              <p className="mt-1 text-sm text-gray-500">
-                {search ? "Try adjusting your search terms." : "Get started by adding a new course."}
-              </p>
-              {!search && (
-                <div className="mt-6">
-                  <Button onClick={() => setAddCourseOpen(true)}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Course
-                  </Button>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      )}
-
-      <AddCourseDialog open={addCourseOpen} onOpenChange={setAddCourseOpen} />
+      <AddCourseDialog 
+        open={addCourseOpen} 
+        onOpenChange={setAddCourseOpen} 
+      />
     </div>
   );
 }
