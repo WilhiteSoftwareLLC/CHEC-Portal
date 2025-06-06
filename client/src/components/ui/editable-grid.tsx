@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { ChevronUp, ChevronDown, Edit, Save, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { cn } from "@/lib/utils";
 
 export interface GridColumn {
@@ -10,7 +11,7 @@ export interface GridColumn {
   sortable?: boolean;
   editable?: boolean;
   width?: string;
-  type?: "text" | "email" | "tel" | "number";
+  type?: "text" | "email" | "tel" | "number" | "checkbox";
 }
 
 export interface EditableGridProps {
@@ -162,7 +163,20 @@ export default function EditableGrid({
                           column.width && `w-${column.width}`
                         )}
                       >
-                        {isEditing ? (
+                        {column.type === "checkbox" ? (
+                          <div className="flex justify-center">
+                            <Checkbox
+                              checked={Boolean(value)}
+                              onCheckedChange={async (checked) => {
+                                try {
+                                  await onRowUpdate(row.id, { [column.key]: checked });
+                                } catch (error) {
+                                  console.error("Failed to update checkbox:", error);
+                                }
+                              }}
+                            />
+                          </div>
+                        ) : isEditing ? (
                           <div className="flex items-center space-x-2">
                             <Input
                               type={column.type || "text"}

@@ -86,18 +86,14 @@ export default function Courses() {
   const coursesWithDisplay = courses?.map((course: Course) => ({
     ...course,
     hourDisplay: course.hour === 0 ? "Math Hour" : course.hour?.toString() || "",
-    offeredFallDisplay: course.offeredFall ? "Yes" : "No",
-    offeredSpringDisplay: course.offeredSpring ? "Yes" : "No"
   })) || [];
 
   const columns: GridColumn[] = [
     { key: "courseName", label: "Course Name", sortable: true, editable: true, width: "64" },
     { key: "hourDisplay", label: "Hour", sortable: true, editable: false, width: "24" },
     { key: "hour", label: "Hour (Edit)", sortable: true, editable: true, type: "number", width: "32" },
-    { key: "offeredFallDisplay", label: "Fall", sortable: true, editable: false, width: "20" },
-    { key: "offeredFall", label: "Fall (Edit)", sortable: true, editable: true, width: "24" },
-    { key: "offeredSpringDisplay", label: "Spring", sortable: true, editable: false, width: "20" },
-    { key: "offeredSpring", label: "Spring (Edit)", sortable: true, editable: true, width: "24" },
+    { key: "offeredFall", label: "Fall", sortable: true, editable: false, width: "20", type: "checkbox" },
+    { key: "offeredSpring", label: "Spring", sortable: true, editable: false, width: "20", type: "checkbox" },
   ];
 
   return (
