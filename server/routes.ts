@@ -2,15 +2,15 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, isAuthenticated } from "./replitAuth";
-import { 
+import {
   insertFamilySchema,
   insertStudentSchema,
   insertCourseSchema,
-  insertEnrollmentSchema,
-  insertInvoiceSchema,
-  insertInvoiceItemSchema,
+  insertClassSchema,
+  insertGradeSchema,
+  insertHourSchema,
+  insertSettingsSchema,
 } from "@shared/schema";
-import { z } from "zod";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Auth middleware
@@ -28,35 +28,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Dashboard routes
-  app.get('/api/dashboard/stats', isAuthenticated, async (req, res) => {
-    try {
-      const stats = await storage.getDashboardStats();
-      res.json(stats);
-    } catch (error) {
-      console.error("Error fetching dashboard stats:", error);
-      res.status(500).json({ message: "Failed to fetch dashboard stats" });
-    }
-  });
-
-  app.get('/api/dashboard/recent-enrollments', isAuthenticated, async (req, res) => {
-    try {
-      const limit = parseInt(req.query.limit as string) || 10;
-      const enrollments = await storage.getRecentEnrollments(limit);
-      res.json(enrollments);
-    } catch (error) {
-      console.error("Error fetching recent enrollments:", error);
-      res.status(500).json({ message: "Failed to fetch recent enrollments" });
-    }
-  });
-
   // Family routes
-  app.get('/api/families', isAuthenticated, async (req, res) => {
+  app.get("/api/families", isAuthenticated, async (req, res) => {
     try {
-      const search = req.query.search as string;
-      const families = search 
-        ? await storage.searchFamilies(search)
-        : await storage.getFamilies();
+      const families = await storage.getFamilies();
       res.json(families);
     } catch (error) {
       console.error("Error fetching families:", error);
@@ -64,7 +39,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/families/:id', isAuthenticated, async (req, res) => {
+  app.get("/api/families/search", isAuthenticated, async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ message: "Query parameter 'q' is required" });
+      }
+      const families = await storage.searchFamilies(query);
+      res.json(families);
+    } catch (error) {
+      console.error("Error searching families:", error);
+      res.status(500).json({ message: "Failed to search families" });
+    }
+  });
+
+  app.get("/api/families/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const family = await storage.getFamily(id);
@@ -78,36 +67,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/families', isAuthenticated, async (req, res) => {
+  app.post("/api/families", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertFamilySchema.parse(req.body);
-      const family = await storage.createFamily(validatedData);
+      const familyData = insertFamilySchema.parse(req.body);
+      const family = await storage.createFamily(familyData);
       res.status(201).json(family);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
       console.error("Error creating family:", error);
       res.status(500).json({ message: "Failed to create family" });
     }
   });
 
-  app.put('/api/families/:id', isAuthenticated, async (req, res) => {
+  app.patch("/api/families/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertFamilySchema.partial().parse(req.body);
-      const family = await storage.updateFamily(id, validatedData);
+      const familyData = insertFamilySchema.partial().parse(req.body);
+      const family = await storage.updateFamily(id, familyData);
       res.json(family);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
       console.error("Error updating family:", error);
       res.status(500).json({ message: "Failed to update family" });
     }
   });
 
-  app.delete('/api/families/:id', isAuthenticated, async (req, res) => {
+  app.delete("/api/families/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteFamily(id);
@@ -119,20 +102,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Student routes
-  app.get('/api/students', isAuthenticated, async (req, res) => {
+  app.get("/api/students", isAuthenticated, async (req, res) => {
     try {
-      const search = req.query.search as string;
-      const familyId = req.query.familyId as string;
-      
-      let students;
-      if (search) {
-        students = await storage.searchStudents(search);
-      } else if (familyId) {
-        students = await storage.getStudentsByFamily(parseInt(familyId));
-      } else {
-        students = await storage.getStudents();
-      }
-      
+      const students = await storage.getStudents();
       res.json(students);
     } catch (error) {
       console.error("Error fetching students:", error);
@@ -140,7 +112,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/students/:id', isAuthenticated, async (req, res) => {
+  app.get("/api/students/search", isAuthenticated, async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ message: "Query parameter 'q' is required" });
+      }
+      const students = await storage.searchStudents(query);
+      res.json(students);
+    } catch (error) {
+      console.error("Error searching students:", error);
+      res.status(500).json({ message: "Failed to search students" });
+    }
+  });
+
+  app.get("/api/students/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const student = await storage.getStudent(id);
@@ -154,36 +140,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/students', isAuthenticated, async (req, res) => {
+  app.get("/api/families/:familyId/students", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertStudentSchema.parse(req.body);
-      const student = await storage.createStudent(validatedData);
+      const familyId = parseInt(req.params.familyId);
+      const students = await storage.getStudentsByFamily(familyId);
+      res.json(students);
+    } catch (error) {
+      console.error("Error fetching students by family:", error);
+      res.status(500).json({ message: "Failed to fetch students" });
+    }
+  });
+
+  app.post("/api/students", isAuthenticated, async (req, res) => {
+    try {
+      const studentData = insertStudentSchema.parse(req.body);
+      const student = await storage.createStudent(studentData);
       res.status(201).json(student);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
       console.error("Error creating student:", error);
       res.status(500).json({ message: "Failed to create student" });
     }
   });
 
-  app.put('/api/students/:id', isAuthenticated, async (req, res) => {
+  app.patch("/api/students/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertStudentSchema.partial().parse(req.body);
-      const student = await storage.updateStudent(id, validatedData);
+      const studentData = insertStudentSchema.partial().parse(req.body);
+      const student = await storage.updateStudent(id, studentData);
       res.json(student);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
       console.error("Error updating student:", error);
       res.status(500).json({ message: "Failed to update student" });
     }
   });
 
-  app.delete('/api/students/:id', isAuthenticated, async (req, res) => {
+  app.delete("/api/students/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteStudent(id);
@@ -194,13 +185,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Course routes
-  app.get('/api/courses', isAuthenticated, async (req, res) => {
+  // Course routes (for 7th grade and older)
+  app.get("/api/courses", isAuthenticated, async (req, res) => {
     try {
-      const search = req.query.search as string;
-      const courses = search 
-        ? await storage.searchCourses(search)
-        : await storage.getCourses();
+      const courses = await storage.getCourses();
       res.json(courses);
     } catch (error) {
       console.error("Error fetching courses:", error);
@@ -208,7 +196,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/courses/:id', isAuthenticated, async (req, res) => {
+  app.get("/api/courses/search", isAuthenticated, async (req, res) => {
+    try {
+      const query = req.query.q as string;
+      if (!query) {
+        return res.status(400).json({ message: "Query parameter 'q' is required" });
+      }
+      const courses = await storage.searchCourses(query);
+      res.json(courses);
+    } catch (error) {
+      console.error("Error searching courses:", error);
+      res.status(500).json({ message: "Failed to search courses" });
+    }
+  });
+
+  app.get("/api/courses/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const course = await storage.getCourse(id);
@@ -222,36 +224,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/courses', isAuthenticated, async (req, res) => {
+  app.post("/api/courses", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertCourseSchema.parse(req.body);
-      const course = await storage.createCourse(validatedData);
+      const courseData = insertCourseSchema.parse(req.body);
+      const course = await storage.createCourse(courseData);
       res.status(201).json(course);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
       console.error("Error creating course:", error);
       res.status(500).json({ message: "Failed to create course" });
     }
   });
 
-  app.put('/api/courses/:id', isAuthenticated, async (req, res) => {
+  app.patch("/api/courses/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertCourseSchema.partial().parse(req.body);
-      const course = await storage.updateCourse(id, validatedData);
+      const courseData = insertCourseSchema.partial().parse(req.body);
+      const course = await storage.updateCourse(id, courseData);
       res.json(course);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
       console.error("Error updating course:", error);
       res.status(500).json({ message: "Failed to update course" });
     }
   });
 
-  app.delete('/api/courses/:id', isAuthenticated, async (req, res) => {
+  app.delete("/api/courses/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       await storage.deleteCourse(id);
@@ -262,174 +258,139 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Enrollment routes
-  app.get('/api/enrollments', isAuthenticated, async (req, res) => {
+  // Class routes (for 6th grade and younger)
+  app.get("/api/classes", isAuthenticated, async (req, res) => {
     try {
-      const studentId = req.query.studentId as string;
-      const courseId = req.query.courseId as string;
-      
-      let enrollments;
-      if (studentId) {
-        enrollments = await storage.getEnrollmentsByStudent(parseInt(studentId));
-      } else if (courseId) {
-        enrollments = await storage.getEnrollmentsByCourse(parseInt(courseId));
-      } else {
-        enrollments = await storage.getEnrollments();
-      }
-      
-      res.json(enrollments);
+      const classes = await storage.getClasses();
+      res.json(classes);
     } catch (error) {
-      console.error("Error fetching enrollments:", error);
-      res.status(500).json({ message: "Failed to fetch enrollments" });
+      console.error("Error fetching classes:", error);
+      res.status(500).json({ message: "Failed to fetch classes" });
     }
   });
 
-  app.post('/api/enrollments', isAuthenticated, async (req, res) => {
-    try {
-      const validatedData = insertEnrollmentSchema.parse(req.body);
-      const enrollment = await storage.createEnrollment(validatedData);
-      res.status(201).json(enrollment);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error creating enrollment:", error);
-      res.status(500).json({ message: "Failed to create enrollment" });
-    }
-  });
-
-  app.put('/api/enrollments/:id', isAuthenticated, async (req, res) => {
+  app.get("/api/classes/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const validatedData = insertEnrollmentSchema.partial().parse(req.body);
-      const enrollment = await storage.updateEnrollment(id, validatedData);
-      res.json(enrollment);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
+      const classData = await storage.getClass(id);
+      if (!classData) {
+        return res.status(404).json({ message: "Class not found" });
       }
-      console.error("Error updating enrollment:", error);
-      res.status(500).json({ message: "Failed to update enrollment" });
+      res.json(classData);
+    } catch (error) {
+      console.error("Error fetching class:", error);
+      res.status(500).json({ message: "Failed to fetch class" });
     }
   });
 
-  app.delete('/api/enrollments/:id', isAuthenticated, async (req, res) => {
+  app.post("/api/classes", isAuthenticated, async (req, res) => {
+    try {
+      const classData = insertClassSchema.parse(req.body);
+      const newClass = await storage.createClass(classData);
+      res.status(201).json(newClass);
+    } catch (error) {
+      console.error("Error creating class:", error);
+      res.status(500).json({ message: "Failed to create class" });
+    }
+  });
+
+  app.patch("/api/classes/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      await storage.deleteEnrollment(id);
+      const classData = insertClassSchema.partial().parse(req.body);
+      const updatedClass = await storage.updateClass(id, classData);
+      res.json(updatedClass);
+    } catch (error) {
+      console.error("Error updating class:", error);
+      res.status(500).json({ message: "Failed to update class" });
+    }
+  });
+
+  app.delete("/api/classes/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteClass(id);
       res.status(204).send();
     } catch (error) {
-      console.error("Error deleting enrollment:", error);
-      res.status(500).json({ message: "Failed to delete enrollment" });
+      console.error("Error deleting class:", error);
+      res.status(500).json({ message: "Failed to delete class" });
     }
   });
 
-  // Invoice routes
-  app.get('/api/invoices', isAuthenticated, async (req, res) => {
+  // Grade routes
+  app.get("/api/grades", isAuthenticated, async (req, res) => {
     try {
-      const familyId = req.query.familyId as string;
-      const invoices = familyId 
-        ? await storage.getInvoicesByFamily(parseInt(familyId))
-        : await storage.getInvoices();
-      res.json(invoices);
+      const grades = await storage.getGrades();
+      res.json(grades);
     } catch (error) {
-      console.error("Error fetching invoices:", error);
-      res.status(500).json({ message: "Failed to fetch invoices" });
+      console.error("Error fetching grades:", error);
+      res.status(500).json({ message: "Failed to fetch grades" });
     }
   });
 
-  app.get('/api/invoices/:id', isAuthenticated, async (req, res) => {
+  app.post("/api/grades", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const invoice = await storage.getInvoice(id);
-      if (!invoice) {
-        return res.status(404).json({ message: "Invoice not found" });
-      }
-      res.json(invoice);
+      const gradeData = insertGradeSchema.parse(req.body);
+      const grade = await storage.createGrade(gradeData);
+      res.status(201).json(grade);
     } catch (error) {
-      console.error("Error fetching invoice:", error);
-      res.status(500).json({ message: "Failed to fetch invoice" });
+      console.error("Error creating grade:", error);
+      res.status(500).json({ message: "Failed to create grade" });
     }
   });
 
-  app.post('/api/invoices', isAuthenticated, async (req, res) => {
+  // Hour routes
+  app.get("/api/hours", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertInvoiceSchema.parse(req.body);
-      const invoice = await storage.createInvoice(validatedData);
-      res.status(201).json(invoice);
+      const hours = await storage.getHours();
+      res.json(hours);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error creating invoice:", error);
-      res.status(500).json({ message: "Failed to create invoice" });
+      console.error("Error fetching hours:", error);
+      res.status(500).json({ message: "Failed to fetch hours" });
     }
   });
 
-  app.put('/api/invoices/:id', isAuthenticated, async (req, res) => {
+  app.post("/api/hours", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertInvoiceSchema.partial().parse(req.body);
-      const invoice = await storage.updateInvoice(id, validatedData);
-      res.json(invoice);
+      const hourData = insertHourSchema.parse(req.body);
+      const hour = await storage.createHour(hourData);
+      res.status(201).json(hour);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error updating invoice:", error);
-      res.status(500).json({ message: "Failed to update invoice" });
+      console.error("Error creating hour:", error);
+      res.status(500).json({ message: "Failed to create hour" });
     }
   });
 
-  app.delete('/api/invoices/:id', isAuthenticated, async (req, res) => {
+  // Settings routes
+  app.get("/api/settings", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      await storage.deleteInvoice(id);
-      res.status(204).send();
+      const settings = await storage.getSettings();
+      res.json(settings);
     } catch (error) {
-      console.error("Error deleting invoice:", error);
-      res.status(500).json({ message: "Failed to delete invoice" });
+      console.error("Error fetching settings:", error);
+      res.status(500).json({ message: "Failed to fetch settings" });
     }
   });
 
-  // Invoice item routes
-  app.post('/api/invoice-items', isAuthenticated, async (req, res) => {
+  app.patch("/api/settings", isAuthenticated, async (req, res) => {
     try {
-      const validatedData = insertInvoiceItemSchema.parse(req.body);
-      const item = await storage.createInvoiceItem(validatedData);
-      res.status(201).json(item);
+      const settingsData = insertSettingsSchema.partial().parse(req.body);
+      const settings = await storage.updateSettings(settingsData);
+      res.json(settings);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error creating invoice item:", error);
-      res.status(500).json({ message: "Failed to create invoice item" });
+      console.error("Error updating settings:", error);
+      res.status(500).json({ message: "Failed to update settings" });
     }
   });
 
-  app.put('/api/invoice-items/:id', isAuthenticated, async (req, res) => {
+  // Dashboard stats
+  app.get("/api/dashboard/stats", isAuthenticated, async (req, res) => {
     try {
-      const id = parseInt(req.params.id);
-      const validatedData = insertInvoiceItemSchema.partial().parse(req.body);
-      const item = await storage.updateInvoiceItem(id, validatedData);
-      res.json(item);
+      const stats = await storage.getDashboardStats();
+      res.json(stats);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid data", errors: error.errors });
-      }
-      console.error("Error updating invoice item:", error);
-      res.status(500).json({ message: "Failed to update invoice item" });
-    }
-  });
-
-  app.delete('/api/invoice-items/:id', isAuthenticated, async (req, res) => {
-    try {
-      const id = parseInt(req.params.id);
-      await storage.deleteInvoiceItem(id);
-      res.status(204).send();
-    } catch (error) {
-      console.error("Error deleting invoice item:", error);
-      res.status(500).json({ message: "Failed to delete invoice item" });
+      console.error("Error fetching dashboard stats:", error);
+      res.status(500).json({ message: "Failed to fetch dashboard stats" });
     }
   });
 

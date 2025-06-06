@@ -1,0 +1,95 @@
+# A Class is for elementary students (6th grade and younger). All students in the same grade take the same classes.
+Table: Class
+  ID (COUNTER)
+  ClassName (VARCHAR)
+  StartCode (INTEGER)
+  EndCode (INTEGER)
+
+# A Course is for secondary students (7th grade and older). These students select which courses they will take each year.
+# Some courses have lab fees and book rental fees that are specific to that course.
+# Some courses are only offered one semester (fall or spring)
+Table: Course
+  ID (COUNTER)
+  CourseName (VARCHAR)
+  OfferedFall (BIT)
+  OfferedSpring (BIT)
+  Hour (INTEGER)
+  Fee (CURRENCY)
+  BookRental (CURRENCY)
+  Location (VARCHAR)
+
+# A Family is the basic unit of the co-op. Every student belongs to a family.
+Table: Family
+  id (COUNTER)
+  LastName (VARCHAR)
+  Father (VARCHAR)
+  Mother (VARCHAR)
+  ParentCell (VARCHAR)
+  Email (VARCHAR)
+  Address (VARCHAR)
+  City (VARCHAR)
+  Zip (DOUBLE)
+  HomePhone (VARCHAR)
+  ParentCell2 (VARCHAR)
+  SecondEmail (VARCHAR)
+  WorkPhone (VARCHAR)
+  Church (VARCHAR)
+  PastorName (VARCHAR)
+  PastorPhone (VARCHAR)
+
+# This is a table of families that used to be part of the co-op but are no longer.
+Table: Former Families
+  ID (COUNTER)
+  LastName (VARCHAR)
+  Father (VARCHAR)
+  Mother (VARCHAR)
+  ParentCell (VARCHAR)
+  Email (VARCHAR)
+  Address (VARCHAR)
+  City (VARCHAR)
+  Zip (DOUBLE)
+  HomePhone (VARCHAR)
+  ParentCell2 (VARCHAR)
+  Field1 (VARCHAR)
+  WorkPhone (VARCHAR)
+  Church (VARCHAR)
+  PastorName (VARCHAR)
+  PastorPhone (VARCHAR)
+
+# The Grade table maps Grade names to Codes. We start "1st" grade at 1, but we have several years of preschool that have negative number codes.
+Table: Grade
+  ID (COUNTER)
+  GradeName (VARCHAR)
+  Code (INTEGER)
+
+# The name of the Hour at the co-op (e.g 1st, 2nd, 3rd)
+Table: Hour
+  id (INTEGER)
+  Description (VARCHAR)
+
+# A list of variables that could be modified each year
+Table: Settings
+  ID (COUNTER)
+  FamilyFee (CURRENCY)
+  BackgroundFee (CURRENCY)
+  StudentFee (CURRENCY)
+  SchoolYear (INTEGER)
+
+# All the students registered in the co-op along with a denormalized schedule for those students.
+# Only 7th grade and older have Course names assigned for the columns like "1stHour, 2nd Hour, etc".
+Table: Student
+  id (COUNTER)
+  FamilyID (INTEGER)
+  LastName (VARCHAR)
+  FirstName (VARCHAR)
+  Birthdate (DATETIME)
+  GradYear (VARCHAR)
+  Comment1 (VARCHAR)
+  MathHour (VARCHAR)
+  1stHour (VARCHAR)
+  2ndHour (VARCHAR)
+  3rdHour (VARCHAR)
+  4thHour (VARCHAR)
+  5thHourFall (VARCHAR)
+  5thHourSpring (VARCHAR)
+  FridayScience (VARCHAR)

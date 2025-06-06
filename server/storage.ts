@@ -3,9 +3,10 @@ import {
   families,
   students,
   courses,
-  enrollments,
-  invoices,
-  invoiceItems,
+  classes,
+  grades,
+  hours,
+  settings,
   type User,
   type UpsertUser,
   type Family,
@@ -15,18 +16,19 @@ import {
   type StudentWithFamily,
   type Course,
   type InsertCourse,
-  type Enrollment,
-  type InsertEnrollment,
-  type EnrollmentWithDetails,
-  type Invoice,
-  type InsertInvoice,
-  type InvoiceWithDetails,
-  type InvoiceItem,
-  type InsertInvoiceItem,
+  type Class,
+  type InsertClass,
+  type Grade,
+  type InsertGrade,
+  type Hour,
+  type InsertHour,
+  type Settings,
+  type InsertSettings,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, desc, sql, and, like, or, count } from "drizzle-orm";
+import { eq, desc, like, count, sql, and } from "drizzle-orm";
 
+// Interface for storage operations
 export interface IStorage {
   // User operations (mandatory for Replit Auth)
   getUser(id: string): Promise<User | undefined>;
@@ -49,7 +51,7 @@ export interface IStorage {
   deleteStudent(id: number): Promise<void>;
   searchStudents(query: string): Promise<StudentWithFamily[]>;
 
-  // Course operations
+  // Course operations (for 7th grade and older)
   getCourses(): Promise<Course[]>;
   getCourse(id: number): Promise<Course | undefined>;
   createCourse(course: InsertCourse): Promise<Course>;
@@ -57,36 +59,32 @@ export interface IStorage {
   deleteCourse(id: number): Promise<void>;
   searchCourses(query: string): Promise<Course[]>;
 
-  // Enrollment operations
-  getEnrollments(): Promise<EnrollmentWithDetails[]>;
-  getEnrollment(id: number): Promise<EnrollmentWithDetails | undefined>;
-  getEnrollmentsByStudent(studentId: number): Promise<EnrollmentWithDetails[]>;
-  getEnrollmentsByCourse(courseId: number): Promise<EnrollmentWithDetails[]>;
-  createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment>;
-  updateEnrollment(id: number, enrollment: Partial<InsertEnrollment>): Promise<Enrollment>;
-  deleteEnrollment(id: number): Promise<void>;
+  // Class operations (for 6th grade and younger)
+  getClasses(): Promise<Class[]>;
+  getClass(id: number): Promise<Class | undefined>;
+  createClass(classData: InsertClass): Promise<Class>;
+  updateClass(id: number, classData: Partial<InsertClass>): Promise<Class>;
+  deleteClass(id: number): Promise<void>;
 
-  // Invoice operations
-  getInvoices(): Promise<InvoiceWithDetails[]>;
-  getInvoice(id: number): Promise<InvoiceWithDetails | undefined>;
-  getInvoicesByFamily(familyId: number): Promise<InvoiceWithDetails[]>;
-  createInvoice(invoice: InsertInvoice): Promise<Invoice>;
-  updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice>;
-  deleteInvoice(id: number): Promise<void>;
-  createInvoiceItem(item: InsertInvoiceItem): Promise<InvoiceItem>;
-  updateInvoiceItem(id: number, item: Partial<InsertInvoiceItem>): Promise<InvoiceItem>;
-  deleteInvoiceItem(id: number): Promise<void>;
+  // Grade operations
+  getGrades(): Promise<Grade[]>;
+  createGrade(grade: InsertGrade): Promise<Grade>;
+
+  // Hour operations
+  getHours(): Promise<Hour[]>;
+  createHour(hour: InsertHour): Promise<Hour>;
+
+  // Settings operations
+  getSettings(): Promise<Settings | undefined>;
+  updateSettings(settings: Partial<InsertSettings>): Promise<Settings>;
 
   // Dashboard stats
   getDashboardStats(): Promise<{
     totalFamilies: number;
-    activeStudents: number;
-    availableCourses: number;
-    pendingInvoices: number;
+    totalStudents: number;
+    totalCourses: number;
+    totalClasses: number;
   }>;
-
-  // Recent activity
-  getRecentEnrollments(limit?: number): Promise<EnrollmentWithDetails[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -113,17 +111,11 @@ export class DatabaseStorage implements IStorage {
 
   // Family operations
   async getFamilies(): Promise<Family[]> {
-    return await db
-      .select()
-      .from(families)
-      .orderBy(desc(families.createdAt));
+    return await db.select().from(families).orderBy(families.lastName);
   }
 
   async getFamily(id: number): Promise<Family | undefined> {
-    const [family] = await db
-      .select()
-      .from(families)
-      .where(eq(families.id, id));
+    const [family] = await db.select().from(families).where(eq(families.id, id));
     return family;
   }
 
@@ -138,7 +130,7 @@ export class DatabaseStorage implements IStorage {
   async updateFamily(id: number, family: Partial<InsertFamily>): Promise<Family> {
     const [updatedFamily] = await db
       .update(families)
-      .set({ ...family, updatedAt: new Date() })
+      .set(family)
       .where(eq(families.id, id))
       .returning();
     return updatedFamily;
@@ -153,43 +145,63 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(families)
       .where(
-        or(
-          like(families.name, `%${query}%`),
-          like(families.primaryContact, `%${query}%`),
-          like(families.email, `%${query}%`)
-        )
+        sql`LOWER(${families.lastName}) LIKE LOWER(${'%' + query + '%'}) OR 
+            LOWER(${families.father}) LIKE LOWER(${'%' + query + '%'}) OR
+            LOWER(${families.mother}) LIKE LOWER(${'%' + query + '%'})`
       )
-      .orderBy(desc(families.createdAt));
+      .orderBy(families.lastName);
   }
 
   // Student operations
   async getStudents(): Promise<StudentWithFamily[]> {
     return await db
-      .select()
+      .select({
+        id: students.id,
+        familyId: students.familyId,
+        lastName: students.lastName,
+        firstName: students.firstName,
+        birthdate: students.birthdate,
+        gradYear: students.gradYear,
+        comment1: students.comment1,
+        mathHour: students.mathHour,
+        firstHour: students.firstHour,
+        secondHour: students.secondHour,
+        thirdHour: students.thirdHour,
+        fourthHour: students.fourthHour,
+        fifthHourFall: students.fifthHourFall,
+        fifthHourSpring: students.fifthHourSpring,
+        fridayScience: students.fridayScience,
+        family: families,
+      })
       .from(students)
-      .leftJoin(families, eq(students.familyId, families.id))
-      .orderBy(desc(students.createdAt))
-      .then(rows => 
-        rows.map(row => ({
-          ...row.students,
-          family: row.families!
-        }))
-      );
+      .innerJoin(families, eq(students.familyId, families.id))
+      .orderBy(students.lastName, students.firstName);
   }
 
   async getStudent(id: number): Promise<StudentWithFamily | undefined> {
-    const [result] = await db
-      .select()
+    const [student] = await db
+      .select({
+        id: students.id,
+        familyId: students.familyId,
+        lastName: students.lastName,
+        firstName: students.firstName,
+        birthdate: students.birthdate,
+        gradYear: students.gradYear,
+        comment1: students.comment1,
+        mathHour: students.mathHour,
+        firstHour: students.firstHour,
+        secondHour: students.secondHour,
+        thirdHour: students.thirdHour,
+        fourthHour: students.fourthHour,
+        fifthHourFall: students.fifthHourFall,
+        fifthHourSpring: students.fifthHourSpring,
+        fridayScience: students.fridayScience,
+        family: families,
+      })
       .from(students)
-      .leftJoin(families, eq(students.familyId, families.id))
+      .innerJoin(families, eq(students.familyId, families.id))
       .where(eq(students.id, id));
-
-    if (!result) return undefined;
-
-    return {
-      ...result.students,
-      family: result.families!
-    };
+    return student;
   }
 
   async getStudentsByFamily(familyId: number): Promise<Student[]> {
@@ -211,7 +223,7 @@ export class DatabaseStorage implements IStorage {
   async updateStudent(id: number, student: Partial<InsertStudent>): Promise<Student> {
     const [updatedStudent] = await db
       .update(students)
-      .set({ ...student, updatedAt: new Date() })
+      .set(student)
       .where(eq(students.id, id))
       .returning();
     return updatedStudent;
@@ -223,38 +235,40 @@ export class DatabaseStorage implements IStorage {
 
   async searchStudents(query: string): Promise<StudentWithFamily[]> {
     return await db
-      .select()
+      .select({
+        id: students.id,
+        familyId: students.familyId,
+        lastName: students.lastName,
+        firstName: students.firstName,
+        birthdate: students.birthdate,
+        gradYear: students.gradYear,
+        comment1: students.comment1,
+        mathHour: students.mathHour,
+        firstHour: students.firstHour,
+        secondHour: students.secondHour,
+        thirdHour: students.thirdHour,
+        fourthHour: students.fourthHour,
+        fifthHourFall: students.fifthHourFall,
+        fifthHourSpring: students.fifthHourSpring,
+        fridayScience: students.fridayScience,
+        family: families,
+      })
       .from(students)
-      .leftJoin(families, eq(students.familyId, families.id))
+      .innerJoin(families, eq(students.familyId, families.id))
       .where(
-        or(
-          like(students.firstName, `%${query}%`),
-          like(students.lastName, `%${query}%`),
-          like(families.name, `%${query}%`)
-        )
+        sql`LOWER(${students.firstName}) LIKE LOWER(${'%' + query + '%'}) OR 
+            LOWER(${students.lastName}) LIKE LOWER(${'%' + query + '%'})`
       )
-      .orderBy(desc(students.createdAt))
-      .then(rows => 
-        rows.map(row => ({
-          ...row.students,
-          family: row.families!
-        }))
-      );
+      .orderBy(students.lastName, students.firstName);
   }
 
   // Course operations
   async getCourses(): Promise<Course[]> {
-    return await db
-      .select()
-      .from(courses)
-      .orderBy(desc(courses.createdAt));
+    return await db.select().from(courses).orderBy(courses.courseName);
   }
 
   async getCourse(id: number): Promise<Course | undefined> {
-    const [course] = await db
-      .select()
-      .from(courses)
-      .where(eq(courses.id, id));
+    const [course] = await db.select().from(courses).where(eq(courses.id, id));
     return course;
   }
 
@@ -269,7 +283,7 @@ export class DatabaseStorage implements IStorage {
   async updateCourse(id: number, course: Partial<InsertCourse>): Promise<Course> {
     const [updatedCourse] = await db
       .update(courses)
-      .set({ ...course, updatedAt: new Date() })
+      .set(course)
       .where(eq(courses.id, id))
       .returning();
     return updatedCourse;
@@ -284,253 +298,100 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(courses)
       .where(
-        or(
-          like(courses.name, `%${query}%`),
-          like(courses.instructor, `%${query}%`),
-          like(courses.subject, `%${query}%`)
-        )
+        sql`LOWER(${courses.courseName}) LIKE LOWER(${'%' + query + '%'}) OR 
+            LOWER(${courses.location}) LIKE LOWER(${'%' + query + '%'})`
       )
-      .orderBy(desc(courses.createdAt));
+      .orderBy(courses.courseName);
   }
 
-  // Enrollment operations
-  async getEnrollments(): Promise<EnrollmentWithDetails[]> {
-    return await db
-      .select()
-      .from(enrollments)
-      .leftJoin(students, eq(enrollments.studentId, students.id))
-      .leftJoin(families, eq(students.familyId, families.id))
-      .leftJoin(courses, eq(enrollments.courseId, courses.id))
-      .orderBy(desc(enrollments.createdAt))
-      .then(rows => 
-        rows.map(row => ({
-          ...row.enrollments,
-          student: {
-            ...row.students!,
-            family: row.families!
-          },
-          course: row.courses!
-        }))
-      );
+  // Class operations
+  async getClasses(): Promise<Class[]> {
+    return await db.select().from(classes).orderBy(classes.className);
   }
 
-  async getEnrollment(id: number): Promise<EnrollmentWithDetails | undefined> {
-    const [result] = await db
-      .select()
-      .from(enrollments)
-      .leftJoin(students, eq(enrollments.studentId, students.id))
-      .leftJoin(families, eq(students.familyId, families.id))
-      .leftJoin(courses, eq(enrollments.courseId, courses.id))
-      .where(eq(enrollments.id, id));
-
-    if (!result) return undefined;
-
-    return {
-      ...result.enrollments,
-      student: {
-        ...result.students!,
-        family: result.families!
-      },
-      course: result.courses!
-    };
+  async getClass(id: number): Promise<Class | undefined> {
+    const [classData] = await db.select().from(classes).where(eq(classes.id, id));
+    return classData;
   }
 
-  async getEnrollmentsByStudent(studentId: number): Promise<EnrollmentWithDetails[]> {
-    return await db
-      .select()
-      .from(enrollments)
-      .leftJoin(students, eq(enrollments.studentId, students.id))
-      .leftJoin(families, eq(students.familyId, families.id))
-      .leftJoin(courses, eq(enrollments.courseId, courses.id))
-      .where(eq(enrollments.studentId, studentId))
-      .orderBy(desc(enrollments.createdAt))
-      .then(rows => 
-        rows.map(row => ({
-          ...row.enrollments,
-          student: {
-            ...row.students!,
-            family: row.families!
-          },
-          course: row.courses!
-        }))
-      );
-  }
-
-  async getEnrollmentsByCourse(courseId: number): Promise<EnrollmentWithDetails[]> {
-    return await db
-      .select()
-      .from(enrollments)
-      .leftJoin(students, eq(enrollments.studentId, students.id))
-      .leftJoin(families, eq(students.familyId, families.id))
-      .leftJoin(courses, eq(enrollments.courseId, courses.id))
-      .where(eq(enrollments.courseId, courseId))
-      .orderBy(desc(enrollments.createdAt))
-      .then(rows => 
-        rows.map(row => ({
-          ...row.enrollments,
-          student: {
-            ...row.students!,
-            family: row.families!
-          },
-          course: row.courses!
-        }))
-      );
-  }
-
-  async createEnrollment(enrollment: InsertEnrollment): Promise<Enrollment> {
-    const [newEnrollment] = await db
-      .insert(enrollments)
-      .values(enrollment)
+  async createClass(classData: InsertClass): Promise<Class> {
+    const [newClass] = await db
+      .insert(classes)
+      .values(classData)
       .returning();
-    return newEnrollment;
+    return newClass;
   }
 
-  async updateEnrollment(id: number, enrollment: Partial<InsertEnrollment>): Promise<Enrollment> {
-    const [updatedEnrollment] = await db
-      .update(enrollments)
-      .set({ ...enrollment, updatedAt: new Date() })
-      .where(eq(enrollments.id, id))
+  async updateClass(id: number, classData: Partial<InsertClass>): Promise<Class> {
+    const [updatedClass] = await db
+      .update(classes)
+      .set(classData)
+      .where(eq(classes.id, id))
       .returning();
-    return updatedEnrollment;
+    return updatedClass;
   }
 
-  async deleteEnrollment(id: number): Promise<void> {
-    await db.delete(enrollments).where(eq(enrollments.id, id));
+  async deleteClass(id: number): Promise<void> {
+    await db.delete(classes).where(eq(classes.id, id));
   }
 
-  // Invoice operations
-  async getInvoices(): Promise<InvoiceWithDetails[]> {
-    const invoiceResults = await db
-      .select()
-      .from(invoices)
-      .leftJoin(families, eq(invoices.familyId, families.id))
-      .orderBy(desc(invoices.createdAt));
+  // Grade operations
+  async getGrades(): Promise<Grade[]> {
+    return await db.select().from(grades).orderBy(grades.code);
+  }
 
-    const invoicesWithDetails: InvoiceWithDetails[] = [];
+  async createGrade(grade: InsertGrade): Promise<Grade> {
+    const [newGrade] = await db
+      .insert(grades)
+      .values(grade)
+      .returning();
+    return newGrade;
+  }
 
-    for (const result of invoiceResults) {
-      const items = await db
-        .select()
-        .from(invoiceItems)
-        .leftJoin(courses, eq(invoiceItems.courseId, courses.id))
-        .where(eq(invoiceItems.invoiceId, result.invoices.id));
+  // Hour operations
+  async getHours(): Promise<Hour[]> {
+    return await db.select().from(hours).orderBy(hours.id);
+  }
 
-      invoicesWithDetails.push({
-        ...result.invoices,
-        family: result.families!,
-        items: items.map(item => ({
-          ...item.invoice_items,
-          course: item.courses || undefined
-        }))
-      });
+  async createHour(hour: InsertHour): Promise<Hour> {
+    const [newHour] = await db
+      .insert(hours)
+      .values(hour)
+      .returning();
+    return newHour;
+  }
+
+  // Settings operations
+  async getSettings(): Promise<Settings | undefined> {
+    const [settings_data] = await db.select().from(settings).limit(1);
+    return settings_data;
+  }
+
+  async updateSettings(settingsData: Partial<InsertSettings>): Promise<Settings> {
+    // Try to update first
+    const [updatedSettings] = await db
+      .update(settings)
+      .set(settingsData)
+      .returning();
+    
+    // If no rows were updated, insert a new record
+    if (!updatedSettings) {
+      const [newSettings] = await db
+        .insert(settings)
+        .values(settingsData as InsertSettings)
+        .returning();
+      return newSettings;
     }
-
-    return invoicesWithDetails;
-  }
-
-  async getInvoice(id: number): Promise<InvoiceWithDetails | undefined> {
-    const [result] = await db
-      .select()
-      .from(invoices)
-      .leftJoin(families, eq(invoices.familyId, families.id))
-      .where(eq(invoices.id, id));
-
-    if (!result) return undefined;
-
-    const items = await db
-      .select()
-      .from(invoiceItems)
-      .leftJoin(courses, eq(invoiceItems.courseId, courses.id))
-      .where(eq(invoiceItems.invoiceId, id));
-
-    return {
-      ...result.invoices,
-      family: result.families!,
-      items: items.map(item => ({
-        ...item.invoice_items,
-        course: item.courses || undefined
-      }))
-    };
-  }
-
-  async getInvoicesByFamily(familyId: number): Promise<InvoiceWithDetails[]> {
-    const invoiceResults = await db
-      .select()
-      .from(invoices)
-      .leftJoin(families, eq(invoices.familyId, families.id))
-      .where(eq(invoices.familyId, familyId))
-      .orderBy(desc(invoices.createdAt));
-
-    const invoicesWithDetails: InvoiceWithDetails[] = [];
-
-    for (const result of invoiceResults) {
-      const items = await db
-        .select()
-        .from(invoiceItems)
-        .leftJoin(courses, eq(invoiceItems.courseId, courses.id))
-        .where(eq(invoiceItems.invoiceId, result.invoices.id));
-
-      invoicesWithDetails.push({
-        ...result.invoices,
-        family: result.families!,
-        items: items.map(item => ({
-          ...item.invoice_items,
-          course: item.courses || undefined
-        }))
-      });
-    }
-
-    return invoicesWithDetails;
-  }
-
-  async createInvoice(invoice: InsertInvoice): Promise<Invoice> {
-    const [newInvoice] = await db
-      .insert(invoices)
-      .values(invoice)
-      .returning();
-    return newInvoice;
-  }
-
-  async updateInvoice(id: number, invoice: Partial<InsertInvoice>): Promise<Invoice> {
-    const [updatedInvoice] = await db
-      .update(invoices)
-      .set({ ...invoice, updatedAt: new Date() })
-      .where(eq(invoices.id, id))
-      .returning();
-    return updatedInvoice;
-  }
-
-  async deleteInvoice(id: number): Promise<void> {
-    await db.delete(invoices).where(eq(invoices.id, id));
-  }
-
-  async createInvoiceItem(item: InsertInvoiceItem): Promise<InvoiceItem> {
-    const [newItem] = await db
-      .insert(invoiceItems)
-      .values(item)
-      .returning();
-    return newItem;
-  }
-
-  async updateInvoiceItem(id: number, item: Partial<InsertInvoiceItem>): Promise<InvoiceItem> {
-    const [updatedItem] = await db
-      .update(invoiceItems)
-      .set(item)
-      .where(eq(invoiceItems.id, id))
-      .returning();
-    return updatedItem;
-  }
-
-  async deleteInvoiceItem(id: number): Promise<void> {
-    await db.delete(invoiceItems).where(eq(invoiceItems.id, id));
+    
+    return updatedSettings;
   }
 
   // Dashboard stats
   async getDashboardStats(): Promise<{
     totalFamilies: number;
-    activeStudents: number;
-    availableCourses: number;
-    pendingInvoices: number;
+    totalStudents: number;
+    totalCourses: number;
+    totalClasses: number;
   }> {
     const [familyCount] = await db
       .select({ count: count() })
@@ -538,47 +399,22 @@ export class DatabaseStorage implements IStorage {
 
     const [studentCount] = await db
       .select({ count: count() })
-      .from(students)
-      .where(eq(students.active, true));
+      .from(students);
 
     const [courseCount] = await db
       .select({ count: count() })
-      .from(courses)
-      .where(eq(courses.active, true));
+      .from(courses);
 
-    const [invoiceCount] = await db
+    const [classCount] = await db
       .select({ count: count() })
-      .from(invoices)
-      .where(eq(invoices.status, "pending"));
+      .from(classes);
 
     return {
       totalFamilies: familyCount.count,
-      activeStudents: studentCount.count,
-      availableCourses: courseCount.count,
-      pendingInvoices: invoiceCount.count,
+      totalStudents: studentCount.count,
+      totalCourses: courseCount.count,
+      totalClasses: classCount.count,
     };
-  }
-
-  // Recent activity
-  async getRecentEnrollments(limit: number = 10): Promise<EnrollmentWithDetails[]> {
-    return await db
-      .select()
-      .from(enrollments)
-      .leftJoin(students, eq(enrollments.studentId, students.id))
-      .leftJoin(families, eq(students.familyId, families.id))
-      .leftJoin(courses, eq(enrollments.courseId, courses.id))
-      .orderBy(desc(enrollments.createdAt))
-      .limit(limit)
-      .then(rows => 
-        rows.map(row => ({
-          ...row.enrollments,
-          student: {
-            ...row.students!,
-            family: row.families!
-          },
-          course: row.courses!
-        }))
-      );
   }
 }
 

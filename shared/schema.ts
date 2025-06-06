@@ -37,182 +37,164 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-// Families table
-export const families = pgTable("families", {
+// Settings table - configurable variables for each year
+export const settings = pgTable("settings", {
   id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  primaryContact: varchar("primary_contact", { length: 255 }).notNull(),
-  email: varchar("email", { length: 255 }),
-  phone: varchar("phone", { length: 20 }),
-  address: text("address"),
-  emergencyContact: varchar("emergency_contact", { length: 255 }),
-  emergencyPhone: varchar("emergency_phone", { length: 20 }),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
+  familyFee: decimal("family_fee", { precision: 10, scale: 2 }),
+  backgroundFee: decimal("background_fee", { precision: 10, scale: 2 }),
+  studentFee: decimal("student_fee", { precision: 10, scale: 2 }),
+  schoolYear: integer("school_year"),
 });
 
-// Students table
+// Grade table - maps grade names to codes (including negative codes for preschool)
+export const grades = pgTable("grades", {
+  id: serial("id").primaryKey(),
+  gradeName: varchar("grade_name", { length: 50 }).notNull(),
+  code: integer("code").notNull(),
+});
+
+// Hour table - names of class periods (1st, 2nd, 3rd, etc.)
+export const hours = pgTable("hours", {
+  id: integer("id").primaryKey(),
+  description: varchar("description", { length: 50 }).notNull(),
+});
+
+// Family table - matches your existing structure
+export const families = pgTable("families", {
+  id: serial("id").primaryKey(),
+  lastName: varchar("last_name", { length: 255 }).notNull(),
+  father: varchar("father", { length: 255 }),
+  mother: varchar("mother", { length: 255 }),
+  parentCell: varchar("parent_cell", { length: 20 }),
+  email: varchar("email", { length: 255 }),
+  address: varchar("address", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  zip: varchar("zip", { length: 10 }),
+  homePhone: varchar("home_phone", { length: 20 }),
+  parentCell2: varchar("parent_cell2", { length: 20 }),
+  secondEmail: varchar("second_email", { length: 255 }),
+  workPhone: varchar("work_phone", { length: 20 }),
+  church: varchar("church", { length: 255 }),
+  pastorName: varchar("pastor_name", { length: 255 }),
+  pastorPhone: varchar("pastor_phone", { length: 20 }),
+});
+
+// Former Families table - families no longer part of co-op
+export const formerFamilies = pgTable("former_families", {
+  id: serial("id").primaryKey(),
+  lastName: varchar("last_name", { length: 255 }).notNull(),
+  father: varchar("father", { length: 255 }),
+  mother: varchar("mother", { length: 255 }),
+  parentCell: varchar("parent_cell", { length: 20 }),
+  email: varchar("email", { length: 255 }),
+  address: varchar("address", { length: 255 }),
+  city: varchar("city", { length: 100 }),
+  zip: varchar("zip", { length: 10 }),
+  homePhone: varchar("home_phone", { length: 20 }),
+  parentCell2: varchar("parent_cell2", { length: 20 }),
+  field1: varchar("field1", { length: 255 }),
+  workPhone: varchar("work_phone", { length: 20 }),
+  church: varchar("church", { length: 255 }),
+  pastorName: varchar("pastor_name", { length: 255 }),
+  pastorPhone: varchar("pastor_phone", { length: 20 }),
+});
+
+// Class table - for elementary students (6th grade and younger)
+export const classes = pgTable("classes", {
+  id: serial("id").primaryKey(),
+  className: varchar("class_name", { length: 255 }).notNull(),
+  startCode: integer("start_code"),
+  endCode: integer("end_code"),
+});
+
+// Course table - for secondary students (7th grade and older)
+export const courses = pgTable("courses", {
+  id: serial("id").primaryKey(),
+  courseName: varchar("course_name", { length: 255 }).notNull(),
+  offeredFall: boolean("offered_fall").default(true),
+  offeredSpring: boolean("offered_spring").default(true),
+  hour: integer("hour"),
+  fee: decimal("fee", { precision: 10, scale: 2 }),
+  bookRental: decimal("book_rental", { precision: 10, scale: 2 }),
+  location: varchar("location", { length: 255 }),
+});
+
+// Student table with denormalized schedule - matches your existing structure
 export const students = pgTable("students", {
   id: serial("id").primaryKey(),
   familyId: integer("family_id").references(() => families.id).notNull(),
-  firstName: varchar("first_name", { length: 255 }).notNull(),
   lastName: varchar("last_name", { length: 255 }).notNull(),
-  dateOfBirth: date("date_of_birth"),
-  grade: varchar("grade", { length: 10 }),
-  allergies: text("allergies"),
-  medicalConditions: text("medical_conditions"),
-  specialNeeds: text("special_needs"),
-  notes: text("notes"),
-  active: boolean("active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Courses table
-export const courses = pgTable("courses", {
-  id: serial("id").primaryKey(),
-  name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
-  instructor: varchar("instructor", { length: 255 }),
-  gradeLevel: varchar("grade_level", { length: 50 }),
-  subject: varchar("subject", { length: 100 }),
-  maxStudents: integer("max_students"),
-  cost: decimal("cost", { precision: 10, scale: 2 }),
-  schedule: varchar("schedule", { length: 255 }),
-  location: varchar("location", { length: 255 }),
-  materials: text("materials"),
-  startDate: date("start_date"),
-  endDate: date("end_date"),
-  active: boolean("active").default(true),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Enrollments table (many-to-many between students and courses)
-export const enrollments = pgTable("enrollments", {
-  id: serial("id").primaryKey(),
-  studentId: integer("student_id").references(() => students.id).notNull(),
-  courseId: integer("course_id").references(() => courses.id).notNull(),
-  enrollmentDate: date("enrollment_date").defaultNow(),
-  status: varchar("status", { length: 20 }).default("active"), // active, completed, withdrawn
-  grade: varchar("grade", { length: 5 }),
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Invoices table
-export const invoices = pgTable("invoices", {
-  id: serial("id").primaryKey(),
-  familyId: integer("family_id").references(() => families.id).notNull(),
-  invoiceNumber: varchar("invoice_number", { length: 50 }).notNull().unique(),
-  invoiceDate: date("invoice_date").defaultNow(),
-  dueDate: date("due_date"),
-  subtotal: decimal("subtotal", { precision: 10, scale: 2 }).notNull(),
-  tax: decimal("tax", { precision: 10, scale: 2 }).default("0"),
-  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-  status: varchar("status", { length: 20 }).default("pending"), // pending, paid, overdue, cancelled
-  notes: text("notes"),
-  createdAt: timestamp("created_at").defaultNow(),
-  updatedAt: timestamp("updated_at").defaultNow(),
-});
-
-// Invoice items table
-export const invoiceItems = pgTable("invoice_items", {
-  id: serial("id").primaryKey(),
-  invoiceId: integer("invoice_id").references(() => invoices.id).notNull(),
-  courseId: integer("course_id").references(() => courses.id),
-  description: varchar("description", { length: 255 }).notNull(),
-  quantity: integer("quantity").default(1),
-  unitPrice: decimal("unit_price", { precision: 10, scale: 2 }).notNull(),
-  total: decimal("total", { precision: 10, scale: 2 }).notNull(),
-  createdAt: timestamp("created_at").defaultNow(),
+  firstName: varchar("first_name", { length: 255 }).notNull(),
+  birthdate: timestamp("birthdate"),
+  gradYear: varchar("grad_year", { length: 10 }),
+  comment1: text("comment1"),
+  mathHour: varchar("math_hour", { length: 255 }),
+  firstHour: varchar("first_hour", { length: 255 }),
+  secondHour: varchar("second_hour", { length: 255 }),
+  thirdHour: varchar("third_hour", { length: 255 }),
+  fourthHour: varchar("fourth_hour", { length: 255 }),
+  fifthHourFall: varchar("fifth_hour_fall", { length: 255 }),
+  fifthHourSpring: varchar("fifth_hour_spring", { length: 255 }),
+  fridayScience: varchar("friday_science", { length: 255 }),
 });
 
 // Relations
 export const familiesRelations = relations(families, ({ many }) => ({
   students: many(students),
-  invoices: many(invoices),
 }));
 
-export const studentsRelations = relations(students, ({ one, many }) => ({
+export const studentsRelations = relations(students, ({ one }) => ({
   family: one(families, {
     fields: [students.familyId],
     references: [families.id],
   }),
-  enrollments: many(enrollments),
 }));
 
-export const coursesRelations = relations(courses, ({ many }) => ({
-  enrollments: many(enrollments),
-  invoiceItems: many(invoiceItems),
-}));
-
-export const enrollmentsRelations = relations(enrollments, ({ one }) => ({
-  student: one(students, {
-    fields: [enrollments.studentId],
-    references: [students.id],
-  }),
-  course: one(courses, {
-    fields: [enrollments.courseId],
-    references: [courses.id],
+export const coursesRelations = relations(courses, ({ one }) => ({
+  hour: one(hours, {
+    fields: [courses.hour],
+    references: [hours.id],
   }),
 }));
 
-export const invoicesRelations = relations(invoices, ({ one, many }) => ({
-  family: one(families, {
-    fields: [invoices.familyId],
-    references: [families.id],
+export const classesRelations = relations(classes, ({ one, one: startGrade, one: endGrade }) => ({
+  startGrade: one(grades, {
+    fields: [classes.startCode],
+    references: [grades.code],
   }),
-  items: many(invoiceItems),
-}));
-
-export const invoiceItemsRelations = relations(invoiceItems, ({ one }) => ({
-  invoice: one(invoices, {
-    fields: [invoiceItems.invoiceId],
-    references: [invoices.id],
-  }),
-  course: one(courses, {
-    fields: [invoiceItems.courseId],
-    references: [courses.id],
+  endGrade: one(grades, {
+    fields: [classes.endCode],
+    references: [grades.code],
   }),
 }));
 
 // Insert schemas
 export const insertFamilySchema = createInsertSchema(families).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
 export const insertStudentSchema = createInsertSchema(students).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
 export const insertCourseSchema = createInsertSchema(courses).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
-export const insertEnrollmentSchema = createInsertSchema(enrollments).omit({
+export const insertClassSchema = createInsertSchema(classes).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
-export const insertInvoiceSchema = createInsertSchema(invoices).omit({
+export const insertGradeSchema = createInsertSchema(grades).omit({
   id: true,
-  createdAt: true,
-  updatedAt: true,
 });
 
-export const insertInvoiceItemSchema = createInsertSchema(invoiceItems).omit({
+export const insertHourSchema = createInsertSchema(hours).omit({
   id: true,
-  createdAt: true,
+});
+
+export const insertSettingsSchema = createInsertSchema(settings).omit({
+  id: true,
 });
 
 // Types
@@ -228,26 +210,21 @@ export type Student = typeof students.$inferSelect;
 export type InsertCourse = z.infer<typeof insertCourseSchema>;
 export type Course = typeof courses.$inferSelect;
 
-export type InsertEnrollment = z.infer<typeof insertEnrollmentSchema>;
-export type Enrollment = typeof enrollments.$inferSelect;
+export type InsertClass = z.infer<typeof insertClassSchema>;
+export type Class = typeof classes.$inferSelect;
 
-export type InsertInvoice = z.infer<typeof insertInvoiceSchema>;
-export type Invoice = typeof invoices.$inferSelect;
+export type InsertGrade = z.infer<typeof insertGradeSchema>;
+export type Grade = typeof grades.$inferSelect;
 
-export type InsertInvoiceItem = z.infer<typeof insertInvoiceItemSchema>;
-export type InvoiceItem = typeof invoiceItems.$inferSelect;
+export type InsertHour = z.infer<typeof insertHourSchema>;
+export type Hour = typeof hours.$inferSelect;
+
+export type InsertSettings = z.infer<typeof insertSettingsSchema>;
+export type Settings = typeof settings.$inferSelect;
+
+export type FormerFamily = typeof formerFamilies.$inferSelect;
 
 // Extended types with relations
 export type StudentWithFamily = Student & {
   family: Family;
-};
-
-export type EnrollmentWithDetails = Enrollment & {
-  student: StudentWithFamily;
-  course: Course;
-};
-
-export type InvoiceWithDetails = Invoice & {
-  family: Family;
-  items: (InvoiceItem & { course?: Course })[];
 };
