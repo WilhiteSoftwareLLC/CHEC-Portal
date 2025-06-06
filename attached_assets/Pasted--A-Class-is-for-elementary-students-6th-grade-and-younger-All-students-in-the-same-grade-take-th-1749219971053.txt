@@ -1,0 +1,107 @@
+# A Class is for elementary students (6th grade and younger). All students in the same grade take the same classes.
+# Some student grades are combined into a single class, like this:
+#ClassName,StartCode,EndCode
+#Bears,-4,-4
+#Lions & Tigers,-3,-2
+#Pre-K,-1,-1
+#Kinder,0,0
+#1st & 2nd,1,2
+#3rd & 4th,3,4
+#5th & 6th,5,6
+#Nursery,-5,-5
+Table: Class
+  ID (COUNTER)
+  ClassName (VARCHAR)
+  StartCode (INTEGER)
+  EndCode (INTEGER)
+
+# A Course is for secondary students (7th grade and older). These students select which courses they will take each year.
+# Some courses have lab fees and book rental fees that are specific to that course.
+# Some courses are only offered one semester (fall or spring)
+Table: Course
+  ID (COUNTER)            # an integer identifier of the course which is referenced in the Student table
+  CourseName (VARCHAR)    # the name of the course
+  OfferedFall (BIT)       # true if the course is offered in the fall semester
+  OfferedSpring (BIT)     # true if the course is offered in the spring semester
+  Hour (INTEGER)          # an integer foreign key into the Hour table 
+  Fee (CURRENCY)          # additional fee for this course
+  BookRental (CURRENCY)   # cost of renting the textbook for this course
+  Location (VARCHAR)      # room number or location of this course in the building
+
+# A Family is the basic unit of the co-op. Every student belongs to a family.
+Table: Family
+  id (COUNTER)             # an integer identfier of the family which is referenced in the Student table
+  LastName (VARCHAR)       # last name of the family
+  Father (VARCHAR)         # first name of the father
+  Mother (VARCHAR)         # first name of the mother
+  ParentCell (VARCHAR)     # cell number of the primary parent at the co-op
+  Email (VARCHAR)          # email of the primary parent at the co-op
+  Address (VARCHAR)        # home street address
+  City (VARCHAR)           # home address city
+  Zip (DOUBLE)             # home zip code
+  HomePhone (VARCHAR)      # home phone number
+  ParentCell2 (VARCHAR)    # phone number of the non-primary parent at the co-op
+  SecondEmail (VARCHAR)    # email of the non-primary parent at the co-op
+  WorkPhone (VARCHAR)      # work phone
+  Church (VARCHAR)         # the name of the church the family is attending
+  PastorName (VARCHAR)     # the pastor of the church the family is attending
+  PastorPhone (VARCHAR)    # the phone number of the pastor
+
+# This is a table of families that used to be part of the co-op but are no longer.
+Table: Former Families
+  ID (COUNTER)
+  LastName (VARCHAR)
+  Father (VARCHAR)
+  Mother (VARCHAR)
+  ParentCell (VARCHAR)
+  Email (VARCHAR)
+  Address (VARCHAR)
+  City (VARCHAR)
+  Zip (DOUBLE)
+  HomePhone (VARCHAR)
+  ParentCell2 (VARCHAR)
+  Field1 (VARCHAR)
+  WorkPhone (VARCHAR)
+  Church (VARCHAR)
+  PastorName (VARCHAR)
+  PastorPhone (VARCHAR)
+
+# The Grade table maps Grade names to Codes. We start "1st" grade at 1, but we have several years of preschool that have negative number codes.
+Table: Grade
+  ID (COUNTER)             # An integer identifer of the grade (not referenced by any other table)
+  GradeName (VARCHAR)      # The human-readable name of the grade (e.g. Kindergarten, 1st, 5th, Pre-K, Nursery, etc)
+  Code (INTEGER)           # A code representing the order of the grade. "12th" grade would be 12, "Kindergarten" would be 0. "Nursery" would be -5.   
+
+# The name of the Hour at the co-op (e.g 1st, 2nd, 3rd)
+Table: Hour
+  id (INTEGER)             # An integer identified of the co-op period
+  Description (VARCHAR)    # The human-readable name of the co-op period. Our co-op currently has a 0 hour devoted to math. Although this table is configurable, for the purposes of importing existing data, assume the hour names are: "Math"=0, "1st"=1, "2nd"=2, "3rd"=3, "4th"=4, "5th"=5, "FridayScience"=6.
+
+# A list of variables that could be modified each year
+Table: Settings
+  ID (COUNTER)
+  FamilyFee (CURRENCY)       # The fee for one family to participate in the co-op
+  BackgroundFee (CURRENCY)   # The fee for performing a backgroud check
+  StudentFee (CURRENCY)      # The fee for each student in the family attending the co-op
+  SchoolYear (INTEGER)       # The year the current school year ends (e.g. 2026). To compute a student's grade: SchoolYear - GradYear + 12
+
+# All the students registered in the co-op along with a denormalized schedule for those students.
+# Only 7th grade and older have Course names assigned for the columns like "1stHour, 2nd Hour, etc".
+Table: Student
+  id (COUNTER)             # An integer identifier of the student (not currently referenced by other tables)
+  FamilyID (INTEGER)       # References the id in the family record that this student belongs to
+  LastName (VARCHAR)       # Last name of student
+  FirstName (VARCHAR)      # First name of student
+  Birthdate (DATETIME)     # mm/dd/yyyy
+  GradYear (VARCHAR)       # The year the student graduates. A student's displayed grade should be computed from the current year, not stored. The grade code is computed with: SchoolYear - GradYear + 12. Some grade codes may be negative. Some grade codes may be greater than 12 for second year seniors. The name of the student's grade is found by looking up the GradeName from the Code in the Grade table.
+  Comment1 (VARCHAR)       # additional comment about student
+  MathHour (VARCHAR)       # the name of the course which the student is registered for in the "Math" hour
+  1stHour (VARCHAR)        # the name of the course which the student is registered for in "1st" hour
+  2ndHour (VARCHAR)        # the name of the course which the student is registered for in "2nd" hour
+  3rdHour (VARCHAR)        # the name of the course which the student is registered for in "3rd" hour
+  4thHour (VARCHAR)        # the name of the course which the student is registered for in "4th" hour
+  5thHourFall (VARCHAR)    # the name of the course which the student is registered for in "5th" hour in the fall
+  5thHourSpring (VARCHAR)  # the name of the course which the student is registered for in "5th" hour in the spring
+  FridayScience (VARCHAR)  # the name of the course which the student is registered for during the "FridayScience" hour
+  
+  

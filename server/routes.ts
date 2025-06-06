@@ -408,13 +408,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
-      for (const familyData of families) {
+      for (const familyRow of families) {
         try {
-          const validatedFamily = insertFamilySchema.parse(familyData);
-          const family = await storage.createFamily(validatedFamily);
+          // Map MS Access Family table columns to our schema
+          const familyData = {
+            lastName: familyRow.LastName || familyRow.lastName || '',
+            father: familyRow.Father || familyRow.father || null,
+            mother: familyRow.Mother || familyRow.mother || null,
+            parentCell: familyRow.ParentCell || familyRow.parentCell || null,
+            email: familyRow.Email || familyRow.email || null,
+            address: familyRow.Address || familyRow.address || null,
+            city: familyRow.City || familyRow.city || null,
+            zip: familyRow.Zip ? String(familyRow.Zip) : null,
+            homePhone: familyRow.HomePhone || familyRow.homePhone || null,
+            parentCell2: familyRow.ParentCell2 || familyRow.parentCell2 || null,
+            secondEmail: familyRow.SecondEmail || familyRow.secondEmail || null,
+            workPhone: familyRow.WorkPhone || familyRow.workPhone || null,
+            church: familyRow.Church || familyRow.church || null,
+            pastorName: familyRow.PastorName || familyRow.pastorName || null,
+            pastorPhone: familyRow.PastorPhone || familyRow.pastorPhone || null,
+          };
+
+          const family = await storage.createFamily(familyData);
           results.push({ success: true, family });
         } catch (error) {
-          results.push({ success: false, error: error.message, data: familyData });
+          results.push({ success: false, error: (error as Error).message, data: familyRow });
         }
       }
 
@@ -438,13 +456,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
-      for (const studentData of students) {
+      for (const studentRow of students) {
         try {
-          const validatedStudent = insertStudentSchema.parse(studentData);
-          const student = await storage.createStudent(validatedStudent);
+          // Map MS Access Student table columns to our schema
+          const studentData = {
+            familyId: studentRow.FamilyID || studentRow.familyId || 1,
+            lastName: studentRow.LastName || studentRow.lastName || '',
+            firstName: studentRow.FirstName || studentRow.firstName || '',
+            birthdate: studentRow.Birthdate ? new Date(studentRow.Birthdate) : null,
+            gradYear: studentRow.GradYear ? String(studentRow.GradYear) : null,
+            comment1: studentRow.Comment1 || studentRow.comment1 || null,
+            // Store the denormalized schedule from MS Access
+            mathHour: studentRow.MathHour || studentRow.mathHour || null,
+            firstHour: studentRow['1stHour'] || studentRow.firstHour || null,
+            secondHour: studentRow['2ndHour'] || studentRow.secondHour || null,
+            thirdHour: studentRow['3rdHour'] || studentRow.thirdHour || null,
+            fourthHour: studentRow['4thHour'] || studentRow.fourthHour || null,
+            fifthHourFall: studentRow['5thHourFall'] || studentRow.fifthHourFall || null,
+            fifthHourSpring: studentRow['5thHourSpring'] || studentRow.fifthHourSpring || null,
+            fridayScience: studentRow.FridayScience || studentRow.fridayScience || null,
+          };
+
+          const student = await storage.createStudent(studentData);
           results.push({ success: true, student });
         } catch (error) {
-          results.push({ success: false, error: error.message, data: studentData });
+          results.push({ success: false, error: (error as Error).message, data: studentRow });
         }
       }
 
@@ -468,13 +504,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
-      for (const courseData of courses) {
+      for (const courseRow of courses) {
         try {
-          const validatedCourse = insertCourseSchema.parse(courseData);
-          const course = await storage.createCourse(validatedCourse);
+          // Map MS Access Course table columns to our schema
+          const courseData = {
+            courseName: courseRow.CourseName || courseRow.courseName || '',
+            offeredFall: courseRow.OfferedFall !== undefined ? Boolean(courseRow.OfferedFall) : true,
+            offeredSpring: courseRow.OfferedSpring !== undefined ? Boolean(courseRow.OfferedSpring) : true,
+            hour: courseRow.Hour || courseRow.hour || 1,
+            fee: courseRow.Fee ? String(courseRow.Fee) : null,
+            bookRental: courseRow.BookRental ? String(courseRow.BookRental) : null,
+            location: courseRow.Location || courseRow.location || null,
+          };
+
+          const course = await storage.createCourse(courseData);
           results.push({ success: true, course });
         } catch (error) {
-          results.push({ success: false, error: error.message, data: courseData });
+          results.push({ success: false, error: (error as Error).message, data: courseRow });
         }
       }
 
@@ -498,13 +544,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
-      for (const classData of classes) {
+      for (const classRow of classes) {
         try {
-          const validatedClass = insertClassSchema.parse(classData);
-          const newClass = await storage.createClass(validatedClass);
+          // Map MS Access Class table columns to our schema
+          const classData = {
+            className: classRow.ClassName || classRow.className || '',
+            startCode: classRow.StartCode || classRow.startCode || 0,
+            endCode: classRow.EndCode || classRow.endCode || 0,
+          };
+
+          const newClass = await storage.createClass(classData);
           results.push({ success: true, class: newClass });
         } catch (error) {
-          results.push({ success: false, error: error.message, data: classData });
+          results.push({ success: false, error: (error as Error).message, data: classRow });
         }
       }
 
@@ -517,6 +569,97 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error importing classes:", error);
       res.status(500).json({ message: "Failed to import classes" });
+    }
+  });
+
+  // Import routes for remaining tables
+  app.post("/api/import/grades", async (req, res) => {
+    try {
+      const grades = req.body;
+      if (!Array.isArray(grades)) {
+        return res.status(400).json({ message: "Expected array of grades" });
+      }
+
+      const results = [];
+      for (const gradeRow of grades) {
+        try {
+          // Map MS Access Grade table columns to our schema
+          const gradeData = {
+            gradeName: gradeRow.GradeName || gradeRow.gradeName || '',
+            code: gradeRow.Code || gradeRow.code || 0,
+          };
+
+          const grade = await storage.createGrade(gradeData);
+          results.push({ success: true, grade });
+        } catch (error) {
+          results.push({ success: false, error: (error as Error).message, data: gradeRow });
+        }
+      }
+
+      res.json({ 
+        message: `Processed ${grades.length} grades`, 
+        results,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+    } catch (error) {
+      console.error("Error importing grades:", error);
+      res.status(500).json({ message: "Failed to import grades" });
+    }
+  });
+
+  app.post("/api/import/hours", async (req, res) => {
+    try {
+      const hours = req.body;
+      if (!Array.isArray(hours)) {
+        return res.status(400).json({ message: "Expected array of hours" });
+      }
+
+      const results = [];
+      for (const hourRow of hours) {
+        try {
+          // Map MS Access Hour table columns to our schema
+          const hourData = {
+            id: hourRow.id || hourRow.ID || 0,
+            description: hourRow.Description || hourRow.description || '',
+          };
+
+          const hour = await storage.createHour(hourData);
+          results.push({ success: true, hour });
+        } catch (error) {
+          results.push({ success: false, error: (error as Error).message, data: hourRow });
+        }
+      }
+
+      res.json({ 
+        message: `Processed ${hours.length} hours`, 
+        results,
+        successful: results.filter(r => r.success).length,
+        failed: results.filter(r => !r.success).length
+      });
+    } catch (error) {
+      console.error("Error importing hours:", error);
+      res.status(500).json({ message: "Failed to import hours" });
+    }
+  });
+
+  app.post("/api/import/settings", async (req, res) => {
+    try {
+      const settingsData = req.body;
+      
+      // Map MS Access Settings table columns to our schema
+      const settings = {
+        familyFee: settingsData.FamilyFee ? String(settingsData.FamilyFee) : null,
+        backgroundFee: settingsData.BackgroundFee ? String(settingsData.BackgroundFee) : null,
+        studentFee: settingsData.StudentFee ? String(settingsData.StudentFee) : null,
+        schoolYear: settingsData.SchoolYear || settingsData.schoolYear || null,
+      };
+
+      const result = await storage.updateSettings(settings);
+      res.json({ message: "Settings imported successfully", settings: result });
+    } catch (error) {
+      console.error("Error importing settings:", error);
+      res.status(500).json({ message: "Failed to import settings" });
     }
   });
 
