@@ -670,7 +670,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Expected array of grades" });
       }
 
+      // First, delete all existing grades (fresh start each year)
+      console.log("Deleting all existing grades before import...");
+      await storage.deleteAllGrades();
+
       const results = [];
+      let newGrades = 0;
+
       for (const gradeRow of grades) {
         try {
           // Map MS Access Grade table columns to our schema
@@ -680,17 +686,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           const grade = await storage.createGrade(gradeData);
-          results.push({ success: true, grade });
+          newGrades++;
+          console.log(`New grade created: ${gradeData.gradeName}, newGrades count: ${newGrades}`);
+          results.push({ success: true, grade, isNew: true });
         } catch (error) {
           results.push({ success: false, error: (error as Error).message, data: gradeRow });
         }
       }
 
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+
+      console.log(`Final grade counts - New: ${newGrades}, Deleted all previous grades`);
+
       res.json({ 
         message: `Processed ${grades.length} grades`, 
         results,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length
+        successful,
+        failed,
+        newGrades,
+        deletedPrevious: true
       });
     } catch (error) {
       console.error("Error importing grades:", error);
@@ -705,7 +720,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Expected array of hours" });
       }
 
+      // First, delete all existing hours (fresh start each year)
+      console.log("Deleting all existing hours before import...");
+      await storage.deleteAllHours();
+
       const results = [];
+      let newHours = 0;
+
       for (const hourRow of hours) {
         try {
           // Map MS Access Hour table columns to our schema
@@ -715,17 +736,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           const hour = await storage.createHour(hourData);
-          results.push({ success: true, hour });
+          newHours++;
+          console.log(`New hour created: ${hourData.description}, newHours count: ${newHours}`);
+          results.push({ success: true, hour, isNew: true });
         } catch (error) {
           results.push({ success: false, error: (error as Error).message, data: hourRow });
         }
       }
 
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+
+      console.log(`Final hour counts - New: ${newHours}, Deleted all previous hours`);
+
       res.json({ 
         message: `Processed ${hours.length} hours`, 
         results,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length
+        successful,
+        failed,
+        newHours,
+        deletedPrevious: true
       });
     } catch (error) {
       console.error("Error importing hours:", error);
@@ -737,6 +767,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const settingsData = req.body;
       
+      // First, delete all existing settings (fresh start each year)
+      console.log("Deleting all existing settings before import...");
+      await storage.deleteAllSettings();
+      
       // Map MS Access Settings table columns to our schema
       const settings = {
         familyFee: settingsData.FamilyFee ? String(settingsData.FamilyFee) : null,
@@ -746,7 +780,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       };
 
       const result = await storage.updateSettings(settings);
-      res.json({ message: "Settings imported successfully", settings: result });
+      console.log("New settings created, deleted all previous settings");
+      
+      res.json({ 
+        message: "Settings imported successfully", 
+        settings: result,
+        newSettings: 1,
+        deletedPrevious: true
+      });
     } catch (error) {
       console.error("Error importing settings:", error);
       res.status(500).json({ message: "Failed to import settings" });

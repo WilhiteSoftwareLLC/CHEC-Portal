@@ -125,8 +125,13 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Grades Imported",
-        description: `Successfully imported ${response.successful || 0} grades. ${response.failed || 0} failed.`,
+        description: `New: ${response.newGrades || 0} (replaced all previous). ${response.failed || 0} failed.`,
       });
+      // Clear the form data after successful import
+      setCsvData({ ...csvData, grades: "" });
+      // Invalidate cache to refresh grades list
+      queryClient.invalidateQueries({ queryKey: ["/api/grades"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error) => {
       toast({

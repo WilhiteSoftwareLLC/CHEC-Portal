@@ -75,14 +75,17 @@ export interface IStorage {
   // Grade operations
   getGrades(): Promise<Grade[]>;
   createGrade(grade: InsertGrade): Promise<Grade>;
+  deleteAllGrades(): Promise<void>;
 
   // Hour operations
   getHours(): Promise<Hour[]>;
   createHour(hour: InsertHour): Promise<Hour>;
+  deleteAllHours(): Promise<void>;
 
   // Settings operations
   getSettings(): Promise<Settings | undefined>;
   updateSettings(settings: Partial<InsertSettings>): Promise<Settings>;
+  deleteAllSettings(): Promise<void>;
 
   // Dashboard stats
   getDashboardStats(): Promise<{
@@ -430,6 +433,10 @@ export class DatabaseStorage implements IStorage {
     return newGrade;
   }
 
+  async deleteAllGrades(): Promise<void> {
+    await db.delete(grades);
+  }
+
   // Hour operations
   async getHours(): Promise<Hour[]> {
     return await db.select().from(hours).orderBy(hours.id);
@@ -441,6 +448,10 @@ export class DatabaseStorage implements IStorage {
       .values(hour)
       .returning();
     return newHour;
+  }
+
+  async deleteAllHours(): Promise<void> {
+    await db.delete(hours);
   }
 
   // Settings operations
@@ -466,6 +477,10 @@ export class DatabaseStorage implements IStorage {
     }
     
     return updatedSettings;
+  }
+
+  async deleteAllSettings(): Promise<void> {
+    await db.delete(settings);
   }
 
   // Dashboard stats
