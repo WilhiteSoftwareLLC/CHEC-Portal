@@ -563,7 +563,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Expected array of courses" });
       }
 
+      // First, delete all existing courses (fresh start each year)
+      console.log("Deleting all existing courses before import...");
+      await storage.deleteAllCourses();
+
       const results = [];
+      let newCourses = 0;
+
       for (const courseRow of courses) {
         try {
           // Map MS Access Course table columns to our schema
@@ -578,17 +584,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           };
 
           const course = await storage.createCourse(courseData);
-          results.push({ success: true, course });
+          newCourses++;
+          console.log(`New course created: ${courseData.courseName}, newCourses count: ${newCourses}`);
+          results.push({ success: true, course, isNew: true });
         } catch (error) {
           results.push({ success: false, error: (error as Error).message, data: courseRow });
         }
       }
 
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+
+      console.log(`Final course counts - New: ${newCourses}, Deleted all previous courses`);
+
       res.json({ 
         message: `Processed ${courses.length} courses`, 
         results,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length
+        successful,
+        failed,
+        newCourses,
+        deletedPrevious: true
       });
     } catch (error) {
       console.error("Error importing courses:", error);

@@ -77,8 +77,13 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Courses Imported",
-        description: `Successfully imported ${response.successful || 0} courses. ${response.failed || 0} failed.`,
+        description: `New: ${response.newCourses || 0} (replaced all previous). ${response.failed || 0} failed.`,
       });
+      // Clear the form data after successful import
+      setCsvData({ ...csvData, courses: "" });
+      // Invalidate cache to refresh courses list
+      queryClient.invalidateQueries({ queryKey: ["/api/courses"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error) => {
       toast({
