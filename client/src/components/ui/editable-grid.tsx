@@ -180,7 +180,7 @@ export default function EditableGrid({
                           </div>
                         ) : column.type === "dropdown" ? (
                           <Select
-                            value={String(value || "")}
+                            value={String(value ?? "")}
                             onValueChange={async (newValue) => {
                               try {
                                 const parsedValue = isNaN(Number(newValue)) ? newValue : Number(newValue);
@@ -191,13 +191,13 @@ export default function EditableGrid({
                             }}
                           >
                             <SelectTrigger className="h-8 text-sm">
-                              <SelectValue>
-                                {column.options?.find(opt => opt.value === value)?.label || "Select..."}
+                              <SelectValue placeholder="Select...">
+                                {column.options?.find(opt => String(opt.value) === String(value))?.label || "Select..."}
                               </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
                               {column.options?.map((option) => (
-                                <SelectItem key={option.value} value={String(option.value)}>
+                                <SelectItem key={String(option.value)} value={String(option.value)}>
                                   {option.label}
                                 </SelectItem>
                               ))}

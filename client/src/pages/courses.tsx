@@ -95,9 +95,9 @@ export default function Courses() {
   // Create hour options for dropdown
   const hourOptions = [
     { value: 0, label: "Math Hour" },
-    ...(hours || []).map((hour: any) => ({
-      value: hour.hourNumber,
-      label: `${hour.hourNumber}${hour.hourNumber === 1 ? 'st' : hour.hourNumber === 2 ? 'nd' : hour.hourNumber === 3 ? 'rd' : 'th'} Hour`
+    ...(hours || []).filter((hour: any) => hour.id !== 0).map((hour: any) => ({
+      value: hour.id,
+      label: `${hour.id}${hour.id === 1 ? 'st' : hour.id === 2 ? 'nd' : hour.id === 3 ? 'rd' : 'th'} Hour`
     }))
   ];
 
