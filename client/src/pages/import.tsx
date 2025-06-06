@@ -53,8 +53,13 @@ export default function Import() {
     onSuccess: (response: any) => {
       toast({
         title: "Students Imported",
-        description: `Successfully imported ${response.successful || 0} students. ${response.failed || 0} failed.`,
+        description: `New: ${response.newStudents || 0}, Modified: ${response.modifiedStudents || 0}. ${response.failed || 0} failed.`,
       });
+      // Clear the form data after successful import
+      setCsvData({ ...csvData, students: "" });
+      // Invalidate cache to refresh students list
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
     },
     onError: (error) => {
       toast({

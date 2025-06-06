@@ -492,11 +492,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const results = [];
+      let newStudents = 0;
+      let modifiedStudents = 0;
+
       for (const studentRow of students) {
         try {
           // Map MS Access Student table columns to our schema
           const studentData = {
-            familyId: studentRow.FamilyID || studentRow.familyId || 1,
+            familyId: parseInt(studentRow.FamilyID || studentRow.familyId || 1),
             lastName: studentRow.LastName || studentRow.lastName || '',
             firstName: studentRow.FirstName || studentRow.firstName || '',
             birthdate: studentRow.Birthdate ? new Date(studentRow.Birthdate) : null,
@@ -513,18 +516,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fridayScience: studentRow.FridayScience || studentRow.fridayScience || null,
           };
 
-          const student = await storage.createStudent(studentData);
-          results.push({ success: true, student });
+          // Check if student exists using FamilyID + FirstName combination
+          const existingStudents = await storage.getStudentsByFamily(studentData.familyId);
+          const existingStudent = existingStudents.find(s => s.firstName === studentData.firstName);
+          const isNew = !existingStudent;
+
+          if (isNew) {
+            const student = await storage.createStudent(studentData);
+            newStudents++;
+            console.log(`New student created: ${studentData.firstName} (Family ${studentData.familyId}), newStudents count: ${newStudents}`);
+            results.push({ success: true, student, isNew: true });
+          } else {
+            const student = await storage.updateStudent(existingStudent.id, studentData);
+            modifiedStudents++;
+            console.log(`Student updated: ${studentData.firstName} (Family ${studentData.familyId}), modifiedStudents count: ${modifiedStudents}`);
+            results.push({ success: true, student, isNew: false });
+          }
         } catch (error) {
           results.push({ success: false, error: (error as Error).message, data: studentRow });
         }
       }
 
+      const successful = results.filter(r => r.success).length;
+      const failed = results.filter(r => !r.success).length;
+
+      console.log(`Final student counts - New: ${newStudents}, Modified: ${modifiedStudents}`);
+
       res.json({ 
         message: `Processed ${students.length} students`, 
         results,
-        successful: results.filter(r => r.success).length,
-        failed: results.filter(r => !r.success).length
+        successful,
+        failed,
+        newStudents,
+        modifiedStudents
       });
     } catch (error) {
       console.error("Error importing students:", error);
