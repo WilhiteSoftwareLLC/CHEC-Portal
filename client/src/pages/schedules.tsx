@@ -77,10 +77,10 @@ export default function Schedules() {
   };
 
   // Filter students to only show 7th grade and older
-  const eligibleStudents = students?.filter((student: StudentWithFamily) => {
+  const eligibleStudents = Array.isArray(students) ? students.filter((student: StudentWithFamily) => {
     const gradeCode = getCurrentGrade(student.gradYear);
     return gradeCode !== null && gradeCode >= 7;
-  }) || [];
+  }) : [];
 
   const filteredStudents = eligibleStudents.filter((student: StudentWithFamily) => {
     if (search) {
@@ -118,7 +118,7 @@ export default function Schedules() {
 
   // Get current course selection for a student and hour
   const getCurrentCourse = (studentId: number, hour: string) => {
-    const student = students?.find((s: StudentWithFamily) => s.id === studentId);
+    const student = Array.isArray(students) ? students.find((s: StudentWithFamily) => s.id === studentId) : null;
     if (!student) return "";
 
     // Check for unsaved changes first

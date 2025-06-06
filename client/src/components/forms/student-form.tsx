@@ -517,6 +517,7 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
                 <Textarea
                   placeholder="Enter any additional comments about the student"
                   {...field}
+                  value={field.value || ""}
                 />
               </FormControl>
               <FormMessage />
