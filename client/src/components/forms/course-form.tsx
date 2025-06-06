@@ -12,7 +12,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { insertCourseSchema, type Course, type InsertCourse } from "@shared/schema";
 
@@ -25,6 +27,16 @@ interface CourseFormProps {
 export default function CourseForm({ course, onSubmit, onCancel }: CourseFormProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+
+  const { data: classes } = useQuery({
+    queryKey: ["/api/classes"],
+    queryFn: async () => {
+      const response = await fetch("/api/classes", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
+  });
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertCourse) => {
@@ -73,6 +85,7 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
     resolver: zodResolver(insertCourseSchema),
     defaultValues: {
       courseName: course?.courseName || "",
+      classId: course?.classId || null,
       offeredFall: course?.offeredFall ?? true,
       offeredSpring: course?.offeredSpring ?? true,
       hour: course?.hour || 0,
@@ -112,6 +125,35 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
               )}
             />
           </div>
+
+          <FormField
+            control={form.control}
+            name="classId"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Class</FormLabel>
+                <Select 
+                  onValueChange={(value) => field.onChange(value === "" ? null : parseInt(value))} 
+                  value={field.value?.toString() || ""}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a class" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="">No Class</SelectItem>
+                    {(classes || []).map((cls: any) => (
+                      <SelectItem key={cls.id} value={cls.id.toString()}>
+                        {cls.className}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <FormField
             control={form.control}
