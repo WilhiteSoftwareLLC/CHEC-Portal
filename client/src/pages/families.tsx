@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddFamilyDialog from "@/components/dialogs/add-family-dialog";
+import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
 import type { Family } from "@shared/schema";
 
@@ -86,19 +87,29 @@ export default function Families() {
   ];
 
   return (
-    <div className="p-6">
-      <EditableGrid
-        data={families || []}
-        columns={columns}
-        onRowUpdate={handleUpdateFamily}
-        onRowDelete={handleDeleteFamily}
-        isLoading={isLoading}
+    <div>
+      <PageHeader 
+        title="Families"
+        description="Manage family information and contacts"
+        actionButton={{
+          label: "Add Family",
+          onClick: () => setAddFamilyOpen(true)
+        }}
       />
+      <div className="px-6">
+        <EditableGrid
+          data={families || []}
+          columns={columns}
+          onRowUpdate={handleUpdateFamily}
+          onRowDelete={handleDeleteFamily}
+          isLoading={isLoading}
+        />
 
-      <AddFamilyDialog 
-        open={addFamilyOpen} 
-        onOpenChange={setAddFamilyOpen} 
-      />
+        <AddFamilyDialog 
+          open={addFamilyOpen} 
+          onOpenChange={setAddFamilyOpen} 
+        />
+      </div>
     </div>
   );
 }

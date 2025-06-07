@@ -1,4 +1,4 @@
-import Header from "./header";
+import AppHeader from "./app-header";
 import { useDialogs } from "@/contexts/dialog-context";
 
 interface MainLayoutProps {
@@ -10,12 +10,7 @@ export default function MainLayout({ children }: MainLayoutProps) {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <Header 
-        onAddFamily={() => setAddFamilyOpen(true)}
-        onAddStudent={() => setAddStudentOpen(true)}
-        onAddCourse={() => setAddCourseOpen(true)}
-        onAddClass={() => setAddClassOpen(true)}
-      />
+      <AppHeader />
       <main className="p-6">
         {children}
       </main>
