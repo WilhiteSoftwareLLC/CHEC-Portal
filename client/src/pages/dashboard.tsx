@@ -112,7 +112,7 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="p-6 min-h-screen bg-gray-50">
       {/* Navigation Grid */}
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
         {navigationCards.map((card) => (

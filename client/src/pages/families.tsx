@@ -96,7 +96,7 @@ export default function Families() {
           onClick: () => setAddFamilyOpen(true)
         }}
       />
-      <div className="px-6">
+      <div className="p-6">
         <EditableGrid
           data={families || []}
           columns={columns}

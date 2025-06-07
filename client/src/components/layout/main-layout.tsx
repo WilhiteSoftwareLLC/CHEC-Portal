@@ -6,12 +6,10 @@ interface MainLayoutProps {
 }
 
 export default function MainLayout({ children }: MainLayoutProps) {
-  const { setAddFamilyOpen, setAddStudentOpen, setAddCourseOpen, setAddClassOpen } = useDialogs();
-
   return (
     <div className="min-h-screen bg-gray-50">
       <AppHeader />
-      <main className="p-6">
+      <main>
         {children}
       </main>
     </div>

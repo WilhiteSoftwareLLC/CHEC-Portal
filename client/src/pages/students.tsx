@@ -3,6 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddStudentDialog from "@/components/dialogs/add-student-dialog";
+import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
 import type { StudentWithFamily } from "@shared/schema";
 
@@ -275,19 +276,29 @@ export default function Students() {
   ];
 
   return (
-    <div className="p-6">
-      <EditableGrid
-        data={studentsWithGrade}
-        columns={columns}
-        onRowUpdate={handleUpdateStudent}
-        onRowDelete={handleDeleteStudent}
-        isLoading={studentsLoading}
+    <div>
+      <PageHeader 
+        title="Students"
+        description="Manage student records and enrollment"
+        actionButton={{
+          label: "Add Student",
+          onClick: () => setAddStudentOpen(true)
+        }}
       />
+      <div className="p-6">
+        <EditableGrid
+          data={studentsWithGrade}
+          columns={columns}
+          onRowUpdate={handleUpdateStudent}
+          onRowDelete={handleDeleteStudent}
+          isLoading={studentsLoading}
+        />
 
-      <AddStudentDialog 
-        open={addStudentOpen} 
-        onOpenChange={setAddStudentOpen} 
-      />
+        <AddStudentDialog 
+          open={addStudentOpen} 
+          onOpenChange={setAddStudentOpen} 
+        />
+      </div>
     </div>
   );
 }

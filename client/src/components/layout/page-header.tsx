@@ -4,33 +4,30 @@ import { Link } from "wouter";
 
 interface PageHeaderProps {
   title: string;
-  description: string;
-  showDashboardButton?: boolean;
+  description?: string;
   actionButton?: {
     label: string;
     onClick: () => void;
   };
 }
 
-export default function PageHeader({ title, description, showDashboardButton = true, actionButton }: PageHeaderProps) {
+export default function PageHeader({ title, description, actionButton }: PageHeaderProps) {
   return (
-    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4 mb-6">
+    <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          {showDashboardButton && (
-            <Link href="/">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mr-4 p-2"
-              >
-                <LayoutDashboard className="h-6 w-6 text-blue-600" />
-              </Button>
-            </Link>
-          )}
+          <Link href="/">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="mr-4 p-2"
+            >
+              <LayoutDashboard className="h-6 w-6 text-blue-600" />
+            </Button>
+          </Link>
           <div>
             <h2 className="text-2xl font-semibold text-gray-900">{title}</h2>
-            <p className="text-sm text-gray-600 mt-1">{description}</p>
+            {description && <p className="text-sm text-gray-600 mt-1">{description}</p>}
           </div>
         </div>
         <div className="flex items-center space-x-4">
