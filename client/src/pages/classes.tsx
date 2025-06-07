@@ -298,7 +298,7 @@ export default function Classes() {
   ];
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <PageHeader 
         title="Classes"
         description="Manage grade-based class groupings"
@@ -307,7 +307,7 @@ export default function Classes() {
           onClick: () => setAddClassOpen(true)
         }}
       />
-      <div className="p-6">
+      <div className="flex-1 p-6 overflow-hidden flex flex-col">
         <div className="flex justify-end mb-4">
           <Button 
             variant="outline" 
@@ -318,13 +318,15 @@ export default function Classes() {
           </Button>
         </div>
         
-        <EditableGrid
-          data={Array.isArray(classes) ? classes : []}
-          columns={columns}
-          onRowUpdate={handleUpdateClass}
-          onRowDelete={handleDeleteClass}
-          isLoading={classesLoading}
-        />
+        <div className="flex-1 overflow-hidden">
+          <EditableGrid
+            data={Array.isArray(classes) ? classes : []}
+            columns={columns}
+            onRowUpdate={handleUpdateClass}
+            onRowDelete={handleDeleteClass}
+            isLoading={classesLoading}
+          />
+        </div>
         
         <AddClassDialog
           open={addClassOpen}

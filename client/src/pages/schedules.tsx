@@ -349,7 +349,7 @@ export default function Schedules() {
   };
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <PageHeader 
         title="Schedules"
         description="Assign courses to students (7th grade and older)"
@@ -358,7 +358,7 @@ export default function Schedules() {
           onClick: () => saveSchedulesMutation.mutate()
         } : undefined}
       />
-      <div className="p-6">
+      <div className="flex-1 p-6 overflow-hidden flex flex-col">
         <div className="flex justify-end mb-6">
           <Button 
             variant="outline" 
@@ -369,8 +369,9 @@ export default function Schedules() {
           </Button>
         </div>
 
-        {/* Students Schedule Grid */}
-        {studentsLoading ? (
+        <div className="flex-1 overflow-y-auto">
+          {/* Students Schedule Grid */}
+          {studentsLoading ? (
         <div className="space-y-6">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
@@ -479,6 +480,7 @@ export default function Schedules() {
           )}
         </div>
       )}
+        </div>
       </div>
     </div>
   );
