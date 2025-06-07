@@ -306,27 +306,21 @@ export default function Classes() {
           label: "Add Class",
           onClick: () => setAddClassOpen(true)
         }}
+        secondaryButton={{
+          label: "Print Class Rosters",
+          onClick: handlePrintClassRosters,
+          variant: "outline",
+          icon: PrinterCheck
+        }}
       />
-      <div className="flex-1 p-6 overflow-hidden flex flex-col">
-        <div className="flex justify-end mb-4">
-          <Button 
-            variant="outline" 
-            onClick={handlePrintClassRosters}
-          >
-            <PrinterCheck className="mr-2 h-4 w-4" />
-            Print Class Rosters
-          </Button>
-        </div>
-        
-        <div className="flex-1 overflow-hidden">
-          <EditableGrid
-            data={Array.isArray(classes) ? classes : []}
-            columns={columns}
-            onRowUpdate={handleUpdateClass}
-            onRowDelete={handleDeleteClass}
-            isLoading={classesLoading}
-          />
-        </div>
+      <div className="flex-1 p-6 overflow-hidden">
+        <EditableGrid
+          data={Array.isArray(classes) ? classes : []}
+          columns={columns}
+          onRowUpdate={handleUpdateClass}
+          onRowDelete={handleDeleteClass}
+          isLoading={classesLoading}
+        />
         
         <AddClassDialog
           open={addClassOpen}
