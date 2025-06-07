@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PrinterCheck } from "lucide-react";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddCourseDialog from "@/components/dialogs/add-course-dialog";
+import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
 import type { Course } from "@shared/schema";
 
@@ -313,29 +314,39 @@ export default function Courses() {
   ];
 
   return (
-    <div className="p-6">
-      <div className="flex justify-end mb-4">
-        <Button 
-          variant="outline" 
-          onClick={handlePrintCourseRosters}
-        >
-          <PrinterCheck className="mr-2 h-4 w-4" />
-          Print Course Rosters
-        </Button>
-      </div>
-      
-      <EditableGrid
-        data={courses || []}
-        columns={columns}
-        onRowUpdate={handleUpdateCourse}
-        onRowDelete={handleDeleteCourse}
-        isLoading={isLoading}
+    <div>
+      <PageHeader 
+        title="Courses"
+        description="Manage courses and instructors"
+        actionButton={{
+          label: "Add Course",
+          onClick: () => setAddCourseOpen(true)
+        }}
       />
+      <div className="p-6">
+        <div className="flex justify-end mb-4">
+          <Button 
+            variant="outline" 
+            onClick={handlePrintCourseRosters}
+          >
+            <PrinterCheck className="mr-2 h-4 w-4" />
+            Print Course Rosters
+          </Button>
+        </div>
+        
+        <EditableGrid
+          data={courses || []}
+          columns={columns}
+          onRowUpdate={handleUpdateCourse}
+          onRowDelete={handleDeleteCourse}
+          isLoading={isLoading}
+        />
 
-      <AddCourseDialog 
-        open={addCourseOpen} 
-        onOpenChange={setAddCourseOpen} 
-      />
+        <AddCourseDialog 
+          open={addCourseOpen} 
+          onOpenChange={setAddCourseOpen} 
+        />
+      </div>
     </div>
   );
 }

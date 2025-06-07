@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { PrinterCheck } from "lucide-react";
 import EditableGrid, { type GridColumn } from "@/components/ui/editable-grid";
 import AddClassDialog from "@/components/dialogs/add-class-dialog";
+import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
 import type { Class, Grade, InsertClass } from "@shared/schema";
 
@@ -297,29 +298,39 @@ export default function Classes() {
   ];
 
   return (
-    <div className="p-6">
-      <div className="flex justify-end mb-4">
-        <Button 
-          variant="outline" 
-          onClick={handlePrintClassRosters}
-        >
-          <PrinterCheck className="mr-2 h-4 w-4" />
-          Print Class Rosters
-        </Button>
+    <div>
+      <PageHeader 
+        title="Classes"
+        description="Manage grade-based class groupings"
+        actionButton={{
+          label: "Add Class",
+          onClick: () => setAddClassOpen(true)
+        }}
+      />
+      <div className="p-6">
+        <div className="flex justify-end mb-4">
+          <Button 
+            variant="outline" 
+            onClick={handlePrintClassRosters}
+          >
+            <PrinterCheck className="mr-2 h-4 w-4" />
+            Print Class Rosters
+          </Button>
+        </div>
+        
+        <EditableGrid
+          data={Array.isArray(classes) ? classes : []}
+          columns={columns}
+          onRowUpdate={handleUpdateClass}
+          onRowDelete={handleDeleteClass}
+          isLoading={classesLoading}
+        />
+        
+        <AddClassDialog
+          open={addClassOpen}
+          onOpenChange={setAddClassOpen}
+        />
       </div>
-      
-      <EditableGrid
-        data={Array.isArray(classes) ? classes : []}
-        columns={columns}
-        onRowUpdate={handleUpdateClass}
-        onRowDelete={handleDeleteClass}
-        isLoading={classesLoading}
-      />
-      
-      <AddClassDialog
-        open={addClassOpen}
-        onOpenChange={setAddClassOpen}
-      />
     </div>
   );
 }
