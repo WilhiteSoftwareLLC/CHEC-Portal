@@ -208,13 +208,7 @@ export default function Settings() {
         </Dialog>
 
         <Card>
-        <CardHeader>
-          <CardTitle>Configuration Settings</CardTitle>
-          <CardDescription>
-            Manage system-wide configuration settings. These values control various aspects of the application.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {settingsArray.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
               No settings configured. Add your first setting using the button above.
