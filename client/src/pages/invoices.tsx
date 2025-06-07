@@ -368,16 +368,16 @@ export default function Invoices() {
       />
       <div className="p-6">
         {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="text-green-600 h-6 w-6" />
+              <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-green-600 h-4 w-4" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Revenue</p>
-                <p className="text-2xl font-semibold text-gray-900">
+              <div className="ml-3">
+                <p className="text-xs font-medium text-gray-600">Total Revenue</p>
+                <p className="text-lg font-semibold text-gray-900">
                   ${calculateTotalRevenue()}
                 </p>
               </div>
@@ -386,14 +386,14 @@ export default function Invoices() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center">
-                <DollarSign className="text-orange-600 h-6 w-6" />
+              <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-orange-600 h-4 w-4" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Pending Amount</p>
-                <p className="text-2xl font-semibold text-gray-900">
+              <div className="ml-3">
+                <p className="text-xs font-medium text-gray-600">Pending Amount</p>
+                <p className="text-lg font-semibold text-gray-900">
                   ${calculatePendingAmount()}
                 </p>
               </div>
@@ -402,14 +402,14 @@ export default function Invoices() {
         </Card>
 
         <Card>
-          <CardContent className="p-6">
+          <CardContent className="p-4">
             <div className="flex items-center">
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-                <FileText className="text-blue-600 h-6 w-6" />
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <FileText className="text-blue-600 h-4 w-4" />
               </div>
-              <div className="ml-4">
-                <p className="text-sm font-medium text-gray-600">Total Invoices</p>
-                <p className="text-2xl font-semibold text-gray-900">
+              <div className="ml-3">
+                <p className="text-xs font-medium text-gray-600">Total Invoices</p>
+                <p className="text-lg font-semibold text-gray-900">
                   {computedInvoices.length}
                 </p>
               </div>
@@ -419,62 +419,57 @@ export default function Invoices() {
       </div>
 
       {/* Invoice Grid */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Family Invoices</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Family Name</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Total Amount</th>
-                  <th className="text-left py-3 px-4 font-medium text-gray-900">Status</th>
-                  <th className="relative py-3 px-4"><span className="sr-only">Actions</span></th>
+      <div className="border rounded-lg">
+        <div className="overflow-auto max-h-[calc(100vh-300px)]">
+          <table className="w-full">
+            <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Family Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Total Amount</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Status</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+              {computedInvoices.map((invoice: any) => (
+                <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {invoice.family.lastName}, {invoice.family.father} & {invoice.family.mother}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    ${invoice.total}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Badge variant={invoice.paid ? "default" : "destructive"}>
+                      {invoice.paid ? "Paid" : "Unpaid"}
+                    </Badge>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-right">
+                    <div className="flex items-center justify-end space-x-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewInvoice(invoice.family)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant={invoice.paid ? "outline" : "default"}
+                        size="sm"
+                        onClick={() => togglePaymentStatus(invoice.family.id)}
+                      >
+                        {invoice.paid ? "Mark Unpaid" : "Mark Paid"}
+                      </Button>
+                    </div>
+                  </td>
                 </tr>
-              </thead>
-              <tbody>
-                {computedInvoices.map((invoice: any) => (
-                  <tr key={invoice.id} className="border-b hover:bg-gray-50">
-                    <td className="py-4 px-4">
-                      <div className="text-sm font-medium text-gray-900">
-                        {invoice.family.lastName}, {invoice.family.father} & {invoice.family.mother}
-                      </div>
-                    </td>
-                    <td className="py-4 px-4 text-sm text-gray-900">
-                      ${invoice.total}
-                    </td>
-                    <td className="py-4 px-4">
-                      <Badge variant={invoice.paid ? "default" : "destructive"}>
-                        {invoice.paid ? "Paid" : "Unpaid"}
-                      </Badge>
-                    </td>
-                    <td className="py-4 px-4 text-right">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          onClick={() => handleViewInvoice(invoice.family)}
-                        >
-                          <Eye className="h-4 w-4" />
-                        </Button>
-                        <Button 
-                          variant={invoice.paid ? "outline" : "default"}
-                          size="sm"
-                          onClick={() => togglePaymentStatus(invoice.family.id)}
-                        >
-                          {invoice.paid ? "Mark Unpaid" : "Mark Paid"}
-                        </Button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
       {/* Invoice Preview Dialog */}
       <Dialog open={invoiceDialogOpen} onOpenChange={setInvoiceDialogOpen}>
