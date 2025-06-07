@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { FileText, Download, PrinterCheck, DollarSign, Eye } from "lucide-react";
+import PageHeader from "@/components/layout/page-header";
 import type { Family } from "@shared/schema";
 
 export default function Invoices() {
@@ -356,21 +357,18 @@ export default function Invoices() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <p className="text-sm text-gray-600">Automatically computed from family and student data</p>
-        </div>
-        <div className="flex space-x-2">
-          <Button variant="outline" onClick={handlePrintAllInvoices}>
-            <PrinterCheck className="mr-2 h-4 w-4" />
-            Print All Invoices
-          </Button>
-        </div>
-      </div>
-
-      {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+    <div>
+      <PageHeader 
+        title="Invoices"
+        description="Automatically computed from family and student data"
+        actionButton={{
+          label: "Print All Invoices",
+          onClick: handlePrintAllInvoices
+        }}
+      />
+      <div className="p-6">
+        {/* Summary Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
         <Card>
           <CardContent className="p-6">
             <div className="flex items-center">
@@ -496,6 +494,7 @@ export default function Invoices() {
           )}
         </DialogContent>
       </Dialog>
+      </div>
     </div>
   );
 }
