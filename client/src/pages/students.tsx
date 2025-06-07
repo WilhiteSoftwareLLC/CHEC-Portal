@@ -276,7 +276,7 @@ export default function Students() {
   ];
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <PageHeader 
         title="Students"
         description="Manage student records and enrollment"
@@ -285,7 +285,7 @@ export default function Students() {
           onClick: () => setAddStudentOpen(true)
         }}
       />
-      <div className="p-6">
+      <div className="flex-1 p-6 overflow-hidden">
         <EditableGrid
           data={studentsWithGrade}
           columns={columns}

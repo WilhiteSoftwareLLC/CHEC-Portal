@@ -7,9 +7,9 @@ interface MainLayoutProps {
 
 export default function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="h-screen bg-gray-50 flex flex-col">
       <AppHeader />
-      <main>
+      <main className="flex-1 overflow-hidden">
         {children}
       </main>
     </div>

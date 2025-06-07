@@ -314,7 +314,7 @@ export default function Courses() {
   ];
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <PageHeader 
         title="Courses"
         description="Manage courses and instructors"
@@ -323,7 +323,7 @@ export default function Courses() {
           onClick: () => setAddCourseOpen(true)
         }}
       />
-      <div className="p-6">
+      <div className="flex-1 p-6 overflow-hidden flex flex-col">
         <div className="flex justify-end mb-4">
           <Button 
             variant="outline" 
@@ -334,13 +334,15 @@ export default function Courses() {
           </Button>
         </div>
         
-        <EditableGrid
-          data={courses || []}
-          columns={columns}
-          onRowUpdate={handleUpdateCourse}
-          onRowDelete={handleDeleteCourse}
-          isLoading={isLoading}
-        />
+        <div className="flex-1 overflow-hidden">
+          <EditableGrid
+            data={courses || []}
+            columns={columns}
+            onRowUpdate={handleUpdateCourse}
+            onRowDelete={handleDeleteCourse}
+            isLoading={isLoading}
+          />
+        </div>
 
         <AddCourseDialog 
           open={addCourseOpen} 

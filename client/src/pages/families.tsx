@@ -87,7 +87,7 @@ export default function Families() {
   ];
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <PageHeader 
         title="Families"
         description="Manage family information and contacts"
@@ -96,7 +96,7 @@ export default function Families() {
           onClick: () => setAddFamilyOpen(true)
         }}
       />
-      <div className="p-6">
+      <div className="flex-1 p-6 overflow-hidden">
         <EditableGrid
           data={families || []}
           columns={columns}
