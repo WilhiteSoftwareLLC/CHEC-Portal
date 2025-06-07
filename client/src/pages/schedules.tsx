@@ -1,21 +1,28 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useToast } from "@/hooks/use-toast";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Calendar, Save, User, BookOpen, Clock, GraduationCap, PrinterCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+import { Eye } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
-import type { StudentWithFamily, Course } from "@shared/schema";
+import type { Student, Course, Grade } from "@shared/schema";
+
+interface StudentWithFamily extends Student {
+  family: {
+    lastName: string;
+    father: string;
+    mother: string;
+  };
+}
 
 export default function Schedules() {
-  const [scheduleChanges, setScheduleChanges] = useState<Record<string, string>>({});
-  const { toast } = useToast();
-
-  const { data: students, isLoading: studentsLoading } = useQuery({
+  const [selectedStudent, setSelectedStudent] = useState<StudentWithFamily | null>(null);
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
+  const [studentCourses, setStudentCourses] = useState<Record<string, string | null>>({});
+  
+  const { data: students } = useQuery({
     queryKey: ["/api/students"],
     retry: false,
   });
@@ -25,462 +32,243 @@ export default function Schedules() {
     retry: false,
   });
 
-  const { data: settings } = useQuery({
-    queryKey: ["/api/settings"],
-  });
-
   const { data: grades } = useQuery({
     queryKey: ["/api/grades"],
-  });
-
-  const { data: classes } = useQuery({
-    queryKey: ["/api/classes"],
     retry: false,
   });
 
-  const getCurrentGrade = (gradYear: string | null) => {
-    if (!gradYear || !settings || !grades) return null;
+  const { data: settings } = useQuery({
+    queryKey: ["/api/settings"],
+    retry: false,
+  });
+
+  const getCurrentGradeName = (gradYear: number) => {
+    if (!grades || !settings) return '';
     
-    const schoolYear = parseInt((settings as any).SchoolYear || "2024");
-    const graduationYear = parseInt(gradYear);
-    const gradeCode = schoolYear - graduationYear + 13;
+    const currentYear = parseInt(settings.SchoolYear) || new Date().getFullYear();
+    const gradeThisYear = gradYear - currentYear;
     
-    const grade = Array.isArray(grades) ? grades.find((g: any) => g.code === gradeCode) : null;
-    return grade ? gradeCode : null;
+    const grade = grades.find((g: Grade) => g.code === gradeThisYear);
+    return grade ? grade.gradeName : `Grade ${gradeThisYear}`;
   };
 
-  const getCurrentGradeName = (gradYear: string | null) => {
-    if (!gradYear || !settings || !grades) return "Unknown";
-    
-    const schoolYear = parseInt((settings as any).SchoolYear || "2024");
-    const graduationYear = parseInt(gradYear);
-    const gradeCode = schoolYear - graduationYear + 13;
-    
-    const grade = Array.isArray(grades) ? grades.find((g: any) => g.code === gradeCode) : null;
-    return grade ? grade.gradeName : "Unknown";
+  const getCourseCount = (student: StudentWithFamily) => {
+    const studentCourses = [
+      student.mathHour,
+      student.firstHour,
+      student.secondHour,
+      student.thirdHour,
+      student.fourthHour,
+      student.fifthHourFall,
+      student.fifthHourSpring,
+      student.fridayScience,
+    ];
+
+    return studentCourses.filter(course => course && course !== 'NO_COURSE').length;
   };
 
-  // Get the class that a student belongs to based on their current grade
-  const getStudentClass = (gradYear: string | null) => {
-    if (!gradYear || !settings || !classes) return null;
-    
-    const gradeCode = getCurrentGrade(gradYear);
-    if (gradeCode === null) return null;
-    
-    // Find the class that contains this grade code
-    const studentClass = Array.isArray(classes) ? classes.find((cls: any) => 
-      gradeCode >= cls.startCode && gradeCode <= cls.endCode
-    ) : null;
-    
-    return studentClass;
+  const handleViewSchedule = (student: StudentWithFamily) => {
+    setSelectedStudent(student);
+    setStudentCourses({
+      mathHour: student.mathHour || null,
+      firstHour: student.firstHour || null,
+      secondHour: student.secondHour || null,
+      thirdHour: student.thirdHour || null,
+      fourthHour: student.fourthHour || null,
+      fifthHourFall: student.fifthHourFall || null,
+      fifthHourSpring: student.fifthHourSpring || null,
+      fridayScience: student.fridayScience || null,
+    });
+    setScheduleDialogOpen(true);
   };
 
-  // Filter students to only show 7th grade and older
-  const eligibleStudents = Array.isArray(students) ? students.filter((student: StudentWithFamily) => {
-    const gradeCode = getCurrentGrade(student.gradYear);
-    return gradeCode !== null && gradeCode >= 7;
-  }) : [];
-
-  const filteredStudents = eligibleStudents;
-
-  // Get courses by hour and student class
-  const getCoursesByHour = (hour: number, studentGradYear: string | null) => {
+  const getAvailableCoursesForHour = (hourIndex: number) => {
     if (!courses) return [];
-    const studentClass = getStudentClass(studentGradYear);
-    
-    return (courses as Course[]).filter(course => 
-      course.hour === hour && 
-      (course.classId === studentClass?.id || course.classId === null)
-    );
+    return courses.filter((course: Course) => course.hour === hourIndex);
   };
 
-  // Get courses for Math Hour (hour 0) filtered by student class
-  const getMathHourCourses = (studentGradYear: string | null) => {
-    if (!courses) return [];
-    const studentClass = getStudentClass(studentGradYear);
-    
-    return (courses as Course[]).filter(course => 
-      course.hour === 0 && 
-      (course.classId === studentClass?.id || course.classId === null)
-    );
-  };
-
-  // Get current course selection for a student and hour
-  const getCurrentCourse = (studentId: number, hour: string) => {
-    const student = Array.isArray(students) ? students.find((s: StudentWithFamily) => s.id === studentId) : null;
-    if (!student) return "";
-
-    // Check for unsaved changes first
-    const changeKey = `${studentId}_${hour}`;
-    if (scheduleChanges[changeKey]) {
-      return scheduleChanges[changeKey];
-    }
-
-    // Return current value from database
-    switch (hour) {
-      case "mathHour":
-        return student.mathHour || "";
-      case "firstHour":
-        return student.firstHour || "";
-      case "secondHour":
-        return student.secondHour || "";
-      case "thirdHour":
-        return student.thirdHour || "";
-      case "fourthHour":
-        return student.fourthHour || "";
-      case "fifthHourFall":
-        return student.fifthHourFall || "";
-      case "fifthHourSpring":
-        return student.fifthHourSpring || "";
-      case "fridayScience":
-        return student.fridayScience || "";
-      default:
-        return "";
-    }
-  };
-
-  // Handle course selection change
-  const handleCourseChange = (studentId: number, hour: string, courseName: string) => {
-    const changeKey = `${studentId}_${hour}`;
-    setScheduleChanges(prev => ({
+  const updateCourse = (field: string, courseId: string | null) => {
+    setStudentCourses(prev => ({
       ...prev,
-      [changeKey]: courseName
+      [field]: courseId === 'NO_COURSE' ? null : courseId
     }));
   };
 
-  // Save schedule changes
-  const saveSchedulesMutation = useMutation({
-    mutationFn: async () => {
-      const updates = [];
+  const handlePrintSchedules = () => {
+    if (!students) return;
+
+    const printContent = students.map((student: StudentWithFamily) => {
+      const gradeName = getCurrentGradeName(student.gradYear);
+      const courseCount = getCourseCount(student);
       
-      for (const [changeKey, courseName] of Object.entries(scheduleChanges)) {
-        const [studentId, hour] = changeKey.split('_');
-        updates.push({
-          studentId: parseInt(studentId),
-          hour,
-          courseName
-        });
-      }
-
-      await apiRequest("/api/students/bulk-schedule-update", "POST", { updates });
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
-      setScheduleChanges({});
-      toast({
-        title: "Schedules Updated",
-        description: "Student schedules have been saved successfully.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  const hours = [
-    { key: "mathHour", label: "Math Hour" },
-    { key: "firstHour", label: "1st Hour", hourNumber: 1 },
-    { key: "secondHour", label: "2nd Hour", hourNumber: 2 },
-    { key: "thirdHour", label: "3rd Hour", hourNumber: 3 },
-    { key: "fourthHour", label: "4th Hour", hourNumber: 4 },
-    { key: "fifthHourFall", label: "5th Hour (Fall)", hourNumber: 5 },
-    { key: "fifthHourSpring", label: "5th Hour (Spring)", hourNumber: 5 },
-  ];
-
-  const hasChanges = Object.keys(scheduleChanges).length > 0;
-
-  const handlePrintAllSchedules = () => {
-    if (!students || !courses || !settings || !grades) return;
-    
-    // Sort students by family name
-    const sortedStudents = [...filteredStudents].sort((a, b) => 
-      a.family.lastName.localeCompare(b.family.lastName)
-    );
-    
-    // Generate schedule HTML for all students
-    const scheduleHTML = generateAllSchedulesHTML(sortedStudents);
-    
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
-
-    printWindow.document.write(scheduleHTML);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  };
-
-  const generateAllSchedulesHTML = (sortedStudents: StudentWithFamily[]) => {
-    const studentSchedules = sortedStudents.map((student, index) => 
-      generateSingleScheduleHTML(student, index > 0)
-    ).join('');
-
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>Student Schedules</title>
-          <style>
-            body { 
-              font-family: Arial, sans-serif; 
-              margin: 20px; 
-              color: #333;
-            }
-            .page-break { 
-              page-break-before: always; 
-            }
-            .student-header {
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-              margin-bottom: 20px;
-              border-bottom: 2px solid #000;
-              padding-bottom: 10px;
-            }
-            .student-name {
-              font-size: 18px;
-              font-weight: bold;
-            }
-            .student-grade {
-              font-size: 16px;
-              color: #666;
-            }
-            table {
-              width: 100%;
-              border-collapse: collapse;
-              margin-bottom: 40px;
-            }
-            th, td {
-              border: 1px solid #000;
-              padding: 8px 12px;
-              text-align: left;
-              white-space: nowrap;
-              height: 40px;
-              vertical-align: middle;
-            }
-            th {
-              background-color: #f5f5f5;
-              font-weight: bold;
-            }
-            .hour-column { width: 15%; }
-            .room-column { width: 20%; }
-            .course-column { width: 65%; }
-          </style>
-        </head>
-        <body>
-          ${studentSchedules}
-        </body>
-      </html>
-    `;
-  };
-
-  const formatPhoneNumber = (phone: string) => {
-    if (!phone) return '';
-    // Remove all non-digits
-    const digits = phone.replace(/\D/g, '');
-    // Format as XXX-XXX-XXXX if we have 10 digits
-    if (digits.length === 10) {
-      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-    }
-    return phone; // Return original if not 10 digits
-  };
-
-  const generateSingleScheduleHTML = (student: StudentWithFamily, addPageBreak: boolean = false) => {
-    const currentGrade = getCurrentGradeName(student.gradYear);
-    
-    // Define schedule rows in order
-    const scheduleRows = [
-      { hour: "Math", field: "mathHour" },
-      { hour: "1st", field: "firstHour" },
-      { hour: "2nd", field: "secondHour" },
-      { hour: "3rd", field: "thirdHour" },
-      { hour: "4th", field: "fourthHour" },
-      { hour: "5th", field: "fifthHourFall" },
-      { hour: "5th", field: "fifthHourSpring" }
-    ];
-
-    const rowsHTML = scheduleRows.map(row => {
-      const courseName = student[row.field as keyof StudentWithFamily] as string;
-      let courseDisplay = courseName || "";
-      let roomDisplay = "";
-
-      if (courseName && courseName !== "NO_COURSE") {
-        // Find the course to get location
-        const course = Array.isArray(courses) ? courses.find((c: any) => c.courseName === courseName) : null;
-        if (course && course.location) {
-          roomDisplay = course.location;
-        }
-      } else {
-        courseDisplay = courseName === "NO_COURSE" ? "Will Not Attend " + row.hour + " Hour" : "";
-      }
+      const studentCoursesList = [
+        { label: 'Math', course: student.mathHour },
+        { label: '1st Hour', course: student.firstHour },
+        { label: '2nd Hour', course: student.secondHour },
+        { label: '3rd Hour', course: student.thirdHour },
+        { label: '4th Hour', course: student.fourthHour },
+        { label: '5th Hour Fall', course: student.fifthHourFall },
+        { label: '5th Hour Spring', course: student.fifthHourSpring },
+        { label: 'Friday Science', course: student.fridayScience },
+      ]
+        .filter(item => item.course && item.course !== 'NO_COURSE')
+        .map(item => `${item.label}: ${item.course}`)
+        .join('\n');
 
       return `
-        <tr>
-          <td class="hour-column">${row.hour}</td>
-          <td class="room-column">${roomDisplay}</td>
-          <td class="course-column">${courseDisplay}</td>
-        </tr>
+        <div style="page-break-after: always; margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc;">
+          <h2>${student.lastName}, ${student.firstName}</h2>
+          <p>Grade: ${gradeName}</p>
+          <p>Family: ${student.family.lastName}</p>
+          <div style="margin-top: 1rem;">
+            <h3>Course Schedule:</h3>
+            <pre style="white-space: pre-line; font-family: inherit;">${studentCoursesList || 'No courses scheduled'}</pre>
+          </div>
+          <p style="margin-top: 1rem;">Total Courses: ${courseCount}</p>
+        </div>
       `;
     }).join('');
 
-    return `
-      ${addPageBreak ? '<div class="page-break"></div>' : ''}
-      <div class="student-header">
-        <div class="student-name">${student.firstName} ${student.lastName}</div>
-        <div class="student-grade">${currentGrade}</div>
-      </div>
-      <table>
-        <thead>
-          <tr>
-            <th class="hour-column">Hour</th>
-            <th class="room-column">Room</th>
-            <th class="course-column">Course</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${rowsHTML}
-        </tbody>
-      </table>
-    `;
+    const printWindow = window.open('', '_blank');
+    if (printWindow) {
+      printWindow.document.write(`
+        <html>
+          <head>
+            <title>Student Schedules</title>
+            <style>
+              body { font-family: Arial, sans-serif; margin: 0; padding: 1rem; }
+              h2 { color: #333; margin-bottom: 0.5rem; }
+              h3 { color: #666; margin-bottom: 0.5rem; }
+              p { margin: 0.25rem 0; }
+              @media print {
+                body { margin: 0; }
+              }
+            </style>
+          </head>
+          <body>${printContent}</body>
+        </html>
+      `);
+      printWindow.document.close();
+      printWindow.print();
+    }
   };
+
+  const hourFields = [
+    { field: 'mathHour', label: 'Math', hourIndex: 0 },
+    { field: 'firstHour', label: '1st Hour', hourIndex: 1 },
+    { field: 'secondHour', label: '2nd Hour', hourIndex: 2 },
+    { field: 'thirdHour', label: '3rd Hour', hourIndex: 3 },
+    { field: 'fourthHour', label: '4th Hour', hourIndex: 4 },
+    { field: 'fifthHourFall', label: '5th Hour Fall', hourIndex: 5 },
+    { field: 'fifthHourSpring', label: '5th Hour Spring', hourIndex: 5 },
+    { field: 'fridayScience', label: 'Friday Science', hourIndex: 6 },
+  ];
 
   return (
     <div className="h-full flex flex-col">
       <PageHeader 
         title="Schedules"
-        description="Assign courses to students (7th grade and older)"
-        actionButton={hasChanges ? {
-          label: "Save Changes",
-          onClick: () => saveSchedulesMutation.mutate()
-        } : undefined}
+        description="Manage student course schedules"
+        actionButton={{
+          label: "Print All Schedules",
+          onClick: handlePrintSchedules
+        }}
       />
-      <div className="flex-1 p-6 overflow-hidden flex flex-col">
-        <div className="flex justify-end mb-6">
-          <Button 
-            variant="outline" 
-            onClick={handlePrintAllSchedules}
-          >
-            <PrinterCheck className="mr-2 h-4 w-4" />
-            Print All Schedules
-          </Button>
+      <div className="flex-1 p-6 overflow-hidden">
+        {/* Student Grid */}
+        <div className="border rounded-lg">
+          <div className="overflow-auto max-h-[calc(100vh-200px)]">
+            <table className="w-full">
+              <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Last Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">First Name</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Current Grade</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b"># Courses</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+                {students?.map((student: StudentWithFamily) => (
+                  <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
+                      {student.lastName}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {student.firstName}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {getCurrentGradeName(student.gradYear)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Badge variant="secondary">
+                        {getCourseCount(student)}
+                      </Badge>
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-right">
+                      <Button 
+                        variant="ghost" 
+                        size="sm"
+                        onClick={() => handleViewSchedule(student)}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </Button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto">
-          {/* Students Schedule Grid */}
-          {studentsLoading ? (
-        <div className="space-y-6">
-          {[1, 2, 3].map((i) => (
-            <Card key={i}>
-              <CardHeader>
-                <Skeleton className="h-6 w-1/4" />
-                <Skeleton className="h-4 w-1/3" />
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-                  {[1, 2, 3, 4].map((j) => (
-                    <Skeleton key={j} className="h-16" />
+        {/* Schedule Edit Dialog */}
+        <Dialog open={scheduleDialogOpen} onOpenChange={setScheduleDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Edit Schedule - {selectedStudent?.lastName}, {selectedStudent?.firstName}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedStudent && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {hourFields.map(({ field, label, hourIndex }) => (
+                    <div key={field} className="space-y-2">
+                      <Label className="text-sm font-medium">{label}</Label>
+                      <Select
+                        value={studentCourses[field] || 'NO_COURSE'}
+                        onValueChange={(value) => updateCourse(field, value === 'NO_COURSE' ? null : value)}
+                      >
+                        <SelectTrigger className="w-full">
+                          <SelectValue placeholder="Select course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NO_COURSE">No Course</SelectItem>
+                          {getAvailableCoursesForHour(hourIndex).map((course: Course) => (
+                            <SelectItem key={course.id} value={course.courseName}>
+                              {course.courseName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      ) : (
-        <div className="space-y-6">
-          {filteredStudents.length > 0 ? (
-            filteredStudents.map((student: StudentWithFamily) => (
-              <Card key={student.id} className="hover:shadow-md transition-shadow">
-                <CardHeader className="pb-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-3">
-                      <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                        <span className="text-sm font-medium text-blue-600">
-                          {student.firstName[0]}{student.lastName[0]}
-                        </span>
-                      </div>
-                      <div>
-                        <CardTitle className="text-lg">
-                          {student.firstName} {student.lastName}
-                        </CardTitle>
-                        <div className="flex items-center space-x-2 text-sm text-gray-600">
-                          <span>{student.family.lastName} Family</span>
-                          <span>•</span>
-                          <span>{getCurrentGradeName(student.gradYear)}</span>
-                        </div>
-                      </div>
-                    </div>
-                    {hasChanges && (
-                      <Badge variant="outline" className="text-orange-600 border-orange-600">
-                        Unsaved Changes
-                      </Badge>
-                    )}
-                  </div>
-                </CardHeader>
-                <CardContent>
-                  <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-                    {hours.map((hour) => (
-                      <div key={hour.key} className="space-y-2">
-                        <label className="text-sm font-medium text-gray-700">
-                          {hour.label}
-                        </label>
-                        <Select
-                          value={getCurrentCourse(student.id, hour.key)}
-                          onValueChange={(value) => handleCourseChange(student.id, hour.key, value)}
-                        >
-                          <SelectTrigger className="w-full">
-                            <SelectValue placeholder="Select course" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No Course</SelectItem>
-                            {hour.key === "mathHour" ? (
-                              getMathHourCourses(student.gradYear).map((course: Course) => (
-                                <SelectItem key={course.id} value={course.courseName}>
-                                  {course.courseName}
-                                </SelectItem>
-                              ))
-                            ) : hour.hourNumber ? (
-                              getCoursesByHour(hour.hourNumber, student.gradYear).map((course: Course) => (
-                                <SelectItem key={course.id} value={course.courseName}>
-                                  {course.courseName}
-                                </SelectItem>
-                              ))
-                            ) : (
-                              // For any other special hours, show courses filtered by student class
-                              (courses as Course[] || []).filter((course: Course) => {
-                                const studentClass = getStudentClass(student.gradYear);
-                                return course.classId === studentClass?.id || course.classId === null;
-                              }).map((course: Course) => (
-                                <SelectItem key={course.id} value={course.courseName}>
-                                  {course.courseName}
-                                </SelectItem>
-                              ))
-                            )}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
-            ))
-          ) : (
-            <Card>
-              <CardContent className="text-center py-12">
-                <GraduationCap className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No eligible students found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Only students in 7th grade and older can be scheduled for courses.
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </div>
-      )}
-        </div>
+                <div className="flex justify-end gap-2">
+                  <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>
+                    Cancel
+                  </Button>
+                  <Button onClick={() => {
+                    // TODO: Save student schedule changes
+                    setScheduleDialogOpen(false);
+                  }}>
+                    Save Changes
+                  </Button>
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
