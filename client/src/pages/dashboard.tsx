@@ -51,7 +51,15 @@ export default function Dashboard() {
       path: "/families",
       color: "bg-blue-500",
       hoverColor: "hover:bg-blue-600",
-      description: "Manage family information"
+      description: "Manage active families"
+    },
+    {
+      title: "Former Families",
+      icon: Users,
+      path: "/former-families",
+      color: "bg-gray-500",
+      hoverColor: "hover:bg-gray-600",
+      description: "View inactive families"
     },
     {
       title: "Students", 

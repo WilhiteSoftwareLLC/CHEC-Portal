@@ -12,7 +12,8 @@ interface HeaderProps {
 
 const pageLabels: Record<string, { title: string; description: string }> = {
   "/": { title: "Dashboard", description: "CHEC Portal Overview" },
-  "/families": { title: "Families", description: "Manage family information and contacts" },
+  "/families": { title: "Families", description: "Manage active family information and contacts" },
+  "/former-families": { title: "Former Families", description: "View inactive family records" },
   "/students": { title: "Students", description: "Manage student records and enrollment" },
   "/courses": { title: "Courses", description: "Manage courses and instructors" },
   "/classes": { title: "Classes", description: "Manage grade-based class groupings" },

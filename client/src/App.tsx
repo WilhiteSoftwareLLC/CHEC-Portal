@@ -10,6 +10,7 @@ import Landing from "@/pages/landing";
 import Login from "@/pages/login";
 import Dashboard from "@/pages/dashboard";
 import Families from "@/pages/families";
+import FormerFamilies from "@/pages/former-families";
 import Students from "@/pages/students";
 import Courses from "@/pages/courses";
 import Classes from "@/pages/classes";
@@ -48,6 +49,7 @@ function Router() {
           <MainLayout>
             <Route path="/" component={Dashboard} />
             <Route path="/families" component={Families} />
+            <Route path="/former-families" component={FormerFamilies} />
             <Route path="/students" component={Students} />
             <Route path="/courses" component={Courses} />
             <Route path="/classes" component={Classes} />
