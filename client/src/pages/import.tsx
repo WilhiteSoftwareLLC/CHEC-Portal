@@ -18,8 +18,7 @@ export default function Import() {
     courses: "",
     classes: "",
     grades: "",
-    hours: "",
-    settings: ""
+    hours: ""
   });
 
   const importFamilies = useMutation({
@@ -167,29 +166,7 @@ export default function Import() {
     },
   });
 
-  const importSettings = useMutation({
-    mutationFn: async (data: any) => {
-      return await apiRequest("/api/import/settings", "POST", data);
-    },
-    onSuccess: (response: any) => {
-      toast({
-        title: "Settings Imported",
-        description: `New: ${response.newSettings || 0} (replaced all previous).`,
-      });
-      // Clear the form data after successful import
-      setCsvData({ ...csvData, settings: "" });
-      // Invalidate cache to refresh settings
-      queryClient.invalidateQueries({ queryKey: ["/api/settings"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/dashboard/stats"] });
-    },
-    onError: (error) => {
-      toast({
-        title: "Import Failed",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+
 
   const parseCsv = (csvText: string) => {
     const lines = csvText.trim().split('\n');
@@ -251,10 +228,6 @@ export default function Import() {
       case 'hours':
         importHours.mutate(data);
         break;
-      case 'settings':
-        const settingsData = data[0]; // Settings is a single record
-        importSettings.mutate(settingsData);
-        break;
     }
   };
 
@@ -273,14 +246,13 @@ export default function Import() {
         </Alert>
 
         <Tabs defaultValue="families" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="families">Families</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
           <TabsTrigger value="courses">Courses</TabsTrigger>
           <TabsTrigger value="classes">Classes</TabsTrigger>
           <TabsTrigger value="grades">Grades</TabsTrigger>
           <TabsTrigger value="hours">Hours</TabsTrigger>
-          <TabsTrigger value="settings">Settings</TabsTrigger>
         </TabsList>
 
         <TabsContent value="families">
@@ -435,30 +407,7 @@ export default function Import() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Settings</CardTitle>
-              <CardDescription>
-                Expected fields: FamilyFee, BackgroundFee, StudentFee, SchoolYear
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Paste CSV data here..."
-                value={csvData.settings}
-                onChange={(e) => setCsvData({ ...csvData, settings: e.target.value })}
-                rows={10}
-              />
-              <Button 
-                onClick={() => handleImport('settings')}
-                disabled={importSettings.isPending}
-              >
-                {importSettings.isPending ? "Importing..." : "Import Settings"}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
+
         </Tabs>
       </div>
     </div>
