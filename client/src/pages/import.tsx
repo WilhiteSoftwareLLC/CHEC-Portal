@@ -232,20 +232,13 @@ export default function Import() {
   };
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <PageHeader 
         title="CSV Import"
         description="Import your existing data from CSV files"
       />
-      <div className="p-6">
-        <Alert className="mb-6">
-          <AlertDescription>
-            Paste the CSV content into the text areas below. 
-            The first row should contain column headers that match your database field names.
-          </AlertDescription>
-        </Alert>
-
-        <Tabs defaultValue="families" className="space-y-6">
+      <div className="flex-1 p-6 overflow-hidden">
+        <Tabs defaultValue="families" className="h-full flex flex-col">
           <TabsList className="grid w-full grid-cols-6">
           <TabsTrigger value="families">Families</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
@@ -255,156 +248,156 @@ export default function Import() {
           <TabsTrigger value="hours">Hours</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="families">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Families</CardTitle>
-              <CardDescription>
+        <TabsContent value="families" className="flex-1 flex flex-col">
+          <div className="flex flex-col h-full space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Import Families</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Paste CSV content below. First row should contain column headers that match database field names.
                 Expected fields: FamilyID, LastName, Father, Mother, Email, SecondEmail, ParentCell, ParentCell2, 
                 HomePhone, WorkPhone, Address, City, Zip, Church, PastorName, PastorPhone
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Paste CSV data here..."
-                value={csvData.families}
-                onChange={(e) => setCsvData({ ...csvData, families: e.target.value })}
-                rows={10}
-              />
-              <Button 
-                onClick={() => handleImport('families')}
-                disabled={importFamilies.isPending}
-              >
-                {importFamilies.isPending ? "Importing..." : "Import Families"}
-              </Button>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <Textarea
+              placeholder="Paste CSV data here..."
+              value={csvData.families}
+              onChange={(e) => setCsvData({ ...csvData, families: e.target.value })}
+              className="flex-1 min-h-0"
+            />
+            <Button 
+              onClick={() => handleImport('families')}
+              disabled={importFamilies.isPending}
+              className="w-fit"
+            >
+              {importFamilies.isPending ? "Importing..." : "Import Families"}
+            </Button>
+          </div>
         </TabsContent>
 
-        <TabsContent value="students">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Students</CardTitle>
-              <CardDescription>
+        <TabsContent value="students" className="flex-1 flex flex-col">
+          <div className="flex flex-col h-full space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Import Students</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Paste CSV content below. First row should contain column headers that match database field names.
                 Expected fields: FamilyID, LastName, FirstName, Birthdate, GradYear, Comment1, MathHour, 
                 1stHour, 2ndHour, 3rdHour, 4thHour, 5thHourFall, 5thHourSpring, FridayScience
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Paste CSV data here..."
-                value={csvData.students}
-                onChange={(e) => setCsvData({ ...csvData, students: e.target.value })}
-                rows={10}
-              />
-              <Button 
-                onClick={() => handleImport('students')}
-                disabled={importStudents.isPending}
-              >
-                {importStudents.isPending ? "Importing..." : "Import Students"}
-              </Button>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <Textarea
+              placeholder="Paste CSV data here..."
+              value={csvData.students}
+              onChange={(e) => setCsvData({ ...csvData, students: e.target.value })}
+              className="flex-1 min-h-0"
+            />
+            <Button 
+              onClick={() => handleImport('students')}
+              disabled={importStudents.isPending}
+              className="w-fit"
+            >
+              {importStudents.isPending ? "Importing..." : "Import Students"}
+            </Button>
+          </div>
         </TabsContent>
 
-        <TabsContent value="courses">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Courses</CardTitle>
-              <CardDescription>
+        <TabsContent value="courses" className="flex-1 flex flex-col">
+          <div className="flex flex-col h-full space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Import Courses</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Paste CSV content below. First row should contain column headers that match database field names.
                 Expected fields: CourseName, OfferedFall, OfferedSpring, Hour, Fee, BookRental, Location
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Paste CSV data here..."
-                value={csvData.courses}
-                onChange={(e) => setCsvData({ ...csvData, courses: e.target.value })}
-                rows={10}
-              />
-              <Button 
-                onClick={() => handleImport('courses')}
-                disabled={importCourses.isPending}
-              >
-                {importCourses.isPending ? "Importing..." : "Import Courses"}
-              </Button>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <Textarea
+              placeholder="Paste CSV data here..."
+              value={csvData.courses}
+              onChange={(e) => setCsvData({ ...csvData, courses: e.target.value })}
+              className="flex-1 min-h-0"
+            />
+            <Button 
+              onClick={() => handleImport('courses')}
+              disabled={importCourses.isPending}
+              className="w-fit"
+            >
+              {importCourses.isPending ? "Importing..." : "Import Courses"}
+            </Button>
+          </div>
         </TabsContent>
 
-        <TabsContent value="classes">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Classes</CardTitle>
-              <CardDescription>
+        <TabsContent value="classes" className="flex-1 flex flex-col">
+          <div className="flex flex-col h-full space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Import Classes</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Paste CSV content below. First row should contain column headers that match database field names.
                 Expected fields: ClassName, StartCode, EndCode
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Paste CSV data here..."
-                value={csvData.classes}
-                onChange={(e) => setCsvData({ ...csvData, classes: e.target.value })}
-                rows={10}
-              />
-              <Button 
-                onClick={() => handleImport('classes')}
-                disabled={importClasses.isPending}
-              >
-                {importClasses.isPending ? "Importing..." : "Import Classes"}
-              </Button>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <Textarea
+              placeholder="Paste CSV data here..."
+              value={csvData.classes}
+              onChange={(e) => setCsvData({ ...csvData, classes: e.target.value })}
+              className="flex-1 min-h-0"
+            />
+            <Button 
+              onClick={() => handleImport('classes')}
+              disabled={importClasses.isPending}
+              className="w-fit"
+            >
+              {importClasses.isPending ? "Importing..." : "Import Classes"}
+            </Button>
+          </div>
         </TabsContent>
 
-        <TabsContent value="grades">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Grades</CardTitle>
-              <CardDescription>
+        <TabsContent value="grades" className="flex-1 flex flex-col">
+          <div className="flex flex-col h-full space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Import Grades</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Paste CSV content below. First row should contain column headers that match database field names.
                 Expected fields: GradeName, Code
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Paste CSV data here..."
-                value={csvData.grades}
-                onChange={(e) => setCsvData({ ...csvData, grades: e.target.value })}
-                rows={10}
-              />
-              <Button 
-                onClick={() => handleImport('grades')}
-                disabled={importGrades.isPending}
-              >
-                {importGrades.isPending ? "Importing..." : "Import Grades"}
-              </Button>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <Textarea
+              placeholder="Paste CSV data here..."
+              value={csvData.grades}
+              onChange={(e) => setCsvData({ ...csvData, grades: e.target.value })}
+              className="flex-1 min-h-0"
+            />
+            <Button 
+              onClick={() => handleImport('grades')}
+              disabled={importGrades.isPending}
+              className="w-fit"
+            >
+              {importGrades.isPending ? "Importing..." : "Import Grades"}
+            </Button>
+          </div>
         </TabsContent>
 
-        <TabsContent value="hours">
-          <Card>
-            <CardHeader>
-              <CardTitle>Import Hours</CardTitle>
-              <CardDescription>
+        <TabsContent value="hours" className="flex-1 flex flex-col">
+          <div className="flex flex-col h-full space-y-4">
+            <div>
+              <h3 className="text-lg font-semibold mb-2">Import Hours</h3>
+              <p className="text-sm text-gray-600 mb-4">
+                Paste CSV content below. First row should contain column headers that match database field names.
                 Expected fields: ID, Description
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <Textarea
-                placeholder="Paste CSV data here..."
-                value={csvData.hours}
-                onChange={(e) => setCsvData({ ...csvData, hours: e.target.value })}
-                rows={10}
-              />
-              <Button 
-                onClick={() => handleImport('hours')}
-                disabled={importHours.isPending}
-              >
-                {importHours.isPending ? "Importing..." : "Import Hours"}
-              </Button>
-            </CardContent>
-          </Card>
+              </p>
+            </div>
+            <Textarea
+              placeholder="Paste CSV data here..."
+              value={csvData.hours}
+              onChange={(e) => setCsvData({ ...csvData, hours: e.target.value })}
+              className="flex-1 min-h-0"
+            />
+            <Button 
+              onClick={() => handleImport('hours')}
+              disabled={importHours.isPending}
+              className="w-fit"
+            >
+              {importHours.isPending ? "Importing..." : "Import Hours"}
+            </Button>
+          </div>
         </TabsContent>
 
 
