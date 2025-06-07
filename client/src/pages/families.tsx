@@ -16,7 +16,9 @@ export default function Families() {
     queryFn: async () => {
       const response = await fetch("/api/families", { credentials: "include" });
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
-      return response.json();
+      const allFamilies = await response.json();
+      // Filter for only active families
+      return allFamilies.filter((family: Family) => family.active === true);
     },
     retry: false,
   });
