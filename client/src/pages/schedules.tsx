@@ -370,7 +370,7 @@ export default function Schedules() {
         </div>
 
         {/* Students Schedule Grid */}
-      {studentsLoading ? (
+        {studentsLoading ? (
         <div className="space-y-6">
           {[1, 2, 3].map((i) => (
             <Card key={i}>
