@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Settings as SettingsIcon, Plus, Trash2, Save } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import PageHeader from "@/components/layout/page-header";
 
 interface Setting {
   id: number;
@@ -130,12 +131,14 @@ export default function Settings() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6">
-        <div className="flex items-center gap-2 mb-6">
-          <SettingsIcon className="h-6 w-6" />
-          <h1 className="text-3xl font-bold">Settings</h1>
+      <div>
+        <PageHeader 
+          title="Settings"
+          description="Manage system-wide configuration settings"
+        />
+        <div className="p-6">
+          <div className="text-center py-8">Loading settings...</div>
         </div>
-        <div className="text-center py-8">Loading settings...</div>
       </div>
     );
   }
@@ -143,20 +146,17 @@ export default function Settings() {
   const settingsArray = settings ? Object.entries(settings).map(([key, value]) => ({ key, value })) : [];
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <SettingsIcon className="h-6 w-6" />
-          <h1 className="text-3xl font-bold">Settings</h1>
-        </div>
-        
+    <div>
+      <PageHeader 
+        title="Settings"
+        description="Manage system-wide configuration settings"
+        actionButton={{
+          label: "Add Setting",
+          onClick: () => setIsAddDialogOpen(true)
+        }}
+      />
+      <div className="p-6">
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Setting
-            </Button>
-          </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Add New Setting</DialogTitle>
@@ -206,9 +206,8 @@ export default function Settings() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
-      <Card>
+        <Card>
         <CardHeader>
           <CardTitle>Configuration Settings</CardTitle>
           <CardDescription>
@@ -255,6 +254,7 @@ export default function Settings() {
           )}
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 }

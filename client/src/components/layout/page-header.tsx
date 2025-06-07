@@ -22,7 +22,7 @@ export default function PageHeader({ title, description, actionButton }: PageHea
               size="sm"
               className="mr-4 p-2"
             >
-              <LayoutDashboard className="h-6 w-6 text-blue-600" />
+              <LayoutDashboard className="h-12 w-12 text-blue-600" />
             </Button>
           </Link>
           <div>
