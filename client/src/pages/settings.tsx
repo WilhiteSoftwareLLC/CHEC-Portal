@@ -150,68 +150,15 @@ export default function Settings() {
       <PageHeader 
         title="Settings"
         description="Manage system-wide configuration settings"
-        actionButton={{
-          label: "Add Setting",
-          onClick: () => setIsAddDialogOpen(true)
-        }}
       />
       <div className="p-6">
-        <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Add New Setting</DialogTitle>
-              <DialogDescription>
-                Add a new configuration setting to the system.
-              </DialogDescription>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="new-key">Key</Label>
-                <Input
-                  id="new-key"
-                  value={newKey}
-                  onChange={(e) => setNewKey(e.target.value)}
-                  placeholder="e.g., FamilyFee, SchoolYear"
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-value">Value</Label>
-                <Input
-                  id="new-value"
-                  value={newValue}
-                  onChange={(e) => setNewValue(e.target.value)}
-                  placeholder="Setting value"
-                />
-              </div>
-              <div>
-                <Label htmlFor="new-description">Description (Optional)</Label>
-                <Input
-                  id="new-description"
-                  value={newDescription}
-                  onChange={(e) => setNewDescription(e.target.value)}
-                  placeholder="Brief description of this setting"
-                />
-              </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setIsAddDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button 
-                  onClick={handleAdd} 
-                  disabled={!newKey || !newValue || addSettingMutation.isPending}
-                >
-                  Add Setting
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
+
 
         <Card>
         <CardContent className="pt-6">
           {settingsArray.length === 0 ? (
             <div className="text-center py-8 text-muted-foreground">
-              No settings configured. Add your first setting using the button above.
+              No settings configured.
             </div>
           ) : (
             <div className="space-y-4">
@@ -232,14 +179,6 @@ export default function Settings() {
                       disabled={editingSettings[key] === undefined || updateSettingMutation.isPending}
                     >
                       <Save className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="destructive"
-                      onClick={() => handleDelete(key)}
-                      disabled={deleteSettingMutation.isPending}
-                    >
-                      <Trash2 className="h-4 w-4" />
                     </Button>
                   </div>
                 </div>
