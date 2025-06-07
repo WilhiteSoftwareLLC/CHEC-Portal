@@ -322,27 +322,21 @@ export default function Courses() {
           label: "Add Course",
           onClick: () => setAddCourseOpen(true)
         }}
+        secondaryButton={{
+          label: "Print Course Rosters",
+          onClick: handlePrintCourseRosters,
+          variant: "outline",
+          icon: PrinterCheck
+        }}
       />
-      <div className="flex-1 p-6 overflow-hidden flex flex-col">
-        <div className="flex justify-end mb-4">
-          <Button 
-            variant="outline" 
-            onClick={handlePrintCourseRosters}
-          >
-            <PrinterCheck className="mr-2 h-4 w-4" />
-            Print Course Rosters
-          </Button>
-        </div>
-        
-        <div className="flex-1 overflow-hidden">
-          <EditableGrid
-            data={courses || []}
-            columns={columns}
-            onRowUpdate={handleUpdateCourse}
-            onRowDelete={handleDeleteCourse}
-            isLoading={isLoading}
-          />
-        </div>
+      <div className="flex-1 p-6 overflow-hidden">
+        <EditableGrid
+          data={courses || []}
+          columns={columns}
+          onRowUpdate={handleUpdateCourse}
+          onRowDelete={handleDeleteCourse}
+          isLoading={isLoading}
+        />
 
         <AddCourseDialog 
           open={addCourseOpen} 

@@ -9,9 +9,15 @@ interface PageHeaderProps {
     label: string;
     onClick: () => void;
   };
+  secondaryButton?: {
+    label: string;
+    onClick: () => void;
+    variant?: "outline" | "default";
+    icon?: any;
+  };
 }
 
-export default function PageHeader({ title, description, actionButton }: PageHeaderProps) {
+export default function PageHeader({ title, description, actionButton, secondaryButton }: PageHeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -31,6 +37,15 @@ export default function PageHeader({ title, description, actionButton }: PageHea
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          {secondaryButton && (
+            <Button 
+              variant={secondaryButton.variant || "outline"}
+              onClick={secondaryButton.onClick}
+            >
+              {secondaryButton.icon && <secondaryButton.icon className="mr-2 h-4 w-4" />}
+              {secondaryButton.label}
+            </Button>
+          )}
           {actionButton && (
             <Button 
               onClick={actionButton.onClick}
