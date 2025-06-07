@@ -112,22 +112,24 @@ export default function Dashboard() {
   ];
 
   return (
-    <div className="p-6 min-h-screen bg-gray-50">
-      {/* Navigation Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8 max-w-6xl mx-auto">
-        {navigationCards.map((card) => (
-          <Link key={card.path} href={card.path}>
-            <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-gray-300">
-              <CardContent className="p-8 text-center">
-                <div className={`mx-auto w-20 h-20 ${card.color} ${card.hoverColor} rounded-2xl flex items-center justify-center mb-6 transition-colors duration-200 group-hover:shadow-lg`}>
-                  <card.icon className="h-10 w-10 text-white" />
-                </div>
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">{card.title}</h3>
-                <p className="text-sm text-gray-600">{card.description}</p>
-              </CardContent>
-            </Card>
-          </Link>
-        ))}
+    <div className="h-full overflow-y-auto bg-gray-50">
+      <div className="p-6">
+        {/* Navigation Grid */}
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6 max-w-6xl mx-auto">
+          {navigationCards.map((card) => (
+            <Link key={card.path} href={card.path}>
+              <Card className="group cursor-pointer transition-all duration-200 hover:shadow-lg hover:scale-105 border-2 hover:border-gray-300">
+                <CardContent className="p-6 text-center">
+                  <div className={`mx-auto w-16 h-16 ${card.color} ${card.hoverColor} rounded-2xl flex items-center justify-center mb-4 transition-colors duration-200 group-hover:shadow-lg`}>
+                    <card.icon className="h-8 w-8 text-white" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">{card.title}</h3>
+                  <p className="text-xs text-gray-600">{card.description}</p>
+                </CardContent>
+              </Card>
+            </Link>
+          ))}
+        </div>
       </div>
     </div>
   );
