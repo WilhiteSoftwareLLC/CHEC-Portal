@@ -8,6 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Upload } from "lucide-react";
+import PageHeader from "@/components/layout/page-header";
 
 export default function Import() {
   const { toast } = useToast();
@@ -258,21 +259,21 @@ export default function Import() {
   };
 
   return (
-    <div className="container mx-auto p-6">
-      <div className="flex items-center gap-2 mb-6">
-        <Upload className="h-6 w-6" />
-        <h1 className="text-3xl font-bold">CSV Import</h1>
-      </div>
+    <div>
+      <PageHeader 
+        title="CSV Import"
+        description="Import your existing data from CSV files"
+      />
+      <div className="p-6">
+        <Alert className="mb-6">
+          <AlertDescription>
+            Paste the CSV content into the text areas below. 
+            The first row should contain column headers that match your database field names.
+          </AlertDescription>
+        </Alert>
 
-      <Alert className="mb-6">
-        <AlertDescription>
-          Import your existing data from CSV files. Paste the CSV content into the text areas below. 
-          The first row should contain column headers that match your database field names.
-        </AlertDescription>
-      </Alert>
-
-      <Tabs defaultValue="families" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-7">
+        <Tabs defaultValue="families" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-7">
           <TabsTrigger value="families">Families</TabsTrigger>
           <TabsTrigger value="students">Students</TabsTrigger>
           <TabsTrigger value="courses">Courses</TabsTrigger>
@@ -458,7 +459,8 @@ export default function Import() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs>
+        </Tabs>
+      </div>
     </div>
   );
 }

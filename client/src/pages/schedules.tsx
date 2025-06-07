@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Calendar, Save, User, BookOpen, Clock, GraduationCap, PrinterCheck } from "lucide-react";
+import PageHeader from "@/components/layout/page-header";
 import type { StudentWithFamily, Course } from "@shared/schema";
 
 export default function Schedules() {
@@ -349,12 +349,17 @@ export default function Schedules() {
   };
 
   return (
-    <div className="p-6">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <p className="text-sm text-gray-600">Assign courses to students (7th grade and older)</p>
-        </div>
-        <div className="flex space-x-2">
+    <div>
+      <PageHeader 
+        title="Schedules"
+        description="Assign courses to students (7th grade and older)"
+        actionButton={hasChanges ? {
+          label: "Save Changes",
+          onClick: () => saveSchedulesMutation.mutate()
+        } : undefined}
+      />
+      <div className="p-6">
+        <div className="flex justify-end mb-6">
           <Button 
             variant="outline" 
             onClick={handlePrintAllSchedules}
@@ -362,20 +367,9 @@ export default function Schedules() {
             <PrinterCheck className="mr-2 h-4 w-4" />
             Print All Schedules
           </Button>
-          {hasChanges && (
-            <Button 
-              onClick={() => saveSchedulesMutation.mutate()}
-              disabled={saveSchedulesMutation.isPending}
-              className="bg-blue-600 hover:bg-blue-700"
-            >
-              <Save className="mr-2 h-4 w-4" />
-              Save Changes
-            </Button>
-          )}
         </div>
-      </div>
 
-      {/* Students Schedule Grid */}
+        {/* Students Schedule Grid */}
       {studentsLoading ? (
         <div className="space-y-6">
           {[1, 2, 3].map((i) => (
@@ -485,6 +479,7 @@ export default function Schedules() {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 }
