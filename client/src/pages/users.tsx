@@ -3,14 +3,13 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Eye, EyeOff, Plus, Edit, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Edit, Trash2 } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import type { AdminUser, ParentUser, Family } from "@shared/schema";
 
@@ -36,13 +35,13 @@ export default function Users() {
     active: true
   });
 
-  const { data: adminUsers, isLoading: adminLoading } = useQuery({
+  const { data: adminUsers } = useQuery({
     queryKey: ["/api/admin-users"],
     retry: false,
   });
 
-  const { data: parentUsers, isLoading: parentLoading } = useQuery({
-    queryKey: ["/api/parent-users"],
+  const { data: parentUsers } = useQuery({
+    queryKey: ["/api/parent-users"], 
     retry: false,
   });
 
@@ -180,7 +179,7 @@ export default function Users() {
     if (editUserDialogOpen && selectedUser) {
       const updates: any = { ...userData };
       if (!formData.password) {
-        delete (updates as any).password;
+        delete updates.password;
       }
       updateUserMutation.mutate({ 
         id: selectedUser.id, 
@@ -193,9 +192,14 @@ export default function Users() {
   };
 
   const getFamilyName = (familyId: number) => {
-    const family = (families as Family[] || []).find((f: Family) => f.id === familyId);
+    const familyList = Array.isArray(families) ? families : [];
+    const family = familyList.find((f: Family) => f.id === familyId);
     return family ? family.lastName : "Unknown Family";
   };
+
+  const adminUserList = Array.isArray(adminUsers) ? adminUsers : [];
+  const parentUserList = Array.isArray(parentUsers) ? parentUsers : [];
+  const familyList = Array.isArray(families) ? families : [];
 
   return (
     <div className="h-full flex flex-col">
@@ -229,7 +233,7 @@ export default function Users() {
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                    {(adminUsers as AdminUser[] || []).map((user: AdminUser) => (
+                    {adminUserList.map((user: AdminUser) => (
                       <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                           {user.username}
@@ -286,7 +290,7 @@ export default function Users() {
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                    {(parentUsers as UserWithFamily[] || []).map((user: UserWithFamily) => (
+                    {parentUserList.map((user: UserWithFamily) => (
                       <tr key={user.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                         <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                           {user.username}
@@ -395,7 +399,7 @@ export default function Users() {
                       <SelectValue placeholder="Select family" />
                     </SelectTrigger>
                     <SelectContent>
-                      {families?.map((family: Family) => (
+                      {familyList.map((family: Family) => (
                         <SelectItem key={family.id} value={family.id.toString()}>
                           {family.lastName}
                         </SelectItem>
@@ -494,7 +498,7 @@ export default function Users() {
                       <SelectValue placeholder="Select family" />
                     </SelectTrigger>
                     <SelectContent>
-                      {families?.map((family: Family) => (
+                      {familyList.map((family: Family) => (
                         <SelectItem key={family.id} value={family.id.toString()}>
                           {family.lastName}
                         </SelectItem>

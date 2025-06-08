@@ -15,6 +15,7 @@ import {
   Settings,
   Download,
   Upload,
+  UserCog,
   X,
 } from "lucide-react";
 
@@ -33,6 +34,7 @@ const navigation = [
   { name: "Schedules", href: "/schedules", icon: Calendar },
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Import Data", href: "/import", icon: Upload },
+  { name: "Users", href: "/users", icon: UserCog },
 ];
 
 const settingsNavigation = [
