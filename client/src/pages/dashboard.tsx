@@ -11,6 +11,7 @@ import {
   Upload,
   Settings,
   School,
+  UserCog,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -108,6 +109,14 @@ export default function Dashboard() {
       color: "bg-indigo-500",
       hoverColor: "hover:bg-indigo-600",
       description: "Import from spreadsheets"
+    },
+    {
+      title: "Users",
+      icon: UserCog,
+      path: "/users",
+      color: "bg-amber-500",
+      hoverColor: "hover:bg-amber-600",
+      description: "Manage user accounts"
     },
     {
       title: "Settings",

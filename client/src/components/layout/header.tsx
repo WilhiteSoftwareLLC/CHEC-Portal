@@ -20,6 +20,7 @@ const pageLabels: Record<string, { title: string; description: string }> = {
   "/schedules": { title: "Schedules", description: "Generate and view student schedules" },
   "/invoices": { title: "Invoices", description: "Manage billing and payments" },
   "/import": { title: "Import", description: "Import data from spreadsheets" },
+  "/users": { title: "Users", description: "Manage admin and parent user accounts" },
   "/settings": { title: "Settings", description: "Configure system settings" },
 };
 
