@@ -17,6 +17,7 @@ import Classes from "@/pages/classes";
 import Schedules from "@/pages/schedules";
 import Invoices from "@/pages/invoices";
 import Import from "@/pages/import";
+import Users from "@/pages/users";
 import Settings from "@/pages/settings";
 import MainLayout from "@/components/layout/main-layout";
 
@@ -56,6 +57,7 @@ function Router() {
             <Route path="/schedules" component={Schedules} />
             <Route path="/invoices" component={Invoices} />
             <Route path="/import" component={Import} />
+            <Route path="/users" component={Users} />
             <Route path="/settings" component={Settings} />
           </MainLayout>
         </DialogProvider>
