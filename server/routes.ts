@@ -454,6 +454,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin User routes
+  app.get("/api/admin-users", requireAdmin, async (req, res) => {
+    try {
+      const adminUsers = await storage.getAdminUsers();
+      res.json(adminUsers);
+    } catch (error) {
+      console.error("Error fetching admin users:", error);
+      res.status(500).json({ message: "Failed to fetch admin users" });
+    }
+  });
+
+  app.post("/api/admin-users", requireAdmin, async (req, res) => {
+    try {
+      const { username, email, firstName, lastName, password, role, active } = req.body;
+      
+      if (!username || !email || !password) {
+        return res.status(400).json({ message: "Username, email, and password are required" });
+      }
+
+      const { hashPassword } = await import('./auth');
+      const passwordHash = await hashPassword(password);
+
+      const adminUser = await storage.createAdminUser({
+        username,
+        email,
+        firstName,
+        lastName,
+        passwordHash,
+        role: role || 'admin',
+        active: active !== undefined ? active : true
+      });
+
+      res.status(201).json(adminUser);
+    } catch (error) {
+      console.error("Error creating admin user:", error);
+      res.status(500).json({ message: "Failed to create admin user" });
+    }
+  });
+
+  app.patch("/api/admin-users/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = { ...req.body };
+      
+      // Hash password if it's being updated
+      if (updates.password) {
+        const { hashPassword } = await import('./auth');
+        updates.passwordHash = await hashPassword(updates.password);
+        delete updates.password;
+      }
+      
+      const adminUser = await storage.updateAdminUser(id, updates);
+      res.json(adminUser);
+    } catch (error) {
+      console.error("Error updating admin user:", error);
+      res.status(500).json({ message: "Failed to update admin user" });
+    }
+  });
+
+  app.delete("/api/admin-users/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteAdminUser(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting admin user:", error);
+      res.status(500).json({ message: "Failed to delete admin user" });
+    }
+  });
+
+  // Parent User routes
+  app.get("/api/parent-users", requireAdmin, async (req, res) => {
+    try {
+      const parentUsers = await storage.getParentUsers();
+      res.json(parentUsers);
+    } catch (error) {
+      console.error("Error fetching parent users:", error);
+      res.status(500).json({ message: "Failed to fetch parent users" });
+    }
+  });
+
+  app.post("/api/parent-users", requireAdmin, async (req, res) => {
+    try {
+      const { username, email, password, familyId, active } = req.body;
+      
+      if (!username || !email || !password || !familyId) {
+        return res.status(400).json({ message: "Username, email, password, and familyId are required" });
+      }
+
+      const { hashPassword } = await import('./auth');
+      const passwordHash = await hashPassword(password);
+
+      const parentUser = await storage.createParentUser({
+        username,
+        email,
+        passwordHash,
+        familyId: parseInt(familyId),
+        role: 'parent',
+        active: active !== undefined ? active : true
+      });
+
+      res.status(201).json(parentUser);
+    } catch (error) {
+      console.error("Error creating parent user:", error);
+      res.status(500).json({ message: "Failed to create parent user" });
+    }
+  });
+
+  app.patch("/api/parent-users/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const updates = { ...req.body };
+      
+      // Hash password if it's being updated
+      if (updates.password) {
+        const { hashPassword } = await import('./auth');
+        updates.passwordHash = await hashPassword(updates.password);
+        delete updates.password;
+      }
+      
+      const parentUser = await storage.updateParentUser(id, updates);
+      res.json(parentUser);
+    } catch (error) {
+      console.error("Error updating parent user:", error);
+      res.status(500).json({ message: "Failed to update parent user" });
+    }
+  });
+
+  app.delete("/api/parent-users/:id", requireAdmin, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteParentUser(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting parent user:", error);
+      res.status(500).json({ message: "Failed to delete parent user" });
+    }
+  });
+
   // Settings routes
   app.get("/api/settings", async (req, res) => {
     try {
