@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
-import { useAuth } from "@/hooks/useAuth";
+import { useCredentialAuth } from "@/hooks/useCredentialAuth";
 import {
   BarChart,
   Users,
@@ -43,10 +43,10 @@ const settingsNavigation = [
 
 function SidebarContent({ onLinkClick }: { onLinkClick?: () => void }) {
   const [location] = useLocation();
-  const { user } = useAuth();
-
+  const { user, logout } = useCredentialAuth();
+  
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logout();
   };
 
   return (

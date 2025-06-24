@@ -3,10 +3,10 @@ import { LogOut, User } from "lucide-react";
 import { useCredentialAuth } from "@/hooks/useCredentialAuth";
 
 export default function AppHeader() {
-  const { user } = useCredentialAuth();
-
+  const { user, logout } = useCredentialAuth();
+  
   const handleLogout = () => {
-    window.location.href = "/api/logout";
+    logout();
   };
 
   return (

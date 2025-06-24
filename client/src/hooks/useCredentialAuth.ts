@@ -23,12 +23,24 @@ export function useCredentialAuth() {
       const response = await fetch("/api/logout", {
         method: "POST",
       });
-      return response.json();
+      if (!response.ok) {
+        throw new Error("Logout failed");
+      }
+      return response.ok;
     },
     onSuccess: () => {
+      // Clear all cached data
+      queryClient.clear();
+      // Set auth state to null
       queryClient.setQueryData(["/api/auth/me"], null);
-      queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
-      window.location.href = "/login";
+      // Force redirect to login page
+      window.location.replace("/login");
+    },
+    onError: () => {
+      // Even if logout fails, clear local state and redirect
+      queryClient.clear();
+      queryClient.setQueryData(["/api/auth/me"], null);
+      window.location.replace("/login");
     },
   });
 
