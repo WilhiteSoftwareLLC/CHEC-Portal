@@ -2,7 +2,6 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
 import { authenticateCredentials, requireAuth, requireAdmin, requireParentOrAdmin, requireFamilyAccess, type AuthUser } from "./auth";
 
 // Extend session data interface

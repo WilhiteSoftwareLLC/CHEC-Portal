@@ -147,7 +147,7 @@ export class DatabaseStorage implements IStorage {
 
   // Admin user operations
   async getAdminUsers(): Promise<AdminUser[]> {
-    return await db.select().from(adminUsers).orderBy(desc(adminUsers.createdAt));
+    return db.select().from(adminUsers).orderBy(desc(adminUsers.createdAt));
   }
 
   async getAdminUser(id: number): Promise<AdminUser | undefined> {
@@ -185,7 +185,7 @@ export class DatabaseStorage implements IStorage {
 
   // Parent user operations
   async getParentUsers(): Promise<ParentUser[]> {
-    return await db.select().from(parentUsers).orderBy(desc(parentUsers.createdAt));
+    return db.select().from(parentUsers).orderBy(desc(parentUsers.createdAt));
   }
 
   async getParentUser(id: number): Promise<ParentUser | undefined> {
@@ -204,7 +204,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getParentUsersByFamily(familyId: number): Promise<ParentUser[]> {
-    return await db.select().from(parentUsers).where(eq(parentUsers.familyId, familyId));
+    return db.select().from(parentUsers).where(eq(parentUsers.familyId, familyId));
   }
 
   async createParentUser(userData: InsertParentUser): Promise<ParentUser> {
@@ -227,7 +227,7 @@ export class DatabaseStorage implements IStorage {
 
   // Family operations
   async getFamilies(): Promise<Family[]> {
-    return await db.select().from(families).orderBy(families.lastName);
+    return db.select().from(families).orderBy(families.lastName);
   }
 
   async getFamily(id: number): Promise<Family | undefined> {
@@ -257,7 +257,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchFamilies(query: string): Promise<Family[]> {
-    return await db
+    return db
       .select()
       .from(families)
       .where(
@@ -331,7 +331,7 @@ export class DatabaseStorage implements IStorage {
 
   // Student operations
   async getStudents(): Promise<StudentWithFamily[]> {
-    return await db
+    return db
       .select({
         id: students.id,
         familyId: students.familyId,
@@ -348,6 +348,7 @@ export class DatabaseStorage implements IStorage {
         fifthHourFall: students.fifthHourFall,
         fifthHourSpring: students.fifthHourSpring,
         fridayScience: students.fridayScience,
+        inactive: students.inactive,
         family: families,
       })
       .from(students)
@@ -373,6 +374,7 @@ export class DatabaseStorage implements IStorage {
         fifthHourFall: students.fifthHourFall,
         fifthHourSpring: students.fifthHourSpring,
         fridayScience: students.fridayScience,
+        inactive: students.inactive,
         family: families,
       })
       .from(students)
@@ -382,7 +384,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getStudentsByFamily(familyId: number): Promise<Student[]> {
-    return await db
+    return db
       .select()
       .from(students)
       .where(eq(students.familyId, familyId))
@@ -411,7 +413,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchStudents(query: string): Promise<StudentWithFamily[]> {
-    return await db
+    return db
       .select({
         id: students.id,
         familyId: students.familyId,
@@ -428,6 +430,7 @@ export class DatabaseStorage implements IStorage {
         fifthHourFall: students.fifthHourFall,
         fifthHourSpring: students.fifthHourSpring,
         fridayScience: students.fridayScience,
+        inactive: students.inactive,
         family: families,
       })
       .from(students)
@@ -441,7 +444,7 @@ export class DatabaseStorage implements IStorage {
 
   // Course operations
   async getCourses(): Promise<Course[]> {
-    return await db.select().from(courses).orderBy(courses.courseName);
+    return db.select().from(courses).orderBy(courses.courseName);
   }
 
   async getCourse(id: number): Promise<Course | undefined> {
@@ -475,7 +478,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async searchCourses(query: string): Promise<Course[]> {
-    return await db
+    return db
       .select()
       .from(courses)
       .where(
@@ -486,7 +489,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getCoursesByHour(hour: number): Promise<Course[]> {
-    return await db
+    return db
       .select()
       .from(courses)
       .where(eq(courses.hour, hour))
@@ -495,7 +498,7 @@ export class DatabaseStorage implements IStorage {
 
   // Class operations
   async getClasses(): Promise<Class[]> {
-    return await db.select().from(classes).orderBy(classes.className);
+    return db.select().from(classes).orderBy(classes.className);
   }
 
   async getClass(id: number): Promise<Class | undefined> {
@@ -530,7 +533,7 @@ export class DatabaseStorage implements IStorage {
 
   // Grade operations
   async getGrades(): Promise<Grade[]> {
-    return await db.select().from(grades).orderBy(grades.code);
+    return db.select().from(grades).orderBy(grades.code);
   }
 
   async createGrade(grade: InsertGrade): Promise<Grade> {
@@ -547,7 +550,7 @@ export class DatabaseStorage implements IStorage {
 
   // Hour operations
   async getHours(): Promise<Hour[]> {
-    return await db.select().from(hours).orderBy(hours.id);
+    return db.select().from(hours).orderBy(hours.id);
   }
 
   async createHour(hour: InsertHour): Promise<Hour> {

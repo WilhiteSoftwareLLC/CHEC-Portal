@@ -3,7 +3,6 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { useAuth } from "@/hooks/useAuth";
 import { useCredentialAuth } from "@/hooks/useCredentialAuth";
 import { DialogProvider } from "@/contexts/dialog-context";
 import NotFound from "@/pages/not-found";
@@ -21,11 +20,10 @@ import Settings from "@/pages/settings";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
-  const { isAuthenticated: replitAuth, isLoading: replitLoading } = useAuth();
   const { isAuthenticated: credentialAuth, isLoading: credentialLoading, user } = useCredentialAuth();
 
-  const isLoading = replitLoading || credentialLoading;
-  const isAuthenticated = replitAuth || credentialAuth;
+  const isLoading = credentialLoading;
+  const isAuthenticated = credentialAuth;
 
   if (isLoading) {
     return (
