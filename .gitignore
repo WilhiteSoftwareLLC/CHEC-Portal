@@ -6,4 +6,5 @@ vite.config.ts.*
 *.tar.gz
 .aider*
 .env
+.idea/
 ecosystem.config.cjs
