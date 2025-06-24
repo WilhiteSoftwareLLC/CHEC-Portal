@@ -58,6 +58,7 @@ app.use((req, res, next) => {
   }
 
   console.log(`DATABASE_URL: ${process.env.DATABASE_URL}`);
+  console.log(`NODE_ENV: ${process.env.NODE_ENV || 'development'}`);
 
   // this serves both the API and the client.
   const port = process.env.SERVER_PORT || 5000;
