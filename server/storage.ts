@@ -113,6 +113,7 @@ export interface IStorage {
   setSetting(key: string, value: string, description?: string): Promise<Settings>;
   deleteSetting(key: string): Promise<void>;
   deleteAllSettings(): Promise<void>;
+  initializeDefaultSettings(): Promise<void>;
 
   // Dashboard stats
   getDashboardStats(): Promise<{
@@ -647,6 +648,29 @@ export class DatabaseStorage implements IStorage {
       totalCourses: courseCount.count,
       totalClasses: classCount.count,
     };
+  }
+
+  // Initialize default settings on system startup
+  async initializeDefaultSettings(): Promise<void> {
+    const defaultSettings = [
+      { key: 'BackgroundFee', value: '0', description: 'Background check fee amount' },
+      { key: 'SchoolYear', value: new Date().getFullYear().toString(), description: 'Current school year' },
+      { key: 'StudentFee', value: '0', description: 'Per-student fee amount' },
+      { key: 'FamilyFee', value: '0', description: 'Per-family fee amount' },
+    ];
+
+    for (const setting of defaultSettings) {
+      try {
+        // Check if setting already exists
+        const existing = await this.getSetting(setting.key);
+        if (existing === null) {
+          // Only create if it doesn't exist
+          await this.setSetting(setting.key, setting.value, setting.description);
+        }
+      } catch (error) {
+        console.error(`Failed to initialize setting ${setting.key}:`, error);
+      }
+    }
   }
 }
 
