@@ -57,6 +57,8 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
+  console.log(`DATABASE_URL: ${process.env.DATABASE_URL}`);
+
   // this serves both the API and the client.
   const port = process.env.SERVER_PORT || 5000;
   server.listen({
