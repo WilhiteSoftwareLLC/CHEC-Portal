@@ -64,7 +64,13 @@ export default function Families() {
   });
 
   const handleUpdateFamily = async (id: number, updates: Record<string, any>) => {
-    await updateFamilyMutation.mutateAsync({ id, updates });
+    // Convert string boolean values to actual booleans
+    const processedUpdates = { ...updates };
+    if (updates.active === "true" || updates.active === "false") {
+      processedUpdates.active = updates.active === "true";
+    }
+    
+    await updateFamilyMutation.mutateAsync({ id, updates: processedUpdates });
   };
 
   const handleDeleteFamily = async (familyId: number) => {
