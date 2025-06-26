@@ -237,9 +237,11 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createFamily(family: InsertFamily): Promise<Family> {
+    // Remove id from family data to let database auto-generate it
+    const { id, ...familyData } = family as any;
     const [newFamily] = await db
       .insert(families)
-      .values(family)
+      .values(familyData)
       .returning();
     return newFamily;
   }
