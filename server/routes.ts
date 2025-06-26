@@ -226,8 +226,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/students", async (req, res) => {
     try {
-      const studentData = insertStudentSchema.parse(req.body);
-      const student = await storage.createStudent(studentData);
+      const studentData = { ...req.body };
+      
+      // Convert birthdate string to Date object if provided
+      if (studentData.birthdate && typeof studentData.birthdate === 'string') {
+        studentData.birthdate = new Date(studentData.birthdate);
+      }
+      
+      const validatedData = insertStudentSchema.parse(studentData);
+      const student = await storage.createStudent(validatedData);
       res.status(201).json(student);
     } catch (error) {
       console.error("Error creating student:", error);
@@ -238,8 +245,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/students/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const studentData = insertStudentSchema.partial().parse(req.body);
-      const student = await storage.updateStudent(id, studentData);
+      const studentData = { ...req.body };
+      
+      // Convert birthdate string to Date object if provided
+      if (studentData.birthdate && typeof studentData.birthdate === 'string') {
+        studentData.birthdate = new Date(studentData.birthdate);
+      }
+      
+      const validatedData = insertStudentSchema.partial().parse(studentData);
+      const student = await storage.updateStudent(id, validatedData);
       res.json(student);
     } catch (error) {
       console.error("Error updating student:", error);
