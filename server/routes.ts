@@ -690,6 +690,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Mark families not in import as inactive
       await storage.markFamiliesInactiveExcept(Array.from(importedFamilyIds));
 
+      // Reset the families sequence to prevent duplicate key errors
+      await storage.resetFamiliesSequence();
+
       // Count inactive families after processing
       const inactiveFamilies = await storage.getInactiveFamiliesCount();
 

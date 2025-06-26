@@ -325,6 +325,11 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async resetFamiliesSequence(): Promise<void> {
+    // Reset the sequence to the maximum ID + 1
+    await db.execute(sql`SELECT setval('families_id_seq', COALESCE((SELECT MAX(id) FROM families), 0) + 1, false)`);
+  }
+
   async getInactiveFamiliesCount(): Promise<number> {
     const result = await db
       .select({ count: sql<number>`count(*)` })
