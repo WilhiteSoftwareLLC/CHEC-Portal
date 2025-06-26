@@ -159,10 +159,16 @@ export default function FormerFamilies() {
   ];
 
   const handleRowUpdate = async (id: number, updates: Record<string, any>) => {
+    // Convert string boolean values to actual booleans
+    const processedUpdates = { ...updates };
+    if (updates.active === "true" || updates.active === "false") {
+      processedUpdates.active = updates.active === "true";
+    }
+    
     await new Promise((resolve, reject) => {
       updateFamilyMutation.mutate({
         id,
-        updates,
+        updates: processedUpdates,
       }, {
         onSuccess: resolve,
         onError: reject,
