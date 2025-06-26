@@ -86,6 +86,18 @@ export default function Families() {
     { key: "address", label: "Address", sortable: true, editable: true, width: "64" },
     { key: "city", label: "City", sortable: true, editable: true, width: "40" },
     { key: "zip", label: "ZIP", sortable: true, editable: true, width: "32" },
+    {
+      key: "active",
+      label: "Status",
+      sortable: true,
+      editable: true,
+      type: "dropdown",
+      width: "24",
+      options: [
+        { value: true, label: "Active" },
+        { value: false, label: "Inactive" },
+      ],
+    },
   ];
 
   return (
