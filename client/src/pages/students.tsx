@@ -84,7 +84,13 @@ export default function Students() {
   });
 
   const handleUpdateStudent = async (id: number, updates: Record<string, any>) => {
-    await updateStudentMutation.mutateAsync({ id, updates });
+    // Convert string boolean values to actual booleans for inactive field
+    const processedUpdates = { ...updates };
+    if (updates.inactive === "true" || updates.inactive === "false") {
+      processedUpdates.inactive = updates.inactive === "true";
+    }
+    
+    await updateStudentMutation.mutateAsync({ id, updates: processedUpdates });
   };
 
   const handleDeleteStudent = async (studentId: number) => {
@@ -182,7 +188,9 @@ export default function Students() {
     { key: "familyName", label: "Family", sortable: true, editable: false, width: "40" },
     { key: "currentGrade", label: "Current Grade", sortable: true, editable: false, width: "32" },
     { key: "gradYear", label: "Grad Year", sortable: true, editable: true, type: "number", width: "28" },
-    { key: "inactive", label: "Inactive", sortable: true, editable: false, type: "checkbox", width: "24" },
+    { key: "birthdate", label: "Birth Date", sortable: true, editable: true, type: "date", width: "32" },
+    { key: "comment1", label: "Comments", sortable: true, editable: true, type: "text", width: "48" },
+    { key: "inactive", label: "Inactive", sortable: true, editable: true, type: "checkbox", width: "24" },
     { 
       key: "mathHour", 
       label: "Math Hour", 
