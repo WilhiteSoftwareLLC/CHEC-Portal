@@ -179,15 +179,44 @@ export default function EditableGrid({
                             />
                           </div>
                         ) : column.type === "date" ? (
-                          <div 
-                            className={cn(
-                              "text-sm text-gray-900 dark:text-gray-100",
-                              column.editable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-2 py-1 -mx-2 -my-1"
-                            )}
-                            onClick={() => column.editable && startEdit(row.id, column.key, value ? new Date(value).toISOString().split('T')[0] : '')}
-                          >
-                            {value ? new Date(value).toLocaleDateString('en-US') : (column.editable ? <span className="text-gray-400 italic">Click to edit</span> : "—")}
-                          </div>
+                          isEditing ? (
+                            <div className="flex items-center space-x-2">
+                              <Input
+                                type="date"
+                                value={editValue}
+                                onChange={(e) => setEditValue(e.target.value)}
+                                onKeyDown={handleKeyDown}
+                                className="h-8 text-sm"
+                                autoFocus
+                              />
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={saveEdit}
+                                className="h-8 w-8 p-0"
+                              >
+                                <Save className="h-3 w-3" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={cancelEdit}
+                                className="h-8 w-8 p-0"
+                              >
+                                <X className="h-3 w-3" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div 
+                              className={cn(
+                                "text-sm text-gray-900 dark:text-gray-100",
+                                column.editable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-2 py-1 -mx-2 -my-1"
+                              )}
+                              onClick={() => column.editable && startEdit(row.id, column.key, value ? new Date(value).toISOString().split('T')[0] : '')}
+                            >
+                              {value ? new Date(value).toLocaleDateString('en-US') : (column.editable ? <span className="text-gray-400 italic">Click to edit</span> : "—")}
+                            </div>
+                          )
                         ) : column.type === "dropdown" ? (
                           <Select
                             value={value === null || value === "" ? "NO_COURSE" : String(value)}
