@@ -1,7 +1,20 @@
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
 
 export default function NotFound() {
+  const [, setLocation] = useLocation();
+
+  useEffect(() => {
+    // Redirect to login page after a short delay
+    const timer = setTimeout(() => {
+      setLocation("/login");
+    }, 2000);
+
+    return () => clearTimeout(timer);
+  }, [setLocation]);
+
   return (
     <div className="min-h-screen w-full flex items-center justify-center bg-gray-50">
       <Card className="w-full max-w-md mx-4">
@@ -12,7 +25,7 @@ export default function NotFound() {
           </div>
 
           <p className="mt-4 text-sm text-gray-600">
-            Did you forget to add the page to the router?
+            Redirecting to login page...
           </p>
         </CardContent>
       </Card>
