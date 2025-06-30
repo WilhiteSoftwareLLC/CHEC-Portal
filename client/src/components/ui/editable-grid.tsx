@@ -14,6 +14,7 @@ export interface GridColumn {
   width?: string;
   type?: "text" | "email" | "tel" | "number" | "checkbox" | "dropdown";
   options?: { value: any; label: string }[] | ((row: any) => { value: any; label: string }[]);
+  onCheckboxChange?: (id: number, checked: boolean) => void;
 }
 
 export interface EditableGridProps {
@@ -171,7 +172,13 @@ export default function EditableGrid({
                               checked={Boolean(value)}
                               onCheckedChange={async (checked) => {
                                 try {
-                                  await onRowUpdate(row.id, { [column.key]: checked });
+                                  if (column.onCheckboxChange) {
+                                    // Use custom checkbox handler (for UI-only checkboxes)
+                                    column.onCheckboxChange(row.id, Boolean(checked));
+                                  } else {
+                                    // Use default database update handler
+                                    await onRowUpdate(row.id, { [column.key]: checked });
+                                  }
                                 } catch (error) {
                                   console.error("Failed to update checkbox:", error);
                                 }

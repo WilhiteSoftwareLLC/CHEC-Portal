@@ -10,6 +10,7 @@ import type { StudentWithFamily } from "@shared/schema";
 export default function Students() {
   const { toast } = useToast();
   const { addStudentOpen, setAddStudentOpen } = useDialogs();
+  const [selectedStudents, setSelectedStudents] = useState<Set<number>>(new Set());
 
   const { data: students, isLoading: studentsLoading } = useQuery({
     queryKey: ["/api/students"],
@@ -175,14 +176,36 @@ export default function Students() {
     ];
   };
 
-  // Prepare data with computed grade
+  // Prepare data with computed grade and selected status
   const studentsWithGrade = students?.map((student: StudentWithFamily) => ({
     ...student,
     currentGrade: getCurrentGrade(student.gradYear),
-    familyName: student.family.lastName
+    familyName: student.family.lastName,
+    selected: selectedStudents.has(student.id)
   })) || [];
 
+  const handleStudentSelection = (studentId: number, selected: boolean) => {
+    setSelectedStudents(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(studentId);
+      } else {
+        newSet.delete(studentId);
+      }
+      return newSet;
+    });
+  };
+
   const columns: GridColumn[] = [
+    { 
+      key: "selected", 
+      label: "Selected", 
+      sortable: false, 
+      editable: false, 
+      width: "20", 
+      type: "checkbox",
+      onCheckboxChange: handleStudentSelection
+    },
     { key: "lastName", label: "Last Name", sortable: true, editable: true, width: "40" },
     { key: "firstName", label: "First Name", sortable: true, editable: true, width: "40" },
     { key: "familyName", label: "Family", sortable: true, editable: false, width: "40" },
