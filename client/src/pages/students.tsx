@@ -396,18 +396,14 @@ export default function Students() {
           label: "Add Student",
           onClick: () => setAddStudentOpen(true)
         }}
+        secondaryButton={{
+          label: `Export Selected Students (${selectedStudents.size})`,
+          onClick: handleExportSelected,
+          variant: "outline",
+          icon: Download,
+          disabled: selectedStudents.size === 0
+        }}
       />
-      <div className="px-6 pb-4">
-        <Button
-          onClick={handleExportSelected}
-          variant="outline"
-          disabled={selectedStudents.size === 0}
-          className="flex items-center gap-2"
-        >
-          <Download className="h-4 w-4" />
-          Export Selected Students ({selectedStudents.size})
-        </Button>
-      </div>
       <div className="flex-1 p-6 overflow-hidden">
         <EditableGrid
           data={studentsWithGrade}
