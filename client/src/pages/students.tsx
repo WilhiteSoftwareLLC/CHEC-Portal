@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Button } from "@/components/ui/button";
+import { Download } from "lucide-react";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddStudentDialog from "@/components/dialogs/add-student-dialog";
 import PageHeader from "@/components/layout/page-header";
@@ -197,6 +199,84 @@ export default function Students() {
     });
   };
 
+  const handleExportSelected = () => {
+    if (selectedStudents.size === 0) {
+      toast({
+        title: "No Students Selected",
+        description: "Please select students to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Get selected students data
+    const selectedStudentsData = studentsWithGrade.filter(student => 
+      selectedStudents.has(student.id)
+    );
+
+    // Create CSV content
+    const headers = [
+      "ID",
+      "Last Name", 
+      "First Name",
+      "Family Name",
+      "Current Grade",
+      "Grad Year",
+      "Birth Date",
+      "Comments",
+      "Inactive",
+      "Math Hour",
+      "1st Hour",
+      "2nd Hour", 
+      "3rd Hour",
+      "4th Hour",
+      "5th Hour Fall",
+      "5th Hour Spring",
+      "Friday Science"
+    ];
+
+    const csvRows = [
+      headers.join(","),
+      ...selectedStudentsData.map(student => [
+        student.id,
+        `"${student.lastName || ""}"`,
+        `"${student.firstName || ""}"`,
+        `"${student.familyName || ""}"`,
+        `"${student.currentGrade || ""}"`,
+        student.gradYear || "",
+        student.birthdate ? new Date(student.birthdate).toLocaleDateString() : "",
+        `"${student.comment1 || ""}"`,
+        student.inactive ? "true" : "false",
+        `"${student.mathHour || ""}"`,
+        `"${student.firstHour || ""}"`,
+        `"${student.secondHour || ""}"`,
+        `"${student.thirdHour || ""}"`,
+        `"${student.fourthHour || ""}"`,
+        `"${student.fifthHourFall || ""}"`,
+        `"${student.fifthHourSpring || ""}"`,
+        `"${student.fridayScience || ""}"`
+      ].join(","))
+    ];
+
+    const csvContent = csvRows.join("\n");
+
+    // Create and download file
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `selected_students_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Complete",
+      description: `Exported ${selectedStudents.size} students to CSV file.`,
+    });
+  };
+
   const columns: GridColumn[] = [
     { 
       key: "selected", 
@@ -317,6 +397,17 @@ export default function Students() {
           onClick: () => setAddStudentOpen(true)
         }}
       />
+      <div className="px-6 pb-4">
+        <Button
+          onClick={handleExportSelected}
+          variant="outline"
+          disabled={selectedStudents.size === 0}
+          className="flex items-center gap-2"
+        >
+          <Download className="h-4 w-4" />
+          Export Selected Students ({selectedStudents.size})
+        </Button>
+      </div>
       <div className="flex-1 p-6 overflow-hidden">
         <EditableGrid
           data={studentsWithGrade}
