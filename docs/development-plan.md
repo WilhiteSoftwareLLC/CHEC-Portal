@@ -51,16 +51,13 @@ Add a new "Develop" page to the CHEC Portal that allows admin users to execute a
 
 ### Phase 3: Security & Error Handling
 1. Add admin-only access control
-2. Implement command sanitization
-3. Add timeout handling for long-running commands
-4. Implement proper error handling and user feedback
-5. Add logging for all develop page activities
+2. Implement proper error handling and user feedback
+3. Add execution mutex to prevent concurrent commands
+4. Add logging for all develop page activities
 
-### Phase 4: Enhanced Features
-1. Command history/logging
-2. Real-time output streaming
-3. Process cancellation capability
-4. Backup/rollback functionality
+### Phase 4: Enhanced Features (Future)
+1. Real-time output streaming (if needed later)
+2. Process cancellation capability (if needed later)
 
 ## Technical Implementation Details
 
@@ -84,8 +81,9 @@ server/routes.ts
 ### Command Execution
 - Use Node.js `child_process.spawn()` for aider execution
 - Capture both stdout and stderr
-- Implement timeout mechanism
-- Handle process termination
+- No timeout mechanism (wait indefinitely)
+- Prevent concurrent executions with mutex/flag
+- Load all project source files into aider context
 
 ### Deployment Process
 1. Execute `npm run build` in project root
@@ -110,56 +108,54 @@ server/routes.ts
 - Implement command queuing if needed
 - Handle zombie processes
 
-## Questions to Answer
+## Technical Requirements (Answered)
 
-### Technical Questions
-1. **Aider Installation**: Is aider installed globally or locally? What's the exact command path?
-2. **Working Directory**: What directory should aider commands execute in?
-3. **Environment Variables**: Does aider need specific environment variables set?
-4. **Command Timeout**: What's a reasonable timeout for aider commands (5 minutes? 10 minutes)?
-5. **Concurrent Execution**: Should we allow multiple aider commands to run simultaneously?
-6. **Output Streaming**: Do we need real-time output streaming or is batch output sufficient?
+### Aider Configuration
+- **Command Path**: `/home/jeff/CHEC-Portal/aider` (run from project root)
+- **Working Directory**: `/home/jeff/CHEC-Portal` (project root)
+- **Environment Variables**: Automatically loaded by aider from `.env` file
+- **Context Loading**: Load all source files in CHEC-Portal project for every prompt
+- **Concurrent Execution**: Prevent multiple simultaneous aider executions
+- **Timeout**: No timeout - wait for aider to complete regardless of duration
+- **Output**: Show complete aider output at completion (no streaming needed)
 
-### Security Questions
-1. **User Permissions**: Should this be restricted to super-admin only, or all admin users?
-2. **Command Validation**: What input validation/sanitization is needed for prompts?
-3. **File System Access**: Should we restrict which files aider can modify?
-4. **Audit Logging**: What level of logging is needed for compliance/debugging?
+### Security & Access
+- **User Permissions**: Admin users only (assume non-malevolent)
+- **Command Validation**: No sanitization needed (trust admin users)
+- **File System Access**: No restrictions (aider can modify any project files)
+- **Audit Logging**: Standard application logging sufficient
 
-### Deployment Questions
-1. **Build Process**: Is `npm run build` the correct build command?
-2. **PM2 Configuration**: Is `ecosystem.config.cjs` the correct PM2 config file?
-3. **Deployment Verification**: How do we verify successful deployment?
-4. **Rollback Strategy**: What happens if deployment fails?
-5. **Downtime**: Is brief downtime during restart acceptable?
+### Build & Deployment
+- **Build Command**: `npm run build` (from project root)
+- **Build Failure**: Show failure message, do not proceed with deployment
+- **Deployment Command**: `pm2 restart ecosystem.config.cjs` (from project root)
+- **Deployment Effect**: Causes 404 → automatic logout → forced re-login
+- **Rollback Strategy**: Manual developer intervention if needed
 
-### User Experience Questions
-1. **Command History**: Should we store/display previous commands and results?
-2. **Progress Indicators**: How detailed should progress feedback be?
-3. **Error Handling**: How should we display errors to users?
-4. **Session Management**: What happens if user navigates away during command execution?
+### User Experience
+- **Command History**: Do not preserve previous commands/results
+- **Progress Feedback**: Raw aider output, unmodified
+- **Error Handling**: Display errors as received from aider
+- **Session Management**: User logout expected after deployment
 
-### Infrastructure Questions
-1. **Resource Limits**: Are there CPU/memory limits we need to consider?
-2. **Disk Space**: Could aider operations fill up disk space?
-3. **Network Access**: Does aider need internet access for AI API calls?
-4. **Backup Strategy**: Should we backup before allowing modifications?
+### Infrastructure
+- **Resource Limits**: Not a concern (small project fits in 200K context)
+- **Backup Strategy**: Git provides sufficient backup
+- **System Criticality**: Non-critical system, manual fixes acceptable
 
 ## Risk Assessment
 
-### High Risk
-- **Code Injection**: Malicious prompts could potentially harm the system
-- **System Instability**: Bad aider changes could break the application
-- **Data Loss**: Incorrect modifications could corrupt data
+### Accepted Risks
+- **System Instability**: Bad aider changes could break the application (acceptable - manual fix)
+- **Deployment Failures**: Failed deployments could cause downtime (acceptable - manual recovery)
+- **UI Responsiveness**: Long commands might make interface unresponsive (acceptable)
+- **User Confusion**: Complex aider output might be hard to interpret (acceptable)
 
-### Medium Risk
-- **Performance Impact**: Long-running aider commands could affect server performance
-- **Deployment Failures**: Failed deployments could cause downtime
-- **Resource Exhaustion**: Multiple commands could consume system resources
-
-### Low Risk
-- **UI Responsiveness**: Long commands might make interface feel unresponsive
-- **User Confusion**: Complex aider output might be hard to interpret
+### Mitigated Risks
+- **Code Injection**: Not a concern (trusted admin users only)
+- **Data Loss**: Git provides backup protection
+- **Resource Exhaustion**: Not a concern (small project size)
+- **Performance Impact**: Acceptable for non-critical system
 
 ## Success Criteria
 1. Admin users can successfully execute aider commands from web interface
