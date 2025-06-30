@@ -53,11 +53,6 @@ Add a new "Develop" page to the CHEC Portal that allows admin users to execute a
 1. Add admin-only access control
 2. Implement proper error handling and user feedback
 3. Add execution mutex to prevent concurrent commands
-4. Add logging for all develop page activities
-
-### Phase 4: Enhanced Features (Future)
-1. Real-time output streaming (if needed later)
-2. Process cancellation capability (if needed later)
 
 ## Technical Implementation Details
 
@@ -85,11 +80,58 @@ server/routes.ts
 - Prevent concurrent executions with mutex/flag
 - Load all project source files into aider context
 
+### Aider Command Construction
+- Base command: `aider` (from `/home/jeff/CHEC-Portal/`)
+- Add all source files to context: `--file client/src/**/*.tsx --file client/src/**/*.ts --file server/**/*.ts --file shared/**/*.ts`
+- Include user prompt as final argument
+- Working directory: `/home/jeff/CHEC-Portal`
+
+### State Management
+- Track execution state with boolean flag (`isExecuting`)
+- Store current command output in memory during execution
+- Clear results when starting new command
+- Handle process cleanup on completion/error
+
+### Error Handling Scenarios
+- Aider command not found
+- Invalid working directory
+- Process spawn failures
+- Build command failures
+- PM2 restart failures
+- Network/permission issues
+
 ### Deployment Process
-1. Execute `npm run build` in project root
-2. Check build exit code
-3. If successful, execute `pm2 restart ecosystem.config.cjs`
-4. Return deployment status to frontend
+1. Execute `npm run build` in project root (`/home/jeff/CHEC-Portal`)
+2. Check build exit code (0 = success, non-zero = failure)
+3. If build fails, return error message to frontend, do not proceed
+4. If build succeeds, execute `pm2 restart ecosystem.config.cjs`
+5. Return deployment status to frontend
+6. Note: PM2 restart will cause user's session to get 404 → automatic logout
+
+### API Response Formats
+```typescript
+// Execute response
+{
+  success: boolean;
+  output: string;  // Combined stdout/stderr
+  error?: string;  // If execution failed
+}
+
+// Deploy response
+{
+  success: boolean;
+  buildOutput: string;
+  deployOutput?: string;  // Only if build succeeded
+  error?: string;
+}
+```
+
+### Frontend State Management
+- Track execution/deployment status separately
+- Disable buttons during operations
+- Show loading indicators
+- Display output in scrollable text area
+- Handle session loss after deployment
 
 ## Security Considerations
 
@@ -123,7 +165,7 @@ server/routes.ts
 - **User Permissions**: Admin users only (assume non-malevolent)
 - **Command Validation**: No sanitization needed (trust admin users)
 - **File System Access**: No restrictions (aider can modify any project files)
-- **Audit Logging**: Standard application logging sufficient
+- **Audit Logging**: Git provides sufficient audit trail
 
 ### Build & Deployment
 - **Build Command**: `npm run build` (from project root)
