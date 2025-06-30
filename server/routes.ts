@@ -1096,6 +1096,193 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Development routes (admin only)
+  app.post("/api/develop/execute", requireAdmin, async (req, res) => {
+    try {
+      const { prompt } = req.body;
+      
+      if (!prompt || typeof prompt !== 'string') {
+        return res.status(400).json({ error: "Prompt is required" });
+      }
+
+      // Import child_process
+      const { spawn } = await import('child_process');
+      const path = await import('path');
+
+      // Set working directory to project root
+      const workingDir = '/home/jeff/CHEC-Portal';
+      
+      // Construct aider command with all source files
+      const aiderArgs = [
+        '--file', 'client/src/**/*.tsx',
+        '--file', 'client/src/**/*.ts', 
+        '--file', 'server/**/*.ts',
+        '--file', 'shared/**/*.ts',
+        prompt
+      ];
+
+      let output = '';
+      let hasError = false;
+
+      try {
+        const aiderProcess = spawn('aider', aiderArgs, {
+          cwd: workingDir,
+          stdio: ['pipe', 'pipe', 'pipe'],
+          shell: true
+        });
+
+        // Collect stdout and stderr
+        aiderProcess.stdout.on('data', (data) => {
+          output += data.toString();
+        });
+
+        aiderProcess.stderr.on('data', (data) => {
+          output += data.toString();
+        });
+
+        // Wait for process to complete
+        await new Promise((resolve, reject) => {
+          aiderProcess.on('close', (code) => {
+            if (code === 0) {
+              resolve(code);
+            } else {
+              hasError = true;
+              resolve(code);
+            }
+          });
+
+          aiderProcess.on('error', (error) => {
+            hasError = true;
+            output += `\nProcess error: ${error.message}`;
+            reject(error);
+          });
+        });
+
+        res.json({
+          success: !hasError,
+          output: output || 'Command completed successfully',
+          error: hasError ? 'Aider command failed' : undefined
+        });
+
+      } catch (error) {
+        console.error("Error executing aider:", error);
+        res.json({
+          success: false,
+          output: output + `\nExecution error: ${(error as Error).message}`,
+          error: (error as Error).message
+        });
+      }
+
+    } catch (error) {
+      console.error("Error in develop/execute:", error);
+      res.status(500).json({ error: "Failed to execute aider command" });
+    }
+  });
+
+  app.post("/api/develop/deploy", requireAdmin, async (req, res) => {
+    try {
+      // Import child_process
+      const { spawn } = await import('child_process');
+      
+      // Set working directory to project root
+      const workingDir = '/home/jeff/CHEC-Portal';
+      
+      let buildOutput = '';
+      let deployOutput = '';
+      let buildSuccess = false;
+
+      try {
+        // Step 1: Run npm run build
+        const buildProcess = spawn('npm', ['run', 'build'], {
+          cwd: workingDir,
+          stdio: ['pipe', 'pipe', 'pipe'],
+          shell: true
+        });
+
+        // Collect build output
+        buildProcess.stdout.on('data', (data) => {
+          buildOutput += data.toString();
+        });
+
+        buildProcess.stderr.on('data', (data) => {
+          buildOutput += data.toString();
+        });
+
+        // Wait for build to complete
+        const buildCode = await new Promise((resolve, reject) => {
+          buildProcess.on('close', (code) => {
+            resolve(code);
+          });
+
+          buildProcess.on('error', (error) => {
+            buildOutput += `\nBuild process error: ${error.message}`;
+            reject(error);
+          });
+        });
+
+        buildSuccess = buildCode === 0;
+
+        if (!buildSuccess) {
+          return res.json({
+            success: false,
+            buildOutput,
+            error: 'Build failed - deployment aborted'
+          });
+        }
+
+        // Step 2: Run PM2 restart if build succeeded
+        const deployProcess = spawn('pm2', ['restart', 'ecosystem.config.cjs'], {
+          cwd: workingDir,
+          stdio: ['pipe', 'pipe', 'pipe'],
+          shell: true
+        });
+
+        // Collect deploy output
+        deployProcess.stdout.on('data', (data) => {
+          deployOutput += data.toString();
+        });
+
+        deployProcess.stderr.on('data', (data) => {
+          deployOutput += data.toString();
+        });
+
+        // Wait for deployment to complete
+        const deployCode = await new Promise((resolve, reject) => {
+          deployProcess.on('close', (code) => {
+            resolve(code);
+          });
+
+          deployProcess.on('error', (error) => {
+            deployOutput += `\nDeploy process error: ${error.message}`;
+            reject(error);
+          });
+        });
+
+        const deploySuccess = deployCode === 0;
+
+        res.json({
+          success: deploySuccess,
+          buildOutput,
+          deployOutput,
+          error: deploySuccess ? undefined : 'Deployment failed'
+        });
+
+      } catch (error) {
+        console.error("Error during deployment:", error);
+        res.json({
+          success: false,
+          buildOutput,
+          deployOutput,
+          error: (error as Error).message
+        });
+      }
+
+    } catch (error) {
+      console.error("Error in develop/deploy:", error);
+      res.status(500).json({ error: "Failed to deploy application" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

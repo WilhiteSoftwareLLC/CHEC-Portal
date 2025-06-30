@@ -19,6 +19,7 @@ import Invoices from "@/pages/invoices";
 import Import from "@/pages/import";
 import Users from "@/pages/users";
 import Settings from "@/pages/settings";
+import Develop from "@/pages/develop";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
@@ -59,6 +60,7 @@ function Router() {
             <Route path="/import" component={Import} />
             <Route path="/users" component={Users} />
             <Route path="/settings" component={Settings} />
+            <Route path="/develop" component={Develop} />
           </MainLayout>
         </DialogProvider>
       )}
