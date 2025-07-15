@@ -221,7 +221,7 @@ export default function EditableGrid({
                               )}
                               onClick={() => column.editable && startEdit(row.id, column.key, value ? new Date(value).toISOString().split('T')[0] : '')}
                             >
-                              {value ? new Date(value).toLocaleDateString('en-US') : (column.editable ? <span className="text-gray-400 italic">Click to edit</span> : "—")}
+                              {value ? new Date(value).toLocaleDateString('en-US', { timeZone: 'UTC' }) : (column.editable ? <span className="text-gray-400 italic">Click to edit</span> : "—")}
                             </div>
                           )
                         ) : column.type === "dropdown" ? (
