@@ -1153,6 +1153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           // Construct aider command
           const aiderArgs = [
+            '--model', 'sonnet',
             '--load', 'context',
             '--message', `"${prompt}"`
           ];
