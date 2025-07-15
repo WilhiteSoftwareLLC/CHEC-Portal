@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Terminal, Rocket, AlertCircle, CheckCircle } from "lucide-react";
+import { Terminal, Rocket, AlertCircle, CheckCircle, X } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 
 export default function Develop() {
@@ -17,6 +17,80 @@ export default function Develop() {
   const [results, setResults] = useState("");
   const [isExecuting, setIsExecuting] = useState(false);
   const [isDeploying, setIsDeploying] = useState(false);
+  const [currentJobId, setCurrentJobId] = useState<string | null>(null);
+  const eventSourceRef = useRef<EventSource | null>(null);
+  const resultsRef = useRef<HTMLTextAreaElement>(null);
+
+  // Clean up EventSource on unmount or job change
+  useEffect(() => {
+    return () => {
+      if (eventSourceRef.current) {
+        eventSourceRef.current.close();
+        eventSourceRef.current = null;
+      }
+    };
+  }, []);
+
+  // Auto-scroll results to bottom when new content is added
+  useEffect(() => {
+    if (resultsRef.current) {
+      resultsRef.current.scrollTop = resultsRef.current.scrollHeight;
+    }
+  }, [results]);
+
+  const connectToStream = (jobId: string) => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+    }
+
+    const eventSource = new EventSource(`/api/develop/stream/${jobId}`);
+    eventSourceRef.current = eventSource;
+
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        if (data.type === 'output') {
+          setResults(prev => prev + data.data);
+        } else if (data.type === 'complete') {
+          setResults(prev => prev + data.data);
+          setIsExecuting(false);
+          setCurrentJobId(null);
+          
+          if (data.success) {
+            toast({
+              title: "Aider Execution Complete",
+              description: "Command executed successfully",
+            });
+          } else {
+            toast({
+              title: "Aider Execution Failed",
+              description: data.error || "Command failed",
+              variant: "destructive",
+            });
+          }
+          
+          eventSource.close();
+          eventSourceRef.current = null;
+        }
+      } catch (error) {
+        console.error("Error parsing SSE data:", error);
+      }
+    };
+
+    eventSource.onerror = (error) => {
+      console.error("EventSource error:", error);
+      setIsExecuting(false);
+      setCurrentJobId(null);
+      toast({
+        title: "Connection Error",
+        description: "Lost connection to command stream",
+        variant: "destructive",
+      });
+      eventSource.close();
+      eventSourceRef.current = null;
+    };
+  };
 
   const executeMutation = useMutation({
     mutationFn: async (prompt: string) => {
@@ -25,30 +99,27 @@ export default function Develop() {
       return await apiRequest("/api/develop/execute", "POST", { prompt });
     },
     onSuccess: (response) => {
-      setResults(response.output || "Command completed successfully");
-      if (response.success) {
-        toast({
-          title: "Aider Execution Complete",
-          description: "Command executed successfully",
-        });
+      if (response.jobId) {
+        setCurrentJobId(response.jobId);
+        connectToStream(response.jobId);
+        setResults("Starting aider command...\n");
       } else {
+        setIsExecuting(false);
         toast({
-          title: "Aider Execution Failed",
-          description: response.error || "Command failed",
+          title: "Execution Error",
+          description: "Failed to start command",
           variant: "destructive",
         });
       }
     },
     onError: (error) => {
       setResults(`Error: ${error.message}`);
+      setIsExecuting(false);
       toast({
         title: "Execution Error",
         description: error.message,
         variant: "destructive",
       });
-    },
-    onSettled: () => {
-      setIsExecuting(false);
     },
   });
 
@@ -94,6 +165,16 @@ export default function Develop() {
       return;
     }
     executeMutation.mutate(prompt.trim());
+  };
+
+  const handleCancel = () => {
+    if (eventSourceRef.current) {
+      eventSourceRef.current.close();
+      eventSourceRef.current = null;
+    }
+    setIsExecuting(false);
+    setCurrentJobId(null);
+    setResults(prev => prev + "\n❌ Command cancelled by user");
   };
 
   const handleDeploy = () => {
@@ -166,6 +247,15 @@ export default function Develop() {
                   >
                     {isExecuting ? "Executing..." : "Execute Aider"}
                   </Button>
+                  {isExecuting && (
+                    <Button 
+                      variant="destructive"
+                      onClick={handleCancel}
+                      size="icon"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  )}
                   <Button 
                     variant="outline"
                     onClick={handleClear}
@@ -226,6 +316,7 @@ export default function Develop() {
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
                 <Textarea
+                  ref={resultsRef}
                   value={results}
                   readOnly
                   className="flex-1 min-h-0 font-mono text-sm bg-gray-50 dark:bg-gray-900"
