@@ -228,9 +228,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const studentData = { ...req.body };
       
-      // Convert birthdate string to Date object if provided
+      // Convert birthdate string to Date object if provided, treating as local date
       if (studentData.birthdate && typeof studentData.birthdate === 'string') {
-        studentData.birthdate = new Date(studentData.birthdate);
+        // Parse as local date to avoid timezone issues
+        const dateParts = studentData.birthdate.split('-');
+        if (dateParts.length === 3) {
+          studentData.birthdate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+        } else {
+          studentData.birthdate = new Date(studentData.birthdate);
+        }
       }
       
       const validatedData = insertStudentSchema.parse(studentData);
@@ -247,9 +253,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const id = parseInt(req.params.id);
       const studentData = { ...req.body };
       
-      // Convert birthdate string to Date object if provided
+      // Convert birthdate string to Date object if provided, treating as local date
       if (studentData.birthdate && typeof studentData.birthdate === 'string') {
-        studentData.birthdate = new Date(studentData.birthdate);
+        // Parse as local date to avoid timezone issues
+        const dateParts = studentData.birthdate.split('-');
+        if (dateParts.length === 3) {
+          studentData.birthdate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+        } else {
+          studentData.birthdate = new Date(studentData.birthdate);
+        }
       }
       
       const validatedData = insertStudentSchema.partial().parse(studentData);
