@@ -1096,6 +1096,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Store for active jobs
+  const activeJobs = new Map<string, {
+    process?: any;
+    output: string;
+    completed: boolean;
+    success: boolean;
+    error?: string;
+    clients: Set<any>;
+  }>();
+
   // Development routes (admin only)
   app.post("/api/develop/execute", requireAdmin, async (req, res) => {
     try {
@@ -1104,83 +1114,207 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!prompt || typeof prompt !== 'string') {
         return res.status(400).json({ error: "Prompt is required" });
       }
-      console.log("Aider prompt: "+prompt);
 
-      const {execSync} = await import('child_process');
-      execSync("./build_context.sh");
-        
-      // Import child_process
-      const { spawn } = await import('child_process');
-      const path = await import('path');
-
-      // Set working directory to project root
-      const workingDir = '/home/jeff/CHEC-Portal';
+      // Generate unique job ID
+      const jobId = `job_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       
-      // Construct aider command with all source files
-      const aiderArgs = [
-          '--load', 'context',
-          '--message', `"${prompt}"`
-      ];
-      console.log(aiderArgs);
+      // Initialize job state
+      activeJobs.set(jobId, {
+        output: '',
+        completed: false,
+        success: false,
+        clients: new Set()
+      });
 
-      let output = '';
-      let hasError = false;
+      // Return immediately with job ID
+      res.json({ jobId, message: "Job started" });
 
-      try {
-        const aiderProcess = spawn('aider', aiderArgs, {
-          cwd: workingDir,
-          stdio: ['pipe', 'pipe', 'pipe'],
-          shell: true
-        });
+      // Start the process asynchronously
+      setImmediate(async () => {
+        const job = activeJobs.get(jobId)!;
+        
+        try {
+          console.log("Aider prompt: " + prompt);
 
-        // Collect stdout and stderr
-        aiderProcess.stdout.on('data', (data) => {
-          output += data.toString();
-        });
+          const { execSync, spawn } = await import('child_process');
+          
+          // Build context first
+          try {
+            execSync("./build_context.sh", { cwd: '/home/jeff/CHEC-Portal' });
+            job.output += "Context built successfully\n";
+            broadcastToClients(job, { type: 'output', data: job.output });
+          } catch (error) {
+            job.output += `Context build failed: ${error}\n`;
+            broadcastToClients(job, { type: 'output', data: job.output });
+          }
 
-        aiderProcess.stderr.on('data', (data) => {
-          output += data.toString();
-        });
+          // Set working directory to project root
+          const workingDir = '/home/jeff/CHEC-Portal';
+          
+          // Construct aider command
+          const aiderArgs = [
+            '--load', 'context',
+            '--message', `"${prompt}"`
+          ];
+          console.log(aiderArgs);
 
-        // Wait for process to complete
-        await new Promise((resolve, reject) => {
+          const aiderProcess = spawn('aider', aiderArgs, {
+            cwd: workingDir,
+            stdio: ['pipe', 'pipe', 'pipe'],
+            shell: true
+          });
+
+          job.process = aiderProcess;
+
+          // Stream stdout
+          aiderProcess.stdout.on('data', (data) => {
+            const chunk = data.toString();
+            job.output += chunk;
+            broadcastToClients(job, { type: 'output', data: chunk });
+          });
+
+          // Stream stderr
+          aiderProcess.stderr.on('data', (data) => {
+            const chunk = data.toString();
+            job.output += chunk;
+            broadcastToClients(job, { type: 'output', data: chunk });
+          });
+
+          // Handle process completion
           aiderProcess.on('close', (code) => {
-            console.log("Aider on close: "+code)
-            if (code === 0) {
-              resolve(code);
-            } else {
-              hasError = true;
-              resolve(code);
-            }
+            console.log("Aider on close: " + code);
+            job.completed = true;
+            job.success = code === 0;
+            
+            const finalMessage = job.success 
+              ? '\n✅ Command completed successfully' 
+              : '\n❌ Command failed';
+            
+            job.output += finalMessage;
+            
+            broadcastToClients(job, { 
+              type: 'complete', 
+              data: finalMessage,
+              success: job.success 
+            });
+
+            // Clean up after 5 minutes
+            setTimeout(() => {
+              activeJobs.delete(jobId);
+            }, 5 * 60 * 1000);
           });
 
           aiderProcess.on('error', (error) => {
-            console.log("Aider on error: "+ error)
-            hasError = true;
-            output += `\nProcess error: ${error.message}`;
-            reject(error);
+            console.log("Aider on error: " + error);
+            job.completed = true;
+            job.success = false;
+            job.error = error.message;
+            
+            const errorMessage = `\n❌ Process error: ${error.message}`;
+            job.output += errorMessage;
+            
+            broadcastToClients(job, { 
+              type: 'complete', 
+              data: errorMessage,
+              success: false,
+              error: error.message 
+            });
           });
-        });
 
-        res.json({
-          success: !hasError,
-          output: output || 'Command completed successfully',
-          error: hasError ? 'Aider command failed' : undefined
-        });
-
-      } catch (error) {
-        console.error("Error executing aider:", error);
-        res.json({
-          success: false,
-          output: output + `\nExecution error: ${(error as Error).message}`,
-          error: (error as Error).message
-        });
-      }
+        } catch (error) {
+          console.error("Error executing aider:", error);
+          job.completed = true;
+          job.success = false;
+          job.error = (error as Error).message;
+          
+          const errorMessage = `\n❌ Execution error: ${(error as Error).message}`;
+          job.output += errorMessage;
+          
+          broadcastToClients(job, { 
+            type: 'complete', 
+            data: errorMessage,
+            success: false,
+            error: (error as Error).message 
+          });
+        }
+      });
 
     } catch (error) {
       console.error("Error in develop/execute:", error);
-      res.status(500).json({ error: "Failed to execute aider command" });
+      res.status(500).json({ error: "Failed to start aider command" });
     }
+  });
+
+  // SSE endpoint for streaming job output
+  app.get("/api/develop/stream/:jobId", requireAdmin, (req, res) => {
+    const { jobId } = req.params;
+    const job = activeJobs.get(jobId);
+    
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    // Set up SSE headers
+    res.writeHead(200, {
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache',
+      'Connection': 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Headers': 'Cache-Control'
+    });
+
+    // Add client to job's client set
+    job.clients.add(res);
+
+    // Send existing output if any
+    if (job.output) {
+      res.write(`data: ${JSON.stringify({ type: 'output', data: job.output })}\n\n`);
+    }
+
+    // Send completion status if already completed
+    if (job.completed) {
+      res.write(`data: ${JSON.stringify({ 
+        type: 'complete', 
+        success: job.success,
+        error: job.error 
+      })}\n\n`);
+    }
+
+    // Handle client disconnect
+    req.on('close', () => {
+      job.clients.delete(res);
+    });
+  });
+
+  // Helper function to broadcast to all clients of a job
+  function broadcastToClients(job: any, message: any) {
+    const data = `data: ${JSON.stringify(message)}\n\n`;
+    job.clients.forEach((client: any) => {
+      try {
+        client.write(data);
+      } catch (error) {
+        // Remove dead clients
+        job.clients.delete(client);
+      }
+    });
+  }
+
+  // Get job status
+  app.get("/api/develop/status/:jobId", requireAdmin, (req, res) => {
+    const { jobId } = req.params;
+    const job = activeJobs.get(jobId);
+    
+    if (!job) {
+      return res.status(404).json({ error: "Job not found" });
+    }
+
+    res.json({
+      jobId,
+      completed: job.completed,
+      success: job.success,
+      error: job.error,
+      output: job.output
+    });
   });
 
   app.post("/api/develop/deploy", requireAdmin, async (req, res) => {
