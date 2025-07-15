@@ -1104,7 +1104,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!prompt || typeof prompt !== 'string') {
         return res.status(400).json({ error: "Prompt is required" });
       }
+      console.log("Aider prompt: "+prompt);
 
+      const {execSync} = await import('child_process');
+      execSync("./build_context.sh");
+        
       // Import child_process
       const { spawn } = await import('child_process');
       const path = await import('path');
@@ -1114,12 +1118,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Construct aider command with all source files
       const aiderArgs = [
-        '--file', 'client/src/**/*.tsx',
-        '--file', 'client/src/**/*.ts', 
-        '--file', 'server/**/*.ts',
-        '--file', 'shared/**/*.ts',
-        prompt
+          '--load', 'context',
+          '--message', `"${prompt}"`
       ];
+      console.log(aiderArgs);
 
       let output = '';
       let hasError = false;
@@ -1143,6 +1145,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Wait for process to complete
         await new Promise((resolve, reject) => {
           aiderProcess.on('close', (code) => {
+            console.log("Aider on close: "+code)
             if (code === 0) {
               resolve(code);
             } else {
@@ -1152,6 +1155,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           });
 
           aiderProcess.on('error', (error) => {
+            console.log("Aider on error: "+ error)
             hasError = true;
             output += `\nProcess error: ${error.message}`;
             reject(error);
