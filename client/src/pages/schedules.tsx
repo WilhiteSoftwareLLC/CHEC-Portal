@@ -45,11 +45,11 @@ export default function Schedules() {
   const getCurrentGradeName = (gradYear: number) => {
     if (!grades || !settings) return '';
     
-    const currentYear = parseInt(settings.SchoolYear) || new Date().getFullYear();
-    const gradeThisYear = gradYear - currentYear;
+    const schoolYear = parseInt(settings.SchoolYear) || new Date().getFullYear();
+    const gradeCode = schoolYear - gradYear + 13;
     
-    const grade = grades.find((g: Grade) => g.code === gradeThisYear);
-    return grade ? grade.gradeName : `Grade ${gradeThisYear}`;
+    const grade = grades.find((g: Grade) => g.code === gradeCode);
+    return grade ? grade.gradeName : `Grade ${gradeCode}`;
   };
 
   const getCourseCount = (student: StudentWithFamily) => {
