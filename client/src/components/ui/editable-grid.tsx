@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { ChevronUp, ChevronDown, Edit, Save, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,11 @@ export interface GridColumn {
   type?: "text" | "email" | "tel" | "number" | "checkbox" | "dropdown";
   options?: { value: any; label: string }[] | ((row: any) => { value: any; label: string }[]);
   onCheckboxChange?: (id: number, checked: boolean) => void;
+  selectAllCheckbox?: {
+    checked: boolean;
+    indeterminate: boolean;
+    onChange: (checked: boolean) => void;
+  };
 }
 
 export interface EditableGridProps {
@@ -127,6 +132,18 @@ export default function EditableGrid({
                 >
                   <div className="flex items-center space-x-1">
                     <span>{column.label}</span>
+                    {column.selectAllCheckbox && (
+                      <Checkbox
+                        checked={column.selectAllCheckbox.checked}
+                        ref={(el) => {
+                          if (el) {
+                            el.indeterminate = column.selectAllCheckbox.indeterminate;
+                          }
+                        }}
+                        onCheckedChange={(checked) => column.selectAllCheckbox.onChange(Boolean(checked))}
+                        className="ml-1"
+                      />
+                    )}
                     {column.sortable && <SortIcon column={column.key} />}
                   </div>
                 </th>
