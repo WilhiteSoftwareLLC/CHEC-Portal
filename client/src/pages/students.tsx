@@ -199,6 +199,20 @@ export default function Students() {
     });
   };
 
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      // Select all students
+      const allStudentIds = new Set(studentsWithGrade.map(student => student.id));
+      setSelectedStudents(allStudentIds);
+    } else {
+      // Deselect all students
+      setSelectedStudents(new Set());
+    }
+  };
+
+  const isAllSelected = studentsWithGrade.length > 0 && selectedStudents.size === studentsWithGrade.length;
+  const isIndeterminate = selectedStudents.size > 0 && selectedStudents.size < studentsWithGrade.length;
+
   const handleExportSelected = () => {
     if (selectedStudents.size === 0) {
       toast({
@@ -285,7 +299,12 @@ export default function Students() {
       editable: false, 
       width: "20", 
       type: "checkbox",
-      onCheckboxChange: handleStudentSelection
+      onCheckboxChange: handleStudentSelection,
+      selectAllCheckbox: {
+        checked: isAllSelected,
+        indeterminate: isIndeterminate,
+        onChange: handleSelectAll
+      }
     },
     { key: "lastName", label: "Last Name", sortable: true, editable: true, width: "40" },
     { key: "firstName", label: "First Name", sortable: true, editable: true, width: "40" },
