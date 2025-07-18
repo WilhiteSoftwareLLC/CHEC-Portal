@@ -233,7 +233,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Parse as local date to avoid timezone issues
         const dateParts = studentData.birthdate.split('-');
         if (dateParts.length === 3) {
-          studentData.birthdate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+          // Create date at noon to avoid timezone shifting issues
+          studentData.birthdate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 12, 0, 0);
         } else {
           studentData.birthdate = new Date(studentData.birthdate);
         }
@@ -258,7 +259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Parse as local date to avoid timezone issues
         const dateParts = studentData.birthdate.split('-');
         if (dateParts.length === 3) {
-          studentData.birthdate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]));
+          // Create date at noon to avoid timezone shifting issues
+          studentData.birthdate = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 12, 0, 0);
         } else {
           studentData.birthdate = new Date(studentData.birthdate);
         }
