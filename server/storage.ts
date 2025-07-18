@@ -100,6 +100,8 @@ export interface IStorage {
   // Grade operations
   getGrades(): Promise<Grade[]>;
   createGrade(grade: InsertGrade): Promise<Grade>;
+  updateGrade(id: number, grade: Partial<InsertGrade>): Promise<Grade>;
+  deleteGrade(id: number): Promise<void>;
   deleteAllGrades(): Promise<void>;
 
   // Hour operations
@@ -551,6 +553,19 @@ export class DatabaseStorage implements IStorage {
       .values(grade)
       .returning();
     return newGrade;
+  }
+
+  async updateGrade(id: number, grade: Partial<InsertGrade>): Promise<Grade> {
+    const [updatedGrade] = await db
+      .update(grades)
+      .set(grade)
+      .where(eq(grades.id, id))
+      .returning();
+    return updatedGrade;
+  }
+
+  async deleteGrade(id: number): Promise<void> {
+    await db.delete(grades).where(eq(grades.id, id));
   }
 
   async deleteAllGrades(): Promise<void> {
