@@ -796,7 +796,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fourthHour: studentRow['4thHour'] || studentRow.fourthHour || null,
             fifthHourFall: studentRow['5thHourFall'] || studentRow.fifthHourFall || null,
             fifthHourSpring: studentRow['5thHourSpring'] || studentRow.fifthHourSpring || null,
-            fridayScience: studentRow.FridayScience || studentRow.fridayScience || null,
           };
 
           // Check if student exists using FamilyID + FirstName combination

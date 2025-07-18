@@ -281,7 +281,7 @@ export default function Import() {
               <p className="text-sm text-gray-600 mb-4">
                 Paste CSV content below. First row should contain column headers that match database field names.
                 Expected fields: FamilyID, LastName, FirstName, Birthdate, GradYear, Comment1, MathHour, 
-                1stHour, 2ndHour, 3rdHour, 4thHour, 5thHourFall, 5thHourSpring, FridayScience
+                1stHour, 2ndHour, 3rdHour, 4thHour, 5thHourFall, 5thHourSpring
               </p>
             </div>
             <Textarea

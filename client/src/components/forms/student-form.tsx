@@ -145,7 +145,6 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
       fourthHour: student?.fourthHour || "",
       fifthHourFall: student?.fifthHourFall || "",
       fifthHourSpring: student?.fifthHourSpring || "",
-      fridayScience: student?.fridayScience || "",
       inactive: student?.inactive || false,
     },
   });
@@ -171,7 +170,6 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
   const hour3Courses = getCoursesByHour(3);
   const hour4Courses = getCoursesByHour(4);
   const hour5Courses = getCoursesByHour(5);
-  const hour6Courses = getCoursesByHour(6);
   const hour7Courses = getCoursesByHour(7);
   const hour8Courses = getCoursesByHour(8);
 
@@ -186,7 +184,6 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
       fourthHour: data.fourthHour === "NO_COURSE" ? null : data.fourthHour,
       fifthHourFall: data.fifthHourFall === "NO_COURSE" ? null : data.fifthHourFall,
       fifthHourSpring: data.fifthHourSpring === "NO_COURSE" ? null : data.fifthHourSpring,
-      fridayScience: data.fridayScience === "NO_COURSE" ? null : data.fridayScience,
       inactive: data.inactive,
     };
     
@@ -503,34 +500,6 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="fridayScience"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Friday Science</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value || ""}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select Friday science course" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      <SelectItem value="NO_COURSE">No course selected</SelectItem>
-                      {(courses as Course[] || []).filter((course: Course) => 
-                        course.location?.toLowerCase().includes('friday') || 
-                        course.courseName?.toLowerCase().includes('science')
-                      ).map((course) => (
-                        <SelectItem key={course.id} value={course.courseName}>
-                          {course.courseName} - {course.location}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
           </div>
         </div>
 

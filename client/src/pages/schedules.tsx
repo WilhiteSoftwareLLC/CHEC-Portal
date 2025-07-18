@@ -63,7 +63,6 @@ export default function Schedules() {
       student.fourthHour,
       student.fifthHourFall,
       student.fifthHourSpring,
-      student.fridayScience,
     ];
 
     return studentCourses.filter(course => course && course !== 'NO_COURSE').length;
@@ -79,7 +78,6 @@ export default function Schedules() {
       fourthHour: student.fourthHour || null,
       fifthHourFall: student.fifthHourFall || null,
       fifthHourSpring: student.fifthHourSpring || null,
-      fridayScience: student.fridayScience || null,
     });
     setScheduleDialogOpen(true);
   };
@@ -111,7 +109,6 @@ export default function Schedules() {
         { label: '4th Hour', course: student.fourthHour },
         { label: '5th Hour Fall', course: student.fifthHourFall },
         { label: '5th Hour Spring', course: student.fifthHourSpring },
-        { label: 'Friday Science', course: student.fridayScience },
       ]
         .filter(item => item.course && item.course !== 'NO_COURSE')
         .map(item => `${item.label}: ${item.course}`)
@@ -236,7 +233,6 @@ export default function Schedules() {
     { field: 'fourthHour', label: '4th Hour', hourIndex: 4 },
     { field: 'fifthHourFall', label: '5th Hour Fall', hourIndex: 5 },
     { field: 'fifthHourSpring', label: '5th Hour Spring', hourIndex: 5 },
-    { field: 'fridayScience', label: 'Friday Science', hourIndex: 6 },
   ];
 
   return (

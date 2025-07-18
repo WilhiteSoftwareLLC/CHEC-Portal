@@ -358,7 +358,6 @@ export class DatabaseStorage implements IStorage {
         fourthHour: students.fourthHour,
         fifthHourFall: students.fifthHourFall,
         fifthHourSpring: students.fifthHourSpring,
-        fridayScience: students.fridayScience,
         inactive: students.inactive,
         family: families,
       })
@@ -384,7 +383,6 @@ export class DatabaseStorage implements IStorage {
         fourthHour: students.fourthHour,
         fifthHourFall: students.fifthHourFall,
         fifthHourSpring: students.fifthHourSpring,
-        fridayScience: students.fridayScience,
         inactive: students.inactive,
         family: families,
       })

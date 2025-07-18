@@ -165,7 +165,6 @@ export const students = pgTable("students", {
   fourthHour: varchar("fourth_hour", { length: 255 }),
   fifthHourFall: varchar("fifth_hour_fall", { length: 255 }),
   fifthHourSpring: varchar("fifth_hour_spring", { length: 255 }),
-  fridayScience: varchar("friday_science", { length: 255 }),
   inactive: boolean("inactive").default(false),
 });
 

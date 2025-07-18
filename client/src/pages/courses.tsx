@@ -166,8 +166,7 @@ export default function Courses() {
                student.thirdHour === course.courseName ||
                student.fourthHour === course.courseName ||
                student.fifthHourFall === course.courseName ||
-               student.fifthHourSpring === course.courseName ||
-               student.fridayScience === course.courseName;
+               student.fifthHourSpring === course.courseName;
       });
       return enrolledStudents.length > 0;
     });
@@ -250,8 +249,7 @@ export default function Courses() {
              student.thirdHour === course.courseName ||
              student.fourthHour === course.courseName ||
              student.fifthHourFall === course.courseName ||
-             student.fifthHourSpring === course.courseName ||
-             student.fridayScience === course.courseName;
+             student.fifthHourSpring === course.courseName;
     });
 
     // Sort students by last name, then first name

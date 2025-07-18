@@ -74,7 +74,6 @@ export default function Invoices() {
         { hour: 4, field: 'fourthHour' },
         { hour: 5, field: 'fifthHourFall' },
         { hour: 5, field: 'fifthHourSpring' },
-        { hour: 6, field: 'fridayScience' },
       ];
 
       // Process courses in hour order
@@ -252,7 +251,6 @@ export default function Invoices() {
         { hour: 4, field: 'fourthHour', hourName: '4th' },
         { hour: 5, field: 'fifthHourFall', hourName: '5th Fall' },
         { hour: 5, field: 'fifthHourSpring', hourName: '5th Spring' },
-        { hour: 6, field: 'fridayScience', hourName: 'Friday' },
       ];
 
       // Process courses in hour order, only include those with fees

@@ -271,8 +271,7 @@ export default function Students() {
       "3rd Hour",
       "4th Hour",
       "5th Hour Fall",
-      "5th Hour Spring",
-      "Friday Science"
+      "5th Hour Spring"
     ];
 
     const csvRows = [
@@ -293,8 +292,7 @@ export default function Students() {
         `"${student.thirdHour || ""}"`,
         `"${student.fourthHour || ""}"`,
         `"${student.fifthHourFall || ""}"`,
-        `"${student.fifthHourSpring || ""}"`,
-        `"${student.fridayScience || ""}"`
+        `"${student.fifthHourSpring || ""}"`
       ].join(","))
     ];
 
@@ -402,33 +400,6 @@ export default function Students() {
       width: "48", 
       type: "dropdown", 
       options: (row: any) => createCourseOptions(5, row.gradYear, 'spring')
-    },
-    { 
-      key: "fridayScience", 
-      label: "Friday Science", 
-      sortable: true, 
-      editable: false, 
-      width: "40", 
-      type: "dropdown", 
-      options: (row: any) => {
-        if (!courses) return [{ value: "NO_COURSE", label: "No Course" }];
-        const studentClass = getStudentClass(row.gradYear);
-        
-        // Filter courses for Friday Science or science-related courses
-        const fridayCourses = (courses as any[]).filter((course: any) => 
-          (course.location?.toLowerCase().includes('friday') || 
-           course.courseName?.toLowerCase().includes('science')) &&
-          (course.classId === studentClass?.id || course.classId === null)
-        );
-        
-        return [
-          { value: "NO_COURSE", label: "No Course" },
-          ...fridayCourses.map((course: any) => ({
-            value: course.courseName,
-            label: course.courseName
-          }))
-        ];
-      }
     },
   ];
 
