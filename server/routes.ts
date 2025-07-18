@@ -460,6 +460,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/grades/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const gradeData = insertGradeSchema.partial().parse(req.body);
+      const grade = await storage.updateGrade(id, gradeData);
+      res.json(grade);
+    } catch (error) {
+      console.error("Error updating grade:", error);
+      res.status(500).json({ message: "Failed to update grade" });
+    }
+  });
+
+  app.delete("/api/grades/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteGrade(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting grade:", error);
+      res.status(500).json({ message: "Failed to delete grade" });
+    }
+  });
+
   // Hour routes
   app.get("/api/hours", async (req, res) => {
     try {
