@@ -184,6 +184,10 @@ export default function Schedules() {
           aValue = getCurrentGradeName(a.gradYear);
           bValue = getCurrentGradeName(b.gradYear);
           break;
+        case 'gradYear':
+          aValue = parseInt(a.gradYear) || 0;
+          bValue = parseInt(b.gradYear) || 0;
+          break;
         case 'courseCount':
           aValue = getCourseCount(a);
           bValue = getCourseCount(b);
@@ -255,6 +259,7 @@ export default function Schedules() {
                   <SortableHeader field="lastName">Last Name</SortableHeader>
                   <SortableHeader field="firstName">First Name</SortableHeader>
                   <SortableHeader field="currentGrade">Current Grade</SortableHeader>
+                  <SortableHeader field="gradYear">Grad Year</SortableHeader>
                   <SortableHeader field="courseCount"># Courses</SortableHeader>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Actions</th>
                 </tr>
@@ -270,6 +275,9 @@ export default function Schedules() {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                       {getCurrentGradeName(student.gradYear)}
+                    </td>
+                    <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                      {student.gradYear}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <Badge variant="secondary">
