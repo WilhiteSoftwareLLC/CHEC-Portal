@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Eye } from "lucide-react";
+import { Eye, ChevronUp, ChevronDown } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import type { Student, Course, Grade } from "@shared/schema";
 
@@ -21,6 +21,8 @@ export default function Schedules() {
   const [selectedStudent, setSelectedStudent] = useState<StudentWithFamily | null>(null);
   const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
   const [studentCourses, setStudentCourses] = useState<Record<string, string | null>>({});
+  const [sortField, setSortField] = useState<string>('lastName');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
   
   const { data: students } = useQuery({
     queryKey: ["/api/students"],
@@ -153,6 +155,75 @@ export default function Schedules() {
     }
   };
 
+  const handleSort = (field: string) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortedStudents = () => {
+    if (!students) return [];
+    
+    const sortedStudents = [...students].sort((a: StudentWithFamily, b: StudentWithFamily) => {
+      let aValue: any;
+      let bValue: any;
+      
+      switch (sortField) {
+        case 'lastName':
+          aValue = a.lastName || '';
+          bValue = b.lastName || '';
+          break;
+        case 'firstName':
+          aValue = a.firstName || '';
+          bValue = b.firstName || '';
+          break;
+        case 'currentGrade':
+          aValue = getCurrentGradeName(a.gradYear);
+          bValue = getCurrentGradeName(b.gradYear);
+          break;
+        case 'courseCount':
+          aValue = getCourseCount(a);
+          bValue = getCourseCount(b);
+          break;
+        default:
+          aValue = '';
+          bValue = '';
+      }
+      
+      if (typeof aValue === 'string' && typeof bValue === 'string') {
+        const comparison = aValue.localeCompare(bValue);
+        return sortDirection === 'asc' ? comparison : -comparison;
+      }
+      
+      if (typeof aValue === 'number' && typeof bValue === 'number') {
+        return sortDirection === 'asc' ? aValue - bValue : bValue - aValue;
+      }
+      
+      return 0;
+    });
+    
+    return sortedStudents;
+  };
+
+  const SortableHeader = ({ field, children }: { field: string; children: React.ReactNode }) => (
+    <th 
+      className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+      onClick={() => handleSort(field)}
+    >
+      <div className="flex items-center gap-1">
+        {children}
+        {sortField === field && (
+          sortDirection === 'asc' ? 
+            <ChevronUp className="h-3 w-3" /> : 
+            <ChevronDown className="h-3 w-3" />
+        )}
+      </div>
+    </th>
+  );
+
   const hourFields = [
     { field: 'mathHour', label: 'Math', hourIndex: 0 },
     { field: 'firstHour', label: '1st Hour', hourIndex: 1 },
@@ -181,15 +252,15 @@ export default function Schedules() {
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                 <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Last Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">First Name</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Current Grade</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b"># Courses</th>
+                  <SortableHeader field="lastName">Last Name</SortableHeader>
+                  <SortableHeader field="firstName">First Name</SortableHeader>
+                  <SortableHeader field="currentGrade">Current Grade</SortableHeader>
+                  <SortableHeader field="courseCount"># Courses</SortableHeader>
                   <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Actions</th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
-                {students?.map((student: StudentWithFamily) => (
+                {getSortedStudents().map((student: StudentWithFamily) => (
                   <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       {student.lastName}
