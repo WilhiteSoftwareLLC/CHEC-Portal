@@ -49,21 +49,47 @@ export default function Students() {
 
   const updateStudentMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Record<string, any> }) => {
-      await apiRequest(`/api/students/${id}`, "PATCH", updates);
+      const response = await apiRequest(`/api/students/${id}`, "PATCH", updates);
+      return { id, updates, response };
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
-      toast({
-        title: "Student Updated",
-        description: "Student information has been saved.",
+    onMutate: async ({ id, updates }) => {
+      // Cancel any outgoing refetches (so they don't overwrite our optimistic update)
+      await queryClient.cancelQueries({ queryKey: ["/api/students"] });
+
+      // Snapshot the previous value
+      const previousStudents = queryClient.getQueryData(["/api/students"]);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(["/api/students"], (old: any) => {
+        if (!old) return old;
+        return old.map((student: any) => 
+          student.id === id ? { ...student, ...updates } : student
+        );
       });
+
+      // Return a context object with the snapshotted value
+      return { previousStudents };
     },
-    onError: (error) => {
+    onError: (error, variables, context) => {
+      // If the mutation fails, use the context returned from onMutate to roll back
+      if (context?.previousStudents) {
+        queryClient.setQueryData(["/api/students"], context.previousStudents);
+      }
       toast({
         title: "Error",
         description: error.message,
         variant: "destructive",
       });
+    },
+    onSuccess: () => {
+      toast({
+        title: "Student Updated",
+        description: "Student information has been saved.",
+      });
+    },
+    onSettled: () => {
+      // Always refetch after error or success to ensure we have the latest data
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
     },
   });
 
