@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Label } from "@/components/ui/label";
 import { Eye, ChevronUp, ChevronDown } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
+import { getCurrentGradeString } from "@/lib/gradeUtils";
 import type { Student, Course, Grade } from "@shared/schema";
 
 interface StudentWithFamily extends Student {
@@ -44,15 +45,6 @@ export default function Schedules() {
     retry: false,
   });
 
-  const getCurrentGradeName = (gradYear: number) => {
-    if (!grades || !settings) return '';
-    
-    const schoolYear = parseInt(settings.SchoolYear) || new Date().getFullYear();
-    const gradeCode = schoolYear - gradYear + 13;
-    
-    const grade = grades.find((g: Grade) => g.code === gradeCode);
-    return grade ? grade.gradeName : `Grade ${gradeCode}`;
-  };
 
   const getCourseCount = (student: StudentWithFamily) => {
     const studentCourses = [
@@ -178,8 +170,8 @@ export default function Schedules() {
           bValue = b.firstName || '';
           break;
         case 'currentGrade':
-          aValue = getCurrentGradeName(a.gradYear);
-          bValue = getCurrentGradeName(b.gradYear);
+          aValue = getCurrentGradeString(a.gradYear, settings, grades || []);
+          bValue = getCurrentGradeString(b.gradYear, settings, grades || []);
           break;
         case 'gradYear':
           aValue = parseInt(a.gradYear) || 0;
@@ -270,7 +262,7 @@ export default function Schedules() {
                       {student.firstName}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                      {getCurrentGradeName(student.gradYear)}
+                      {getCurrentGradeString(student.gradYear, settings, grades || [])}
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                       {student.gradYear}

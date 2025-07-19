@@ -7,6 +7,7 @@ import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddCourseDialog from "@/components/dialogs/add-course-dialog";
 import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
+import { getCurrentGradeString } from "@/lib/gradeUtils";
 import type { Course } from "@shared/schema";
 
 export default function Courses() {
@@ -50,6 +51,16 @@ export default function Courses() {
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
       return response.json();
     },
+    retry: false,
+  });
+
+  const { data: settings } = useQuery({
+    queryKey: ["/api/settings"],
+    retry: false,
+  });
+
+  const { data: grades } = useQuery({
+    queryKey: ["/api/grades"],
     retry: false,
   });
 
@@ -276,13 +287,13 @@ export default function Courses() {
 
     const rowsHTML = sortedStudents.map((student: any, index: number) => {
       const birthDate = student.birthdate ? new Date(student.birthdate).toLocaleDateString() : '';
-      const gradeCode = student.gradYear ? new Date().getFullYear() - parseInt(student.gradYear) + 13 : '';
+      const gradeString = getCurrentGradeString(student.gradYear, settings, grades || []);
       const formattedPhone = formatPhoneNumber(student.family?.parentCell || '');
       
       return `
         <tr>
           <td class="number-column">${index + 1}.</td>
-          <td class="grade-column">${gradeCode}th</td>
+          <td class="grade-column">${gradeString}</td>
           <td class="name-column">${student.lastName}</td>
           <td class="name-column">${student.firstName}</td>
           <td class="birth-column">${birthDate}</td>

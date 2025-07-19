@@ -8,6 +8,7 @@ import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddStudentDialog from "@/components/dialogs/add-student-dialog";
 import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
+import { getCurrentGradeString, getCurrentGradeCode } from "@/lib/gradeUtils";
 import type { StudentWithFamily } from "@shared/schema";
 
 export default function Students() {
@@ -129,30 +130,12 @@ export default function Students() {
     }
   };
 
-  // Calculate current grade for display
-  const getCurrentGrade = (gradYear: any) => {
-    if (!settings || !grades || !gradYear) return "Unknown";
-    
-    const schoolYear = parseInt((settings as any).SchoolYear || "2024");
-    const gradeCode = schoolYear - parseInt(gradYear) + 13;
-    const grade = (grades as any[]).find((g: any) => g.code === gradeCode);
-    return grade ? grade.gradeName : "Unknown";
-  };
-
-  // Get current grade code for a student
-  const getCurrentGradeCode = (gradYear: any) => {
-    if (!settings || !gradYear) return null;
-    
-    const schoolYear = parseInt((settings as any).SchoolYear || "2024");
-    const gradeCode = schoolYear - parseInt(gradYear) + 13;
-    return gradeCode;
-  };
 
   // Get the class that a student belongs to based on their current grade
   const getStudentClass = (gradYear: any) => {
     if (!gradYear || !settings || !classes) return null;
     
-    const gradeCode = getCurrentGradeCode(gradYear);
+    const gradeCode = getCurrentGradeCode(gradYear, settings);
     if (gradeCode === null) return null;
     
     // Find the class that contains this grade code
@@ -208,7 +191,7 @@ export default function Students() {
   // Prepare data with computed grade and selected status
   const studentsWithGrade = students?.map((student: StudentWithFamily) => ({
     ...student,
-    currentGrade: getCurrentGrade(student.gradYear),
+    currentGrade: getCurrentGradeString(student.gradYear, settings, grades || []),
     familyName: student.family.lastName,
     selected: selectedStudents.has(student.id)
   })) || [];

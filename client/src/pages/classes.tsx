@@ -7,6 +7,7 @@ import EditableGrid, { type GridColumn } from "@/components/ui/editable-grid";
 import AddClassDialog from "@/components/dialogs/add-class-dialog";
 import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
+import { getCurrentGradeString, getCurrentGradeCode } from "@/lib/gradeUtils";
 import type { Class, Grade, InsertClass } from "@shared/schema";
 
 export default function Classes() {
@@ -130,25 +131,6 @@ export default function Classes() {
     return phone; // Return original if not 10 digits
   };
 
-  const getCurrentGrade = (gradYear: string | null) => {
-    if (!gradYear || !settings || !grades) return null;
-    
-    const schoolYear = parseInt((settings as any).SchoolYear || "2024");
-    const graduationYear = parseInt(gradYear);
-    const gradeCode = schoolYear - graduationYear + 13;
-    
-    return gradeCode;
-  };
-
-  const getCurrentGradeName = (gradYear: string | null) => {
-    if (!gradYear || !settings || !grades) return "Unknown";
-    
-    const gradeCode = getCurrentGrade(gradYear);
-    if (gradeCode === null) return "Unknown";
-    
-    const grade = Array.isArray(grades) ? grades.find((g: any) => g.code === gradeCode) : null;
-    return grade ? grade.gradeName : "Unknown";
-  };
 
   const handlePrintClassRosters = () => {
     if (!classes || !students || !settings || !grades) return;
@@ -236,7 +218,7 @@ export default function Classes() {
   const generateSingleClassRosterHTML = (classData: any, addPageBreak: boolean = false) => {
     // Get students in this class (based on grade codes)
     const classStudents = (students || []).filter((student: any) => {
-      const gradeCode = getCurrentGrade(student.gradYear);
+      const gradeCode = getCurrentGradeCode(student.gradYear, settings);
       return gradeCode !== null && gradeCode >= classData.startCode && gradeCode <= classData.endCode;
     });
 
@@ -249,7 +231,7 @@ export default function Classes() {
 
     const rowsHTML = sortedStudents.map((student: any, index: number) => {
       const birthDate = student.birthdate ? new Date(student.birthdate).toLocaleDateString() : '';
-      const gradeName = getCurrentGradeName(student.gradYear);
+      const gradeName = getCurrentGradeString(student.gradYear, settings, grades || []);
       const formattedPhone = formatPhoneNumber(student.family?.parentCell || '');
       
       return `
