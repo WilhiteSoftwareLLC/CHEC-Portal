@@ -157,9 +157,12 @@ export default function Courses() {
       a.courseName.localeCompare(b.courseName)
     );
     
-    // Filter out courses with no enrolled students
+    // Filter out courses with no enrolled students (excluding inactive students)
     const coursesWithStudents = sortedCourses.filter(course => {
       const enrolledStudents = (students || []).filter((student: any) => {
+        // Skip inactive students
+        if (student.inactive) return false;
+        
         return student.mathHour === course.courseName ||
                student.firstHour === course.courseName ||
                student.secondHour === course.courseName ||
@@ -241,8 +244,11 @@ export default function Courses() {
   };
 
   const generateSingleRosterHTML = (course: any, addPageBreak: boolean = false) => {
-    // Get students enrolled in this course
+    // Get students enrolled in this course, excluding inactive students
     const enrolledStudents = (students || []).filter((student: any) => {
+      // Skip inactive students
+      if (student.inactive) return false;
+      
       return student.mathHour === course.courseName ||
              student.firstHour === course.courseName ||
              student.secondHour === course.courseName ||
@@ -252,10 +258,19 @@ export default function Courses() {
              student.fifthHourSpring === course.courseName;
     });
 
-    // Sort students by last name, then first name
+    // Sort students by grade (inverse grad year), then by last name, then by first name
     const sortedStudents = enrolledStudents.sort((a: any, b: any) => {
+      // First sort by grade (inverse grad year - higher grad year = younger student = lower grade)
+      const gradYearA = parseInt(a.gradYear) || 0;
+      const gradYearB = parseInt(b.gradYear) || 0;
+      const gradeCompare = gradYearB - gradYearA; // Higher grad year first (younger students)
+      if (gradeCompare !== 0) return gradeCompare;
+      
+      // Then sort by last name
       const lastNameCompare = a.lastName.localeCompare(b.lastName);
       if (lastNameCompare !== 0) return lastNameCompare;
+      
+      // Finally sort by first name
       return a.firstName.localeCompare(b.firstName);
     });
 
