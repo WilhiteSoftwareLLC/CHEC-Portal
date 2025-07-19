@@ -195,21 +195,21 @@ export default function Courses() {
             .course-header {
               font-size: 18px;
               font-weight: bold;
-              margin-bottom: 20px;
+              margin-bottom: 12px;
               border-bottom: 2px solid #000;
-              padding-bottom: 10px;
+              padding-bottom: 6px;
             }
             table {
               width: 100%;
               border-collapse: collapse;
-              margin-bottom: 40px;
+              margin-bottom: 20px;
             }
             th, td {
               border: 1px solid #000;
-              padding: 8px 12px;
+              padding: 4px 8px;
               text-align: left;
               white-space: nowrap;
-              height: 40px;
+              height: 28px;
               vertical-align: middle;
             }
             th {
