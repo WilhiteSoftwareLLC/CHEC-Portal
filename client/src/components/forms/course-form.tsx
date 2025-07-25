@@ -133,8 +133,8 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
               <FormItem>
                 <FormLabel>Class</FormLabel>
                 <Select 
-                  onValueChange={(value) => field.onChange(value === "" ? null : parseInt(value))} 
-                  value={field.value?.toString() || ""}
+                  onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))} 
+                  value={field.value?.toString() || "null"}
                 >
                   <FormControl>
                     <SelectTrigger>
@@ -142,7 +142,7 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="">No Class</SelectItem>
+                    <SelectItem value="null">No Class</SelectItem>
                     {(classes || []).map((cls: any) => (
                       <SelectItem key={cls.id} value={cls.id.toString()}>
                         {cls.className}
