@@ -130,13 +130,10 @@ export default function Courses() {
   };
 
   // Create hour options for dropdown
-  const hourOptions = [
-    { value: 0, label: "Math Hour" },
-    ...(hours || []).filter((hour: any) => hour.id !== 0).map((hour: any) => ({
-      value: hour.id,
-      label: `${hour.id}${hour.id === 1 ? 'st' : hour.id === 2 ? 'nd' : hour.id === 3 ? 'rd' : 'th'} Hour`
-    }))
-  ];
+  const hourOptions = (hours || []).map((hour: any) => ({
+    value: hour.id,
+    label: hour.description
+  }));
 
   // Create class options for dropdown
   const classOptions = [
