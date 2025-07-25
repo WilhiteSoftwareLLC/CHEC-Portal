@@ -1132,6 +1132,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Reset all course selections for all students
+  app.post("/api/students/reset-course-selections", requireAdmin, async (req, res) => {
+    try {
+      const students = await storage.getStudents();
+      
+      for (const student of students) {
+        await storage.updateStudent(student.id, {
+          mathHour: null,
+          firstHour: null,
+          secondHour: null,
+          thirdHour: null,
+          fourthHour: null,
+          fifthHourFall: null,
+          fifthHourSpring: null,
+        });
+      }
+
+      res.json({ 
+        message: "All course selections have been reset",
+        studentsUpdated: students.length
+      });
+    } catch (error) {
+      console.error("Error resetting course selections:", error);
+      res.status(500).json({ message: "Failed to reset course selections" });
+    }
+  });
+
   // Store for active jobs
   const activeJobs = new Map<string, {
     process?: any;

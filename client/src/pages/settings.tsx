@@ -173,6 +173,27 @@ export default function Settings() {
     },
   });
 
+  // Mutation to reset all course selections
+  const resetCourseSelectionsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/students/reset-course-selections", "POST");
+    },
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      toast({
+        title: "Course Selections Reset",
+        description: `All course selections have been removed from ${response.studentsUpdated} students.`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditChange = (key: string, value: string) => {
     setEditingSettings(prev => ({ ...prev, [key]: value }));
   };
@@ -235,6 +256,12 @@ export default function Settings() {
     }
     
     createGradeMutation.mutate({ gradeName, code });
+  };
+
+  const handleResetCourseSelections = () => {
+    if (window.confirm("Are you sure you want to remove all the students from all the courses?")) {
+      resetCourseSelectionsMutation.mutate();
+    }
   };
 
   if (isLoading || gradesLoading) {
@@ -338,7 +365,25 @@ export default function Settings() {
                 <p className="text-sm text-gray-600">Administrative tools and utilities</p>
               </div>
               
-              {/* Tools content will be added here */}
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="space-y-4">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Course Management</h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Reset all student course selections to prepare for a new enrollment period.
+                      </p>
+                      <Button
+                        onClick={handleResetCourseSelections}
+                        disabled={resetCourseSelectionsMutation.isPending}
+                        variant="destructive"
+                      >
+                        {resetCourseSelectionsMutation.isPending ? "Resetting..." : "Reset All Course Selections"}
+                      </Button>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
         </Tabs>
