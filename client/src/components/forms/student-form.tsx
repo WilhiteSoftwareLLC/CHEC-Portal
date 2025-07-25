@@ -322,11 +322,11 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
             name="mathHour"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Math Hour</FormLabel>
+                <FormLabel>{(hours || []).find((h: any) => h.id === 0)?.description || "Math Hour"}</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value || ""}>
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select course for Math hour" />
+                      <SelectValue placeholder={`Select course for ${(hours || []).find((h: any) => h.id === 0)?.description || "Math hour"}`} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -349,11 +349,11 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
               name="firstHour"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>1st Hour</FormLabel>
+                  <FormLabel>{(hours || []).find((h: any) => h.id === 1)?.description || "1st Hour"}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select course for 1st hour" />
+                        <SelectValue placeholder={`Select course for ${(hours || []).find((h: any) => h.id === 1)?.description || "1st hour"}`} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -375,11 +375,11 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
               name="secondHour"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>2nd Hour</FormLabel>
+                  <FormLabel>{(hours || []).find((h: any) => h.id === 2)?.description || "2nd Hour"}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select course for 2nd hour" />
+                        <SelectValue placeholder={`Select course for ${(hours || []).find((h: any) => h.id === 2)?.description || "2nd hour"}`} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -401,11 +401,11 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
               name="thirdHour"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>3rd Hour</FormLabel>
+                  <FormLabel>{(hours || []).find((h: any) => h.id === 3)?.description || "3rd Hour"}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select course for 3rd hour" />
+                        <SelectValue placeholder={`Select course for ${(hours || []).find((h: any) => h.id === 3)?.description || "3rd hour"}`} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -427,11 +427,11 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
               name="fourthHour"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>4th Hour</FormLabel>
+                  <FormLabel>{(hours || []).find((h: any) => h.id === 4)?.description || "4th Hour"}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select course for 4th hour" />
+                        <SelectValue placeholder={`Select course for ${(hours || []).find((h: any) => h.id === 4)?.description || "4th hour"}`} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -453,11 +453,11 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
               name="fifthHourFall"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>5th Hour Fall</FormLabel>
+                  <FormLabel>{((hours || []).find((h: any) => h.id === 5)?.description || "5th Hour") + " Fall"}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select course for 5th hour fall" />
+                        <SelectValue placeholder={`Select course for ${((hours || []).find((h: any) => h.id === 5)?.description || "5th hour")} fall`} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -479,11 +479,11 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
               name="fifthHourSpring"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>5th Hour Spring</FormLabel>
+                  <FormLabel>{((hours || []).find((h: any) => h.id === 5)?.description || "5th Hour") + " Spring"}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value || ""}>
                     <FormControl>
                       <SelectTrigger>
-                        <SelectValue placeholder="Select course for 5th hour spring" />
+                        <SelectValue placeholder={`Select course for ${((hours || []).find((h: any) => h.id === 5)?.description || "5th hour")} spring`} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>

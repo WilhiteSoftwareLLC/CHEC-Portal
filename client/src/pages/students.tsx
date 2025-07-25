@@ -48,6 +48,11 @@ export default function Students() {
     retry: false,
   });
 
+  const { data: hours } = useQuery({
+    queryKey: ["/api/hours"],
+    retry: false,
+  });
+
   const updateStudentMutation = useMutation({
     mutationFn: async ({ id, updates }: { id: number; updates: Record<string, any> }) => {
       const response = await apiRequest(`/api/students/${id}`, "PATCH", updates);
@@ -248,13 +253,13 @@ export default function Students() {
       "Birth Date",
       "Comments",
       "Inactive",
-      "Math Hour",
-      "1st Hour",
-      "2nd Hour", 
-      "3rd Hour",
-      "4th Hour",
-      "5th Hour Fall",
-      "5th Hour Spring"
+      (hours || []).find((h: any) => h.id === 0)?.description || "Math Hour",
+      (hours || []).find((h: any) => h.id === 1)?.description || "1st Hour",
+      (hours || []).find((h: any) => h.id === 2)?.description || "2nd Hour", 
+      (hours || []).find((h: any) => h.id === 3)?.description || "3rd Hour",
+      (hours || []).find((h: any) => h.id === 4)?.description || "4th Hour",
+      ((hours || []).find((h: any) => h.id === 5)?.description || "5th Hour") + " Fall",
+      ((hours || []).find((h: any) => h.id === 5)?.description || "5th Hour") + " Spring"
     ];
 
     const csvRows = [
@@ -323,7 +328,7 @@ export default function Students() {
     { key: "inactive", label: "Inactive", sortable: true, editable: true, type: "checkbox", width: "24" },
     { 
       key: "mathHour", 
-      label: "Math Hour", 
+      label: (hours || []).find((h: any) => h.id === 0)?.description || "Math Hour", 
       sortable: true, 
       editable: false, 
       width: "40", 
@@ -332,7 +337,7 @@ export default function Students() {
     },
     { 
       key: "firstHour", 
-      label: "1st Hour", 
+      label: (hours || []).find((h: any) => h.id === 1)?.description || "1st Hour", 
       sortable: true, 
       editable: false, 
       width: "40", 
@@ -341,7 +346,7 @@ export default function Students() {
     },
     { 
       key: "secondHour", 
-      label: "2nd Hour", 
+      label: (hours || []).find((h: any) => h.id === 2)?.description || "2nd Hour", 
       sortable: true, 
       editable: false, 
       width: "40", 
@@ -350,7 +355,7 @@ export default function Students() {
     },
     { 
       key: "thirdHour", 
-      label: "3rd Hour", 
+      label: (hours || []).find((h: any) => h.id === 3)?.description || "3rd Hour", 
       sortable: true, 
       editable: false, 
       width: "40", 
@@ -359,7 +364,7 @@ export default function Students() {
     },
     { 
       key: "fourthHour", 
-      label: "4th Hour", 
+      label: (hours || []).find((h: any) => h.id === 4)?.description || "4th Hour", 
       sortable: true, 
       editable: false, 
       width: "40", 
@@ -368,7 +373,7 @@ export default function Students() {
     },
     { 
       key: "fifthHourFall", 
-      label: "5th Hour (Fall)", 
+      label: ((hours || []).find((h: any) => h.id === 5)?.description || "5th Hour") + " (Fall)", 
       sortable: true, 
       editable: false, 
       width: "48", 
@@ -377,7 +382,7 @@ export default function Students() {
     },
     { 
       key: "fifthHourSpring", 
-      label: "5th Hour (Spring)", 
+      label: ((hours || []).find((h: any) => h.id === 5)?.description || "5th Hour") + " (Spring)", 
       sortable: true, 
       editable: false, 
       width: "48", 

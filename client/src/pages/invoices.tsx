@@ -128,13 +128,14 @@ export default function Invoices() {
   };
 
   const handlePrintAllInvoices = () => {
-    if (!families || !students || !settings || !grades || !courses) return;
+    if (!families || !students || !settings || !grades || !courses || !hours) return;
     
     // Cache data for invoice generation
     (window as any).cachedSettings = settings;
     (window as any).cachedStudents = students;
     (window as any).cachedGrades = grades;
     (window as any).cachedCourses = courses;
+    (window as any).cachedHours = hours;
     
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
@@ -244,13 +245,13 @@ export default function Invoices() {
       
       // Define hour order and corresponding student field names
       const hourMappings = [
-        { hour: 0, field: 'mathHour', hourName: 'Math' },
-        { hour: 1, field: 'firstHour', hourName: '1st' },
-        { hour: 2, field: 'secondHour', hourName: '2nd' },
-        { hour: 3, field: 'thirdHour', hourName: '3rd' },
-        { hour: 4, field: 'fourthHour', hourName: '4th' },
-        { hour: 5, field: 'fifthHourFall', hourName: '5th Fall' },
-        { hour: 5, field: 'fifthHourSpring', hourName: '5th Spring' },
+        { hour: 0, field: 'mathHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 0)?.description || 'Math' },
+        { hour: 1, field: 'firstHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 1)?.description || '1st' },
+        { hour: 2, field: 'secondHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 2)?.description || '2nd' },
+        { hour: 3, field: 'thirdHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 3)?.description || '3rd' },
+        { hour: 4, field: 'fourthHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 4)?.description || '4th' },
+        { hour: 5, field: 'fifthHourFall', hourName: ((window as any).cachedHours?.find((h: any) => h.id === 5)?.description || '5th') + ' Fall' },
+        { hour: 5, field: 'fifthHourSpring', hourName: ((window as any).cachedHours?.find((h: any) => h.id === 5)?.description || '5th') + ' Spring' },
       ];
 
       // Process courses in hour order, only include those with fees
@@ -349,6 +350,7 @@ export default function Invoices() {
     (window as any).cachedStudents = students;
     (window as any).cachedGrades = grades;
     (window as any).cachedCourses = courses;
+    (window as any).cachedHours = hours;
     
     setSelectedFamily(family);
     setInvoiceDialogOpen(true);

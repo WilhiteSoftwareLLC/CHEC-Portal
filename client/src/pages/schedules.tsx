@@ -94,13 +94,13 @@ export default function Schedules() {
       const courseCount = getCourseCount(student);
       
       const studentCoursesList = [
-        { label: 'Math', course: student.mathHour },
-        { label: '1st Hour', course: student.firstHour },
-        { label: '2nd Hour', course: student.secondHour },
-        { label: '3rd Hour', course: student.thirdHour },
-        { label: '4th Hour', course: student.fourthHour },
-        { label: '5th Hour Fall', course: student.fifthHourFall },
-        { label: '5th Hour Spring', course: student.fifthHourSpring },
+        { label: hours?.find((h: any) => h.id === 0)?.description || 'Math Hour', course: student.mathHour },
+        { label: hours?.find((h: any) => h.id === 1)?.description || '1st Hour', course: student.firstHour },
+        { label: hours?.find((h: any) => h.id === 2)?.description || '2nd Hour', course: student.secondHour },
+        { label: hours?.find((h: any) => h.id === 3)?.description || '3rd Hour', course: student.thirdHour },
+        { label: hours?.find((h: any) => h.id === 4)?.description || '4th Hour', course: student.fourthHour },
+        { label: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Fall', course: student.fifthHourFall },
+        { label: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Spring', course: student.fifthHourSpring },
       ]
         .filter(item => item.course && item.course !== 'NO_COURSE')
         .map(item => `${item.label}: ${item.course}`)
@@ -217,14 +217,19 @@ export default function Schedules() {
     </th>
   );
 
+  const { data: hours } = useQuery({
+    queryKey: ["/api/hours"],
+    retry: false,
+  });
+
   const hourFields = [
-    { field: 'mathHour', label: 'Math', hourIndex: 0 },
-    { field: 'firstHour', label: '1st Hour', hourIndex: 1 },
-    { field: 'secondHour', label: '2nd Hour', hourIndex: 2 },
-    { field: 'thirdHour', label: '3rd Hour', hourIndex: 3 },
-    { field: 'fourthHour', label: '4th Hour', hourIndex: 4 },
-    { field: 'fifthHourFall', label: '5th Hour Fall', hourIndex: 5 },
-    { field: 'fifthHourSpring', label: '5th Hour Spring', hourIndex: 5 },
+    { field: 'mathHour', label: hours?.find((h: any) => h.id === 0)?.description || 'Math Hour', hourIndex: 0 },
+    { field: 'firstHour', label: hours?.find((h: any) => h.id === 1)?.description || '1st Hour', hourIndex: 1 },
+    { field: 'secondHour', label: hours?.find((h: any) => h.id === 2)?.description || '2nd Hour', hourIndex: 2 },
+    { field: 'thirdHour', label: hours?.find((h: any) => h.id === 3)?.description || '3rd Hour', hourIndex: 3 },
+    { field: 'fourthHour', label: hours?.find((h: any) => h.id === 4)?.description || '4th Hour', hourIndex: 4 },
+    { field: 'fifthHourFall', label: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Fall', hourIndex: 5 },
+    { field: 'fifthHourSpring', label: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Spring', hourIndex: 5 },
   ];
 
   return (

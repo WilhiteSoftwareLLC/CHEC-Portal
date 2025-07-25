@@ -181,15 +181,9 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="0">Math Hour</SelectItem>
-                    {(hours || []).filter((hour: any) => hour.id !== 0).map((hour: any) => (
+                    {(hours || []).map((hour: any) => (
                       <SelectItem key={hour.id} value={hour.id.toString()}>
-                        {hour.id === 1 ? '1st Hour' : 
-                         hour.id === 2 ? '2nd Hour' : 
-                         hour.id === 3 ? '3rd Hour' : 
-                         hour.id === 4 ? '4th Hour' : 
-                         hour.id === 5 ? '5th Hour' : 
-                         `${hour.id}th Hour`}
+                        {hour.description}
                       </SelectItem>
                     ))}
                   </SelectContent>
