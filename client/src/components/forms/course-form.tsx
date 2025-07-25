@@ -38,6 +38,16 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
     retry: false,
   });
 
+  const { data: hours } = useQuery({
+    queryKey: ["/api/hours"],
+    queryFn: async () => {
+      const response = await fetch("/api/hours", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: InsertCourse) => {
       const response = await apiRequest("/api/courses", "POST", data);
@@ -161,14 +171,29 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
             render={({ field }) => (
               <FormItem>
                 <FormLabel>Hour</FormLabel>
-                <FormControl>
-                  <Input
-                    type="number"
-                    placeholder="Enter hour"
-                    {...field}
-                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
-                  />
-                </FormControl>
+                <Select 
+                  onValueChange={(value) => field.onChange(parseInt(value))} 
+                  value={field.value?.toString() || ""}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select hour" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="0">Math Hour</SelectItem>
+                    {(hours || []).filter((hour: any) => hour.id !== 0).map((hour: any) => (
+                      <SelectItem key={hour.id} value={hour.id.toString()}>
+                        {hour.id === 1 ? '1st Hour' : 
+                         hour.id === 2 ? '2nd Hour' : 
+                         hour.id === 3 ? '3rd Hour' : 
+                         hour.id === 4 ? '4th Hour' : 
+                         hour.id === 5 ? '5th Hour' : 
+                         `${hour.id}th Hour`}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <FormMessage />
               </FormItem>
             )}
