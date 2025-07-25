@@ -266,9 +266,10 @@ export default function Settings() {
       />
       <div className="p-6">
         <Tabs defaultValue="settings" className="w-full">
-          <TabsList className="grid w-full grid-cols-2">
+          <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="grades">Grades</TabsTrigger>
+            <TabsTrigger value="tools">Tools</TabsTrigger>
           </TabsList>
           
           <TabsContent value="settings" className="mt-6">
@@ -327,6 +328,17 @@ export default function Settings() {
                 onRowDelete={handleDeleteGrade}
                 isLoading={gradesLoading}
               />
+            </div>
+          </TabsContent>
+          
+          <TabsContent value="tools" className="mt-6">
+            <div className="space-y-4">
+              <div>
+                <h3 className="text-lg font-semibold">Tools</h3>
+                <p className="text-sm text-gray-600">Administrative tools and utilities</p>
+              </div>
+              
+              {/* Tools content will be added here */}
             </div>
           </TabsContent>
         </Tabs>
