@@ -328,19 +328,13 @@ export default function Schedules() {
         title="Schedules"
         description="Manage student course schedules"
         actionButton={{
-          label: "Print All Schedules",
+          label: selectedSchedules.size > 0 
+            ? `Print (${selectedSchedules.size}) Selected Schedules`
+            : "Print All Schedules",
           onClick: handlePrintSchedules
         }}
       />
       <div className="flex-1 p-6 overflow-hidden">
-        {selectedSchedules.size > 0 && (
-          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-            <p className="text-sm text-blue-800">
-              {selectedSchedules.size} schedule{selectedSchedules.size === 1 ? '' : 's'} selected
-            </p>
-          </div>
-        )}
-
         {/* Student Grid */}
         <div className="border rounded-lg">
           <div className="overflow-auto max-h-[calc(100vh-200px)]">
