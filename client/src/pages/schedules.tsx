@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -8,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Eye, ChevronUp, ChevronDown } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import { getCurrentGradeString } from "@/lib/gradeUtils";
+import { useToast } from "@/hooks/use-toast";
 import type { Student, Course, Grade } from "@shared/schema";
 
 interface StudentWithFamily extends Student {
@@ -24,6 +25,9 @@ export default function Schedules() {
   const [studentCourses, setStudentCourses] = useState<Record<string, string | null>>({});
   const [sortField, setSortField] = useState<string>('lastName');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
   
   const { data: students } = useQuery({
     queryKey: ["/api/students"],
@@ -45,6 +49,38 @@ export default function Schedules() {
     retry: false,
   });
 
+  const updateStudentScheduleMutation = useMutation({
+    mutationFn: async ({ studentId, scheduleData }: { studentId: number; scheduleData: Record<string, string | null> }) => {
+      const response = await fetch(`/api/students/${studentId}/schedule`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(scheduleData),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to update student schedule');
+      }
+      
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/students"] });
+      toast({
+        title: "Success",
+        description: "Student schedule updated successfully",
+      });
+      setScheduleDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to update student schedule",
+        variant: "destructive",
+      });
+    },
+  });
 
   const getCourseCount = (student: StudentWithFamily) => {
     const studentCourses = [
@@ -303,15 +339,15 @@ export default function Schedules() {
             </DialogHeader>
             {selectedStudent && (
               <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="space-y-3">
                   {hourFields.map(({ field, label, hourIndex }) => (
-                    <div key={field} className="space-y-2">
+                    <div key={field} className="grid grid-cols-2 gap-4 items-center">
                       <Label className="text-sm font-medium">{label}</Label>
                       <Select
                         value={studentCourses[field] || 'NO_COURSE'}
                         onValueChange={(value) => updateCourse(field, value === 'NO_COURSE' ? null : value)}
                       >
-                        <SelectTrigger className="w-full">
+                        <SelectTrigger className="w-full max-w-[300px]">
                           <SelectValue placeholder="Select course" />
                         </SelectTrigger>
                         <SelectContent>
@@ -330,11 +366,18 @@ export default function Schedules() {
                   <Button variant="outline" onClick={() => setScheduleDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button onClick={() => {
-                    // TODO: Save student schedule changes
-                    setScheduleDialogOpen(false);
-                  }}>
-                    Save Changes
+                  <Button 
+                    onClick={() => {
+                      if (selectedStudent) {
+                        updateStudentScheduleMutation.mutate({
+                          studentId: selectedStudent.id,
+                          scheduleData: studentCourses,
+                        });
+                      }
+                    }}
+                    disabled={updateStudentScheduleMutation.isPending}
+                  >
+                    {updateStudentScheduleMutation.isPending ? "Saving..." : "Save Changes"}
                   </Button>
                 </div>
               </div>

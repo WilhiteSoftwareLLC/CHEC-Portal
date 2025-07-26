@@ -166,6 +166,7 @@ export const students = pgTable("students", {
   fifthHourFall: varchar("fifth_hour_fall", { length: 255 }),
   fifthHourSpring: varchar("fifth_hour_spring", { length: 255 }),
   inactive: boolean("inactive").default(false),
+  registeredOn: timestamp("registered_on"),
 });
 
 // Relations

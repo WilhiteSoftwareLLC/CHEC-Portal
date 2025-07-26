@@ -306,6 +306,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.patch("/api/students/:id/schedule", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { mathHour, firstHour, secondHour, thirdHour, fourthHour, fifthHourFall, fifthHourSpring } = req.body;
+      
+      const updateData = {
+        mathHour: mathHour || null,
+        firstHour: firstHour || null,
+        secondHour: secondHour || null,
+        thirdHour: thirdHour || null,
+        fourthHour: fourthHour || null,
+        fifthHourFall: fifthHourFall || null,
+        fifthHourSpring: fifthHourSpring || null,
+        registeredOn: new Date(),
+      };
+
+      const student = await storage.updateStudent(id, updateData);
+      res.json(student);
+    } catch (error) {
+      console.error("Error updating student schedule:", error);
+      res.status(500).json({ message: "Failed to update student schedule" });
+    }
+  });
+
   // Course routes (for 7th grade and older)
   app.get("/api/courses", async (req, res) => {
     try {
@@ -1146,6 +1170,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           fourthHour: null,
           fifthHourFall: null,
           fifthHourSpring: null,
+          registeredOn: null,
         });
       }
 
