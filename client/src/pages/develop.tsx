@@ -220,9 +220,9 @@ export default function Develop() {
       <div className="flex-1 p-6 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
           {/* Left Column - Input */}
-          <div className="flex flex-col space-y-4">
-            <Card>
-              <CardHeader>
+          <div className="flex flex-col gap-4 h-full">
+            <Card className="flex-1 flex flex-col">
+              <CardHeader className="flex-shrink-0">
                 <CardTitle className="flex items-center gap-2">
                   <Terminal className="h-5 w-5" />
                   Feature Request
@@ -231,15 +231,15 @@ export default function Develop() {
                   Describe what you want to add or fix in plain English. Claude will write the code and test it, then you can deploy when ready.
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="flex-1 flex flex-col gap-4">
                 <Textarea
                   placeholder="Examples:&#10;• Add a new field to track student allergies on the family form&#10;• Change the color of the header to blue&#10;• Add a button to export student data to CSV&#10;• Fix the bug where students can't be deleted&#10;• Make the sidebar collapsible"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="min-h-[300px] text-sm"
+                  className="flex-1 text-sm resize-none"
                   disabled={isExecuting}
                 />
-                <div className="flex gap-2">
+                <div className="flex gap-2 flex-shrink-0">
                   <Button 
                     onClick={handleExecute}
                     disabled={isExecuting || !prompt.trim()}
@@ -267,7 +267,7 @@ export default function Develop() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="flex-shrink-0">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Rocket className="h-5 w-5" />
@@ -297,9 +297,9 @@ export default function Develop() {
           </div>
 
           {/* Right Column - Output */}
-          <div className="flex flex-col">
-            <Card className="flex-1 flex flex-col">
-              <CardHeader>
+          <div className="flex flex-col h-full">
+            <Card className="flex-1 flex flex-col min-h-0">
+              <CardHeader className="flex-shrink-0">
                 <CardTitle className="flex items-center gap-2">
                   {isExecuting ? (
                     <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600" />
@@ -314,12 +314,12 @@ export default function Develop() {
                   {isExecuting ? "Implementing your request..." : "Implementation progress will appear here"}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
+              <CardContent className="flex-1 flex flex-col min-h-0">
                 <Textarea
                   ref={resultsRef}
                   value={results}
                   readOnly
-                  className="flex-1 min-h-0 font-mono text-sm bg-gray-50 dark:bg-gray-900"
+                  className="flex-1 min-h-0 font-mono text-sm bg-gray-50 dark:bg-gray-900 resize-none"
                   placeholder={isExecuting ? "Implementing your request..." : "Implementation progress will appear here"}
                 />
               </CardContent>
