@@ -12,7 +12,6 @@ import {
   Settings,
   School,
   UserCog,
-  Terminal,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -126,14 +125,6 @@ export default function Dashboard() {
       color: "bg-gray-500",
       hoverColor: "hover:bg-gray-600",
       description: "Configure system settings"
-    },
-    {
-      title: "Develop",
-      icon: Terminal,
-      path: "/develop",
-      color: "bg-pink-500",
-      hoverColor: "hover:bg-pink-600",
-      description: "Execute aider commands and deploy"
     }
   ];
 
