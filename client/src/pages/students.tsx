@@ -233,7 +233,7 @@ export default function Students() {
   const handleSelectAll = (selected: boolean) => {
     if (selected) {
       // Select all students
-      const allStudentIds = new Set(studentsWithGrade.map(student => student.id));
+      const allStudentIds = new Set<number>(studentsWithGrade.map((student: any) => student.id));
       setSelectedStudents(allStudentIds);
     } else {
       // Deselect all students
@@ -255,7 +255,7 @@ export default function Students() {
     }
 
     // Get selected students data
-    const selectedStudentsData = studentsWithGrade.filter(student => 
+    const selectedStudentsData = studentsWithGrade.filter((student: any) => 
       selectedStudents.has(student.id)
     );
 
@@ -281,7 +281,7 @@ export default function Students() {
 
     const csvRows = [
       headers.join(","),
-      ...selectedStudentsData.map(student => [
+      ...selectedStudentsData.map((student: any) => [
         student.id,
         `"${student.lastName || ""}"`,
         `"${student.firstName || ""}"`,

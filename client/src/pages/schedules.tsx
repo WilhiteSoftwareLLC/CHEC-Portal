@@ -31,11 +31,21 @@ export default function Schedules() {
   
   const { data: students } = useQuery({
     queryKey: ["/api/students"],
+    queryFn: async () => {
+      const response = await fetch("/api/students", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 
   const { data: courses } = useQuery({
     queryKey: ["/api/courses"],
+    queryFn: async () => {
+      const response = await fetch("/api/courses", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 
@@ -136,7 +146,7 @@ export default function Schedules() {
     if (!students) return;
 
     const printContent = students.map((student: StudentWithFamily) => {
-      const gradeName = getCurrentGradeString(student.gradYear);
+      const gradeName = getCurrentGradeString(student.gradYear || '', settings, grades || []);
       const courseCount = getCourseCount(student);
       
       const studentCoursesList = [
@@ -216,12 +226,12 @@ export default function Schedules() {
           bValue = b.firstName || '';
           break;
         case 'currentGrade':
-          aValue = getCurrentGradeString(a.gradYear, settings, grades || []);
-          bValue = getCurrentGradeString(b.gradYear, settings, grades || []);
+          aValue = getCurrentGradeString(a.gradYear || '', settings, grades || []);
+          bValue = getCurrentGradeString(b.gradYear || '', settings, grades || []);
           break;
         case 'gradYear':
-          aValue = parseInt(a.gradYear) || 0;
-          bValue = parseInt(b.gradYear) || 0;
+          aValue = parseInt(a.gradYear || '0') || 0;
+          bValue = parseInt(b.gradYear || '0') || 0;
           break;
         case 'courseCount':
           aValue = getCourseCount(a);
@@ -265,6 +275,11 @@ export default function Schedules() {
 
   const { data: hours } = useQuery({
     queryKey: ["/api/hours"],
+    queryFn: async () => {
+      const response = await fetch("/api/hours", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 

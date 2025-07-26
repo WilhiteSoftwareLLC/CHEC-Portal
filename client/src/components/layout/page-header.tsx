@@ -14,6 +14,7 @@ interface PageHeaderProps {
     onClick: () => void;
     variant?: "outline" | "default";
     icon?: any;
+    disabled?: boolean;
   };
 }
 
@@ -41,6 +42,7 @@ export default function PageHeader({ title, description, actionButton, secondary
             <Button 
               variant={secondaryButton.variant || "outline"}
               onClick={secondaryButton.onClick}
+              disabled={secondaryButton.disabled}
             >
               {secondaryButton.icon && <secondaryButton.icon className="mr-2 h-4 w-4" />}
               {secondaryButton.label}

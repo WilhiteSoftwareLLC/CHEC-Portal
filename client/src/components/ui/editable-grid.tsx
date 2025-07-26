@@ -12,7 +12,7 @@ export interface GridColumn {
   sortable?: boolean;
   editable?: boolean;
   width?: string;
-  type?: "text" | "email" | "tel" | "number" | "checkbox" | "dropdown";
+  type?: "text" | "email" | "tel" | "number" | "checkbox" | "dropdown" | "date";
   options?: { value: any; label: string }[] | ((row: any) => { value: any; label: string }[]);
   onCheckboxChange?: (id: number, checked: boolean) => void;
   selectAllCheckbox?: {
@@ -137,10 +137,10 @@ export default function EditableGrid({
                         checked={column.selectAllCheckbox.checked}
                         ref={(el) => {
                           if (el) {
-                            el.indeterminate = column.selectAllCheckbox.indeterminate;
+                            (el as any).indeterminate = column.selectAllCheckbox?.indeterminate;
                           }
                         }}
-                        onCheckedChange={(checked) => column.selectAllCheckbox.onChange(Boolean(checked))}
+                        onCheckedChange={(checked) => column.selectAllCheckbox?.onChange(Boolean(checked))}
                         className="ml-1"
                       />
                     )}
