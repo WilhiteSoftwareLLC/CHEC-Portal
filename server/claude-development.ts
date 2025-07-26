@@ -163,26 +163,14 @@ ${codebaseInfo.keyFiles}`;
       throw new Error('Build failed');
     }
 
-    // Deploy with PM2 restart
-    job.output += "Deploying application...\n";
-    broadcastToClients(job, { type: 'output', data: "Deploying application...\n" });
-    
-    try {
-      execSync('pm2 restart CHEC-Portal', { cwd: projectPath });
-      job.output += "🚀 CHEC Portal deployed successfully!\n";
-      broadcastToClients(job, { type: 'output', data: "🚀 CHEC Portal deployed successfully!\n" });
-    } catch (error) {
-      job.output += `Deployment warning: ${error}\n`;
-      broadcastToClients(job, { type: 'output', data: `Deployment warning: ${error}\n` });
-    }
-
     // Mark job as completed successfully
     job.completed = true;
     job.success = true;
-    job.output += "\n✅ Development request completed successfully!\n";
+    job.output += "\n✅ Implementation completed successfully!\n";
+    job.output += "💡 Click the 'Deploy Application' button below to make changes live.\n";
     broadcastToClients(job, { 
       type: 'complete', 
-      data: "\n✅ Development request completed successfully!\n",
+      data: "\n✅ Implementation completed successfully!\n💡 Click the 'Deploy Application' button below to make changes live.\n",
       success: true 
     });
 

@@ -59,8 +59,8 @@ export default function Develop() {
           
           if (data.success) {
             toast({
-              title: "Request Completed",
-              description: "Feature implemented successfully",
+              title: "Implementation Complete",
+              description: "Feature implemented successfully. Ready to deploy.",
             });
           } else {
             toast({
@@ -228,7 +228,7 @@ export default function Develop() {
                   Feature Request
                 </CardTitle>
                 <CardDescription>
-                  Describe what you want to add or fix in plain English. Claude will implement it automatically.
+                  Describe what you want to add or fix in plain English. Claude will write the code and test it, then you can deploy when ready.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -274,14 +274,14 @@ export default function Develop() {
                   Deploy Application
                 </CardTitle>
                 <CardDescription>
-                  Build and redeploy the application after making changes
+                  Deploy your implemented changes to make them live (this will log you out)
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <Alert className="mb-4">
                   <AlertCircle className="h-4 w-4" />
                   <AlertDescription>
-                    Deployment will restart the application and log you out automatically.
+                    Deployment will restart CHEC Portal and log you out. Deploy only after implementing features above.
                   </AlertDescription>
                 </Alert>
                 <Button 
