@@ -199,9 +199,26 @@ export async function executeClaude(
     job.output += "Analyzing codebase...\n";
     broadcastToClients(job, { type: 'output', data: "Analyzing codebase...\n" });
 
-    // Get project structure and key files
+    // Get project structure and key files with intelligent selection
     const projectPath = '/home/jeff/CHEC-Portal';
-    const codebaseInfo = await getCodebaseInfo(projectPath);
+    const codebaseInfo = await getCodebaseInfo(projectPath, prompt);
+    
+    job.output += `📊 Context: ${codebaseInfo.totalTokens} tokens, ${codebaseInfo.filesIncluded}/${codebaseInfo.totalFilesFound} files included\n`;
+    broadcastToClients(job, { type: 'output', data: `📊 Context: ${codebaseInfo.totalTokens} tokens, ${codebaseInfo.filesIncluded}/${codebaseInfo.totalFilesFound} files included\n` });
+    
+    // Check if context is still too large (Claude 3.5 Sonnet has ~200K token limit)
+    if (codebaseInfo.totalTokens > 180000) {
+      job.output += `⚠️ Warning: Context (${codebaseInfo.totalTokens} tokens) may exceed limits, reducing further...\n`;
+      broadcastToClients(job, { type: 'output', data: `⚠️ Warning: Context (${codebaseInfo.totalTokens} tokens) may exceed limits, reducing further...\n` });
+      
+      // Fallback: Use even more aggressive selection
+      const reducedCodebaseInfo = await getCodebaseInfo(projectPath);
+      codebaseInfo.keyFiles = reducedCodebaseInfo.keyFiles.slice(0, Math.min(10000, reducedCodebaseInfo.keyFiles.length));
+      codebaseInfo.totalTokens = estimateTokenCount(codebaseInfo.structure + codebaseInfo.keyFiles);
+      
+      job.output += `📊 Reduced context: ${codebaseInfo.totalTokens} tokens\n`;
+      broadcastToClients(job, { type: 'output', data: `📊 Reduced context: ${codebaseInfo.totalTokens} tokens\n` });
+    }
     
     job.output += "Sending request to Claude...\n";
     broadcastToClients(job, { type: 'output', data: "Sending request to Claude...\n" });
@@ -239,15 +256,26 @@ Here are the current key files:
 
 ${codebaseInfo.keyFiles}`;
 
-    const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
-      max_tokens: 4000,
-      messages: [{
-        role: 'user',
-        content: userMessage
-      }],
-      system: systemMessage
-    });
+    let response;
+    try {
+      response = await anthropic.messages.create({
+        model: 'claude-3-5-sonnet-20241022',
+        max_tokens: 4000,
+        messages: [{
+          role: 'user',
+          content: userMessage
+        }],
+        system: systemMessage
+      });
+    } catch (error: any) {
+      if (error.status === 400 && error.message?.includes('too long')) {
+        job.output += `❌ Context too large for Claude API (${codebaseInfo.totalTokens} estimated tokens)\n`;
+        job.output += `💡 Try a more specific request or break it into smaller parts\n`;
+        broadcastToClients(job, { type: 'output', data: `❌ Context too large for Claude API (${codebaseInfo.totalTokens} estimated tokens)\n💡 Try a more specific request or break it into smaller parts\n` });
+        throw new Error(`Context too large: ${codebaseInfo.totalTokens} tokens. Please make a more specific request.`);
+      }
+      throw error;
+    }
 
     const responseText = response.content[0].type === 'text' ? response.content[0].text : '';
     
@@ -305,7 +333,7 @@ ${codebaseInfo.keyFiles}`;
           
           try {
             // Get fresh codebase info after the failed attempt
-            const freshCodebaseInfo = await getCodebaseInfo(projectPath);
+            const freshCodebaseInfo = await getCodebaseInfo(projectPath, prompt);
             
             // Ask Claude to fix the errors
             const fixResponse = await attemptErrorFix(
@@ -406,7 +434,7 @@ ${codebaseInfo.keyFiles}`;
           
           try {
             // Get fresh codebase info after the failed attempt
-            const freshCodebaseInfo = await getCodebaseInfo(projectPath);
+            const freshCodebaseInfo = await getCodebaseInfo(projectPath, prompt);
             
             // Ask Claude to fix the build errors
             const fixResponse = await attemptErrorFix(
@@ -491,10 +519,72 @@ ${codebaseInfo.keyFiles}`;
   }
 }
 
-// Helper function to get codebase information
-async function getCodebaseInfo(projectPath: string) {
+// Estimate token count (rough approximation: 1 token ≈ 4 characters)
+function estimateTokenCount(text: string): number {
+  return Math.ceil(text.length / 4);
+}
+
+// Select most relevant files based on prompt
+function selectRelevantFiles(allFiles: Array<{path: string, content: string}>, prompt: string, maxTokens: number = 40000): Array<{path: string, content: string}> {
+  const promptLower = prompt.toLowerCase();
+  const relevanceScores = allFiles.map(file => {
+    let score = 0;
+    const fileName = file.path.toLowerCase();
+    const fileContent = file.content.toLowerCase().slice(0, 500); // Just check beginning
+    
+    // Higher priority for files mentioned in prompt
+    if (promptLower.includes(fileName.split('/').pop() || '')) score += 100;
+    
+    // Score based on file type relevance to common requests
+    if (fileName.includes('route')) score += 20;
+    if (fileName.includes('component') || fileName.includes('page')) score += 15;
+    if (fileName.includes('schema') || fileName.includes('type')) score += 10;
+    if (fileName.includes('style') || fileName.includes('css')) score += (promptLower.includes('style') || promptLower.includes('css') || promptLower.includes('color')) ? 30 : 5;
+    if (fileName.includes('form')) score += promptLower.includes('form') ? 25 : 5;
+    if (fileName.includes('auth')) score += promptLower.includes('auth') || promptLower.includes('login') ? 25 : 5;
+    
+    // Score based on content relevance
+    const relevantTerms = ['export', 'import', 'function', 'const', 'interface', 'type'];
+    relevantTerms.forEach(term => {
+      if (fileContent.includes(term)) score += 2;
+    });
+    
+    return { ...file, score };
+  });
+  
+  // Sort by relevance score
+  relevanceScores.sort((a, b) => b.score - a.score);
+  
+  // Select files within token budget
+  const selectedFiles = [];
+  let currentTokens = 0;
+  
+  for (const file of relevanceScores) {
+    const fileTokens = estimateTokenCount(file.content);
+    if (currentTokens + fileTokens <= maxTokens) {
+      selectedFiles.push(file);
+      currentTokens += fileTokens;
+    } else {
+      // Try to include a truncated version if there's some space left
+      const remainingTokens = maxTokens - currentTokens;
+      if (remainingTokens > 500) { // Only if we have reasonable space left
+        const truncatedContent = file.content.slice(0, remainingTokens * 4 - 100);
+        selectedFiles.push({
+          ...file,
+          content: truncatedContent + '\n... (truncated due to context limit)'
+        });
+      }
+      break;
+    }
+  }
+  
+  return selectedFiles;
+}
+
+// Helper function to get codebase information with context management
+async function getCodebaseInfo(projectPath: string, prompt?: string) {
   const structure: string[] = [];
-  const keyFiles: string[] = [];
+  const allFiles: Array<{path: string, content: string}> = [];
   
   async function walkDir(dir: string, prefix = '', maxDepth = 3, currentDepth = 0) {
     if (currentDepth >= maxDepth) return;
@@ -514,11 +604,14 @@ async function getCodebaseInfo(projectPath: string) {
       } else {
         structure.push(`${prefix}📄 ${item}`);
         
-        // Read key files
+        // Collect all potential files for intelligent selection
         if (item.endsWith('.tsx') || item.endsWith('.ts') || item === 'package.json') {
           try {
             const content = await readFile(fullPath, 'utf8');
-            keyFiles.push(`--- ${relativePath} ---\n${content.slice(0, 2000)}${content.length > 2000 ? '\n... (truncated)' : ''}\n`);
+            allFiles.push({
+              path: relativePath,
+              content: content
+            });
           } catch (e) {
             // Skip files that can't be read
           }
@@ -529,8 +622,26 @@ async function getCodebaseInfo(projectPath: string) {
   
   await walkDir(projectPath);
   
+  // Use intelligent file selection if prompt is provided
+  const selectedFiles = prompt 
+    ? selectRelevantFiles(allFiles, prompt, 40000) // Reserve ~40K tokens for files
+    : allFiles.slice(0, 20).map(f => ({ // Fallback: just take first 20 files
+        ...f, 
+        content: f.content.slice(0, 2000) + (f.content.length > 2000 ? '\n... (truncated)' : '')
+      }));
+  
+  const keyFilesContent = selectedFiles.map(file => 
+    `--- ${file.path} ---\n${file.content}\n`
+  ).join('\n\n');
+  
+  const structureContent = structure.join('\n');
+  const totalTokens = estimateTokenCount(structureContent + keyFilesContent);
+  
   return {
-    structure: structure.join('\n'),
-    keyFiles: keyFiles.join('\n\n')
+    structure: structureContent,
+    keyFiles: keyFilesContent,
+    totalTokens,
+    filesIncluded: selectedFiles.length,
+    totalFilesFound: allFiles.length
   };
 }
