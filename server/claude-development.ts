@@ -11,6 +11,55 @@ export interface DevelopmentJob {
   clients: Set<any>;
 }
 
+// Helper function to attempt error fixes with Claude
+async function attemptErrorFix(
+  originalPrompt: string,
+  errorMessages: string,
+  codebaseInfo: any,
+  anthropic: any,
+  attemptNumber: number
+): Promise<string> {
+  const systemMessage = `You are Claude Code, helping to fix TypeScript/build errors in a CHEC Portal application.
+
+Project structure:
+${codebaseInfo.structure}
+
+You are fixing errors from a previous implementation attempt. The original request was: "${originalPrompt}"
+
+Your task is to fix the TypeScript/build errors by making minimal, targeted changes to the code.
+
+Return your response in this format:
+<files>
+<file path="path/to/file.ts">
+// Complete corrected file content here
+</file>
+</files>
+
+Focus ONLY on fixing the errors. Do not add new features or make unnecessary changes.`;
+
+  const userMessage = `The following TypeScript/build errors occurred:
+
+${errorMessages}
+
+Please fix these errors with minimal changes to the codebase. This is attempt ${attemptNumber} of 2.
+
+Here are the current key files:
+
+${codebaseInfo.keyFiles}`;
+
+  const response = await anthropic.messages.create({
+    model: 'claude-3-5-sonnet-20241022',
+    max_tokens: 4000,
+    messages: [{
+      role: 'user',
+      content: userMessage
+    }],
+    system: systemMessage
+  });
+
+  return response.content[0].type === 'text' ? response.content[0].text : '';
+}
+
 export async function executeClaude(
   prompt: string, 
   job: DevelopmentJob, 
@@ -117,15 +166,82 @@ ${codebaseInfo.keyFiles}`;
     job.output += "Changes applied. Running type check...\n";
     broadcastToClients(job, { type: 'output', data: "Changes applied. Running type check...\n" });
 
-    // Run TypeScript check
-    try {
-      execSync('npm run check', { cwd: projectPath, stdio: 'pipe' });
-      job.output += "✅ TypeScript check passed\n";
-      broadcastToClients(job, { type: 'output', data: "✅ TypeScript check passed\n" });
-    } catch (error) {
-      job.output += `❌ TypeScript errors found:\n${error}\n`;
-      broadcastToClients(job, { type: 'output', data: `❌ TypeScript errors found:\n${error}\n` });
-      throw new Error('TypeScript check failed');
+    // Run TypeScript check with error recovery
+    let typeCheckPassed = false;
+    let maxRetries = 2;
+    
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+      try {
+        execSync('npm run check', { cwd: projectPath, stdio: 'pipe' });
+        job.output += "✅ TypeScript check passed\n";
+        broadcastToClients(job, { type: 'output', data: "✅ TypeScript check passed\n" });
+        typeCheckPassed = true;
+        break;
+      } catch (error) {
+        const errorMessage = (error as any).stdout || (error as any).stderr || String(error);
+        job.output += `❌ TypeScript errors found (attempt ${attempt}):\n${errorMessage}\n`;
+        broadcastToClients(job, { type: 'output', data: `❌ TypeScript errors found (attempt ${attempt}):\n${errorMessage}\n` });
+        
+        if (attempt <= maxRetries) {
+          job.output += `🔧 Attempting to fix errors automatically (${attempt}/${maxRetries})...\n`;
+          broadcastToClients(job, { type: 'output', data: `🔧 Attempting to fix errors automatically (${attempt}/${maxRetries})...\n` });
+          
+          try {
+            // Get fresh codebase info after the failed attempt
+            const freshCodebaseInfo = await getCodebaseInfo(projectPath);
+            
+            // Ask Claude to fix the errors
+            const fixResponse = await attemptErrorFix(
+              prompt, 
+              errorMessage, 
+              freshCodebaseInfo, 
+              anthropic, 
+              attempt
+            );
+            
+            // Parse and apply the fixes
+            const fixFileMatches = fixResponse.match(/<file path="([^"]+)">[\s\S]*?<\/file>/g);
+            
+            if (fixFileMatches) {
+              job.output += `Applying ${fixFileMatches.length} error fixes...\n`;
+              broadcastToClients(job, { type: 'output', data: `Applying ${fixFileMatches.length} error fixes...\n` });
+              
+              for (const fileMatch of fixFileMatches) {
+                const pathMatch = fileMatch.match(/<file path="([^"]+)">/);
+                const contentMatch = fileMatch.match(/<file path="[^"]+">([\s\S]*?)<\/file>/);
+                
+                if (pathMatch && contentMatch) {
+                  const filePath = pathMatch[1];
+                  const fileContent = contentMatch[1].trim();
+                  const fullPath = join(projectPath, filePath);
+                  
+                  job.output += `Fixing ${filePath}...\n`;
+                  broadcastToClients(job, { type: 'output', data: `Fixing ${filePath}...\n` });
+                  
+                  await writeFile(fullPath, fileContent, 'utf8');
+                  if (!changedFiles.includes(filePath)) {
+                    changedFiles.push(filePath);
+                  }
+                }
+              }
+            } else {
+              job.output += "⚠️ No fixes found in Claude response, retrying type check...\n";
+              broadcastToClients(job, { type: 'output', data: "⚠️ No fixes found in Claude response, retrying type check...\n" });
+            }
+          } catch (fixError) {
+            job.output += `⚠️ Error during fix attempt: ${fixError}\n`;
+            broadcastToClients(job, { type: 'output', data: `⚠️ Error during fix attempt: ${fixError}\n` });
+          }
+        } else {
+          job.output += `❌ Failed to fix TypeScript errors after ${maxRetries} attempts\n`;
+          broadcastToClients(job, { type: 'output', data: `❌ Failed to fix TypeScript errors after ${maxRetries} attempts\n` });
+          throw new Error(`TypeScript check failed after ${maxRetries} fix attempts`);
+        }
+      }
+    }
+    
+    if (!typeCheckPassed) {
+      throw new Error('TypeScript check failed after all attempts');
     }
 
     // Commit changes to git
@@ -149,18 +265,84 @@ ${codebaseInfo.keyFiles}`;
       broadcastToClients(job, { type: 'output', data: `Git commit failed: ${error}\n` });
     }
 
-    // Build the application
+    // Build the application with error recovery
     job.output += "Building application...\n";
     broadcastToClients(job, { type: 'output', data: "Building application...\n" });
     
-    try {
-      execSync('npm run build', { cwd: projectPath, encoding: 'utf8' });
-      job.output += "✅ Build successful\n";
-      broadcastToClients(job, { type: 'output', data: "✅ Build successful\n" });
-    } catch (error) {
-      job.output += `❌ Build failed:\n${error}\n`;
-      broadcastToClients(job, { type: 'output', data: `❌ Build failed:\n${error}\n` });
-      throw new Error('Build failed');
+    let buildPassed = false;
+    
+    for (let attempt = 1; attempt <= maxRetries + 1; attempt++) {
+      try {
+        execSync('npm run build', { cwd: projectPath, encoding: 'utf8' });
+        job.output += "✅ Build successful\n";
+        broadcastToClients(job, { type: 'output', data: "✅ Build successful\n" });
+        buildPassed = true;
+        break;
+      } catch (error) {
+        const errorMessage = (error as any).stdout || (error as any).stderr || String(error);
+        job.output += `❌ Build failed (attempt ${attempt}):\n${errorMessage}\n`;
+        broadcastToClients(job, { type: 'output', data: `❌ Build failed (attempt ${attempt}):\n${errorMessage}\n` });
+        
+        if (attempt <= maxRetries) {
+          job.output += `🔧 Attempting to fix build errors automatically (${attempt}/${maxRetries})...\n`;
+          broadcastToClients(job, { type: 'output', data: `🔧 Attempting to fix build errors automatically (${attempt}/${maxRetries})...\n` });
+          
+          try {
+            // Get fresh codebase info after the failed attempt
+            const freshCodebaseInfo = await getCodebaseInfo(projectPath);
+            
+            // Ask Claude to fix the build errors
+            const fixResponse = await attemptErrorFix(
+              prompt, 
+              `Build Error: ${errorMessage}`, 
+              freshCodebaseInfo, 
+              anthropic, 
+              attempt
+            );
+            
+            // Parse and apply the fixes
+            const fixFileMatches = fixResponse.match(/<file path="([^"]+)">[\s\S]*?<\/file>/g);
+            
+            if (fixFileMatches) {
+              job.output += `Applying ${fixFileMatches.length} build fixes...\n`;
+              broadcastToClients(job, { type: 'output', data: `Applying ${fixFileMatches.length} build fixes...\n` });
+              
+              for (const fileMatch of fixFileMatches) {
+                const pathMatch = fileMatch.match(/<file path="([^"]+)">/);
+                const contentMatch = fileMatch.match(/<file path="[^"]+">([\s\S]*?)<\/file>/);
+                
+                if (pathMatch && contentMatch) {
+                  const filePath = pathMatch[1];
+                  const fileContent = contentMatch[1].trim();
+                  const fullPath = join(projectPath, filePath);
+                  
+                  job.output += `Fixing ${filePath}...\n`;
+                  broadcastToClients(job, { type: 'output', data: `Fixing ${filePath}...\n` });
+                  
+                  await writeFile(fullPath, fileContent, 'utf8');
+                  if (!changedFiles.includes(filePath)) {
+                    changedFiles.push(filePath);
+                  }
+                }
+              }
+            } else {
+              job.output += "⚠️ No build fixes found in Claude response, retrying build...\n";
+              broadcastToClients(job, { type: 'output', data: "⚠️ No build fixes found in Claude response, retrying build...\n" });
+            }
+          } catch (fixError) {
+            job.output += `⚠️ Error during build fix attempt: ${fixError}\n`;
+            broadcastToClients(job, { type: 'output', data: `⚠️ Error during build fix attempt: ${fixError}\n` });
+          }
+        } else {
+          job.output += `❌ Failed to fix build errors after ${maxRetries} attempts\n`;
+          broadcastToClients(job, { type: 'output', data: `❌ Failed to fix build errors after ${maxRetries} attempts\n` });
+          throw new Error(`Build failed after ${maxRetries} fix attempts`);
+        }
+      }
+    }
+    
+    if (!buildPassed) {
+      throw new Error('Build failed after all attempts');
     }
 
     // Mark job as completed successfully
