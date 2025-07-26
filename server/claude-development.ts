@@ -168,9 +168,9 @@ ${codebaseInfo.keyFiles}`;
     broadcastToClients(job, { type: 'output', data: "Deploying application...\n" });
     
     try {
-      execSync('pm2 restart all', { cwd: projectPath });
-      job.output += "🚀 Application deployed successfully!\n";
-      broadcastToClients(job, { type: 'output', data: "🚀 Application deployed successfully!\n" });
+      execSync('pm2 restart CHEC-Portal', { cwd: projectPath });
+      job.output += "🚀 CHEC Portal deployed successfully!\n";
+      broadcastToClients(job, { type: 'output', data: "🚀 CHEC Portal deployed successfully!\n" });
     } catch (error) {
       job.output += `Deployment warning: ${error}\n`;
       broadcastToClients(job, { type: 'output', data: `Deployment warning: ${error}\n` });

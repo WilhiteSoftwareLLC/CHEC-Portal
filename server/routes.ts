@@ -1460,7 +1460,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
 
         // Step 2: Run PM2 restart if build succeeded
-        const deployProcess = spawn('pm2', ['restart', 'ecosystem.config.cjs'], {
+        const deployProcess = spawn('pm2', ['restart', 'CHEC-Portal'], {
           cwd: workingDir,
           stdio: ['pipe', 'pipe', 'pipe'],
           shell: true
