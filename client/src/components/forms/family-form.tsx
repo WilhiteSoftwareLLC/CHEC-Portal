@@ -126,7 +126,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Father's Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter father's name" {...field} />
+                  <Input placeholder="Enter father's name" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -140,7 +140,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Mother's Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter mother's name" {...field} />
+                  <Input placeholder="Enter mother's name" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -154,7 +154,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Primary Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="Enter primary email" {...field} />
+                  <Input type="email" placeholder="Enter primary email" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -168,7 +168,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Secondary Email</FormLabel>
                 <FormControl>
-                  <Input type="email" placeholder="Enter secondary email" {...field} />
+                  <Input type="email" placeholder="Enter secondary email" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -182,7 +182,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Primary Cell Phone</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter primary cell phone" {...field} />
+                  <Input placeholder="Enter primary cell phone" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -196,7 +196,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Secondary Cell Phone</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter secondary cell phone" {...field} />
+                  <Input placeholder="Enter secondary cell phone" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -210,7 +210,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Home Phone</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter home phone" {...field} />
+                  <Input placeholder="Enter home phone" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -224,7 +224,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Work Phone</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter work phone" {...field} />
+                  <Input placeholder="Enter work phone" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -241,7 +241,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
                 <FormItem>
                   <FormLabel>Address</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter address" {...field} />
+                    <Input placeholder="Enter address" {...field} value={field.value || ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -256,7 +256,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>City</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter city" {...field} />
+                  <Input placeholder="Enter city" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -270,7 +270,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Zip Code</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter zip code" {...field} />
+                  <Input placeholder="Enter zip code" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -286,7 +286,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Church</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter church name" {...field} />
+                  <Input placeholder="Enter church name" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -300,7 +300,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Pastor's Name</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter pastor's name" {...field} />
+                  <Input placeholder="Enter pastor's name" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -314,7 +314,7 @@ export default function FamilyForm({ family, onSubmit, onCancel }: FamilyFormPro
               <FormItem>
                 <FormLabel>Pastor's Phone</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter pastor's phone" {...field} />
+                  <Input placeholder="Enter pastor's phone" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>

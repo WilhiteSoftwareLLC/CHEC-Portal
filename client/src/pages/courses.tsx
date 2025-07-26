@@ -56,11 +56,21 @@ export default function Courses() {
 
   const { data: settings } = useQuery({
     queryKey: ["/api/settings"],
+    queryFn: async () => {
+      const response = await fetch("/api/settings", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 
   const { data: grades } = useQuery({
     queryKey: ["/api/grades"],
+    queryFn: async () => {
+      const response = await fetch("/api/grades", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 

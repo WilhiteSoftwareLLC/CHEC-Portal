@@ -41,11 +41,21 @@ export default function Schedules() {
 
   const { data: grades } = useQuery({
     queryKey: ["/api/grades"],
+    queryFn: async () => {
+      const response = await fetch("/api/grades", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 
   const { data: settings } = useQuery({
     queryKey: ["/api/settings"],
+    queryFn: async () => {
+      const response = await fetch("/api/settings", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 
@@ -126,7 +136,7 @@ export default function Schedules() {
     if (!students) return;
 
     const printContent = students.map((student: StudentWithFamily) => {
-      const gradeName = getCurrentGradeName(student.gradYear);
+      const gradeName = getCurrentGradeString(student.gradYear);
       const courseCount = getCourseCount(student);
       
       const studentCoursesList = [

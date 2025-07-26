@@ -200,7 +200,7 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
               <FormItem>
                 <FormLabel>Location</FormLabel>
                 <FormControl>
-                  <Input placeholder="Enter location" {...field} />
+                  <Input placeholder="Enter location" {...field} value={field.value || ""} />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -217,6 +217,7 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
                   <Input
                     placeholder="Enter course fee"
                     {...field}
+                    value={field.value || ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -234,6 +235,7 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
                   <Input
                     placeholder="Enter book rental fee"
                     {...field}
+                    value={field.value || ""}
                   />
                 </FormControl>
                 <FormMessage />
@@ -252,7 +254,7 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                   <FormControl>
                     <Checkbox
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>
@@ -270,7 +272,7 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
                 <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                   <FormControl>
                     <Checkbox
-                      checked={field.value}
+                      checked={field.value || false}
                       onCheckedChange={field.onChange}
                     />
                   </FormControl>

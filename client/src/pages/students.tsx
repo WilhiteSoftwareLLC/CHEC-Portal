@@ -32,10 +32,22 @@ export default function Students() {
 
   const { data: grades } = useQuery({
     queryKey: ["/api/grades"],
+    queryFn: async () => {
+      const response = await fetch("/api/grades", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
   });
 
   const { data: classes } = useQuery({
     queryKey: ["/api/classes"],
+    queryFn: async () => {
+      const response = await fetch("/api/classes", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
   });
 
   const { data: courses } = useQuery({
@@ -50,6 +62,11 @@ export default function Students() {
 
   const { data: hours } = useQuery({
     queryKey: ["/api/hours"],
+    queryFn: async () => {
+      const response = await fetch("/api/hours", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
     retry: false,
   });
 

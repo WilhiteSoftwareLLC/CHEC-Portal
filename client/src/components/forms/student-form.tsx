@@ -38,23 +38,64 @@ export default function StudentForm({ student, onSubmit, onCancel }: StudentForm
   // Fetch families for the dropdown
   const { data: families = [] } = useQuery({
     queryKey: ["/api/families"],
+    queryFn: async () => {
+      const response = await fetch("/api/families", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
   });
 
   // Fetch all courses and classes for filtering
   const { data: courses = [] } = useQuery({
     queryKey: ["/api/courses"],
+    queryFn: async () => {
+      const response = await fetch("/api/courses", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
   });
   
   const { data: classes = [] } = useQuery({
     queryKey: ["/api/classes"],
+    queryFn: async () => {
+      const response = await fetch("/api/classes", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
   });
 
   const { data: grades = [] } = useQuery({
     queryKey: ["/api/grades"],
+    queryFn: async () => {
+      const response = await fetch("/api/grades", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
   });
 
   const { data: settings } = useQuery({
     queryKey: ["/api/settings"],
+    queryFn: async () => {
+      const response = await fetch("/api/settings", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
+  });
+
+  // Fetch hours for dropdown options
+  const { data: hours = [] } = useQuery({
+    queryKey: ["/api/hours"],
+    queryFn: async () => {
+      const response = await fetch("/api/hours", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
   });
 
   // Helper function to get student's current grade code
