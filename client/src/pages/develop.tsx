@@ -59,13 +59,13 @@ export default function Develop() {
           
           if (data.success) {
             toast({
-              title: "Aider Execution Complete",
-              description: "Command executed successfully",
+              title: "Request Completed",
+              description: "Feature implemented successfully",
             });
           } else {
             toast({
-              title: "Aider Execution Failed",
-              description: data.error || "Command failed",
+              title: "Implementation Failed",
+              description: data.error || "Implementation failed",
               variant: "destructive",
             });
           }
@@ -102,7 +102,7 @@ export default function Develop() {
       if (response.jobId) {
         setCurrentJobId(response.jobId);
         connectToStream(response.jobId);
-        setResults("Starting aider command...\n");
+        setResults("Starting implementation...\n");
       } else {
         setIsExecuting(false);
         toast({
@@ -158,8 +158,8 @@ export default function Develop() {
   const handleExecute = () => {
     if (!prompt.trim()) {
       toast({
-        title: "No Prompt",
-        description: "Please enter a prompt for aider",
+        title: "No Request",
+        description: "Please describe what you want to implement",
         variant: "destructive",
       });
       return;
@@ -192,7 +192,7 @@ export default function Develop() {
       <div className="h-full flex flex-col">
         <PageHeader 
           title="Develop"
-          description="Execute aider commands and deploy application changes"
+          description="Request features and fixes using natural language - powered by Claude"
         />
         <div className="flex-1 p-6 flex items-center justify-center">
           <Card className="max-w-md">
@@ -215,7 +215,7 @@ export default function Develop() {
     <div className="h-full flex flex-col">
       <PageHeader 
         title="Develop"
-        description="Execute aider commands and deploy application changes"
+        description="Request features and fixes using natural language - powered by Claude"
       />
       <div className="flex-1 p-6 overflow-hidden">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
@@ -225,18 +225,18 @@ export default function Develop() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Terminal className="h-5 w-5" />
-                  Aider Prompt
+                  Feature Request
                 </CardTitle>
                 <CardDescription>
-                  Enter your development prompt for aider to execute
+                  Describe what you want to add or fix in plain English. Claude will implement it automatically.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Textarea
-                  placeholder="Enter your aider prompt here..."
+                  placeholder="Examples:&#10;• Add a new field to track student allergies on the family form&#10;• Change the color of the header to blue&#10;• Add a button to export student data to CSV&#10;• Fix the bug where students can't be deleted&#10;• Make the sidebar collapsible"
                   value={prompt}
                   onChange={(e) => setPrompt(e.target.value)}
-                  className="min-h-[300px] font-mono text-sm"
+                  className="min-h-[300px] text-sm"
                   disabled={isExecuting}
                 />
                 <div className="flex gap-2">
@@ -245,7 +245,7 @@ export default function Develop() {
                     disabled={isExecuting || !prompt.trim()}
                     className="flex-1"
                   >
-                    {isExecuting ? "Executing..." : "Execute Aider"}
+                    {isExecuting ? "Implementing..." : "Implement Request"}
                   </Button>
                   {isExecuting && (
                     <Button 
@@ -311,7 +311,7 @@ export default function Develop() {
                   Command Output
                 </CardTitle>
                 <CardDescription>
-                  {isExecuting ? "Executing aider command..." : "Results will appear here"}
+                  {isExecuting ? "Implementing your request..." : "Implementation progress will appear here"}
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">
@@ -320,7 +320,7 @@ export default function Develop() {
                   value={results}
                   readOnly
                   className="flex-1 min-h-0 font-mono text-sm bg-gray-50 dark:bg-gray-900"
-                  placeholder={isExecuting ? "Executing command..." : "Output will appear here after execution"}
+                  placeholder={isExecuting ? "Implementing your request..." : "Implementation progress will appear here"}
                 />
               </CardContent>
             </Card>

@@ -1194,7 +1194,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     clients: Set<any>;
   }>();
 
-  // Development routes (admin only)
+  // Development routes (admin only) - Claude-based implementation
   app.post("/api/develop/execute", requireAdmin, async (req, res) => {
     try {
       const { prompt } = req.body;
@@ -1217,12 +1217,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Return immediately with job ID
       res.json({ jobId, message: "Job started" });
 
-      // Start the process asynchronously
+      // Start the Claude-based development process asynchronously
       setImmediate(async () => {
         const job = activeJobs.get(jobId)!;
         
         try {
-          console.log("Aider prompt: " + prompt);
+          // Import the Claude development service
+          const { executeClaude } = await import('./claude-development');
+          await executeClaude(prompt, job, broadcastToClients);
 
           const { execSync, spawn } = await import('child_process');
           
@@ -1330,7 +1332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
     } catch (error) {
       console.error("Error in develop/execute:", error);
-      res.status(500).json({ error: "Failed to start aider command" });
+      res.status(500).json({ error: "Failed to start Claude development process" });
     }
   });
 
