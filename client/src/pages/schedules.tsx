@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, ChevronUp, ChevronDown } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import { getCurrentGradeString } from "@/lib/gradeUtils";
@@ -25,6 +26,7 @@ export default function Schedules() {
   const [studentCourses, setStudentCourses] = useState<Record<string, string | null>>({});
   const [sortField, setSortField] = useState<string>('lastName');
   const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [selectedSchedules, setSelectedSchedules] = useState<Set<number>>(new Set());
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -293,6 +295,33 @@ export default function Schedules() {
     { field: 'fifthHourSpring', label: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Spring', hourIndex: 5 },
   ];
 
+  // Selection handlers
+  const handleScheduleSelection = (studentId: number, selected: boolean) => {
+    setSelectedSchedules(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(studentId);
+      } else {
+        newSet.delete(studentId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      // Select all students
+      const allStudentIds = new Set<number>(getSortedStudents().map((student: StudentWithFamily) => student.id));
+      setSelectedSchedules(allStudentIds);
+    } else {
+      // Deselect all students
+      setSelectedSchedules(new Set());
+    }
+  };
+
+  const isAllSelected = getSortedStudents().length > 0 && selectedSchedules.size === getSortedStudents().length;
+  const isIndeterminate = selectedSchedules.size > 0 && selectedSchedules.size < getSortedStudents().length;
+
   return (
     <div className="h-full flex flex-col">
       <PageHeader 
@@ -304,12 +333,31 @@ export default function Schedules() {
         }}
       />
       <div className="flex-1 p-6 overflow-hidden">
+        {selectedSchedules.size > 0 && (
+          <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              {selectedSchedules.size} schedule{selectedSchedules.size === 1 ? '' : 's'} selected
+            </p>
+          </div>
+        )}
+
         {/* Student Grid */}
         <div className="border rounded-lg">
           <div className="overflow-auto max-h-[calc(100vh-200px)]">
             <table className="w-full">
               <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                 <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b w-12">
+                    <Checkbox 
+                      checked={isAllSelected}
+                      ref={(checkbox: any) => {
+                        if (checkbox) {
+                          checkbox.indeterminate = isIndeterminate;
+                        }
+                      }}
+                      onCheckedChange={handleSelectAll}
+                    />
+                  </th>
                   <SortableHeader field="lastName">Last Name</SortableHeader>
                   <SortableHeader field="firstName">First Name</SortableHeader>
                   <SortableHeader field="currentGrade">Current Grade</SortableHeader>
@@ -321,6 +369,12 @@ export default function Schedules() {
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
                 {getSortedStudents().map((student: StudentWithFamily) => (
                   <tr key={student.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                    <td className="px-4 py-3 whitespace-nowrap">
+                      <Checkbox 
+                        checked={selectedSchedules.has(student.id)}
+                        onCheckedChange={(checked) => handleScheduleSelection(student.id, checked as boolean)}
+                      />
+                    </td>
                     <td className="px-4 py-3 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-gray-100">
                       {student.lastName}
                     </td>
