@@ -1,5 +1,5 @@
 import { Anthropic } from '@anthropic-ai/sdk';
-import { readdir, readFile, writeFile, stat } from 'fs/promises';
+import { readdir, readFile, writeFile, stat, copyFile } from 'fs/promises';
 import { join, relative } from 'path';
 import { execSync } from 'child_process';
 
@@ -9,6 +9,123 @@ export interface DevelopmentJob {
   success: boolean;
   error?: string;
   clients: Set<any>;
+}
+
+// Safe file writing with backup and validation
+async function safeWriteFile(
+  filePath: string, 
+  content: string, 
+  job: DevelopmentJob, 
+  broadcastToClients: Function
+): Promise<void> {
+  const backupPath = `${filePath}.bak`;
+  
+  try {
+    // Create backup of original file
+    await copyFile(filePath, backupPath);
+    job.output += `📁 Created backup: ${filePath}.bak\n`;
+    broadcastToClients(job, { type: 'output', data: `📁 Created backup: ${filePath}.bak\n` });
+    
+    // Basic validation for common file types
+    const isValid = validateFileContent(filePath, content);
+    if (!isValid) {
+      throw new Error(`File content validation failed for ${filePath}`);
+    }
+    
+    // Write the new content
+    await writeFile(filePath, content, 'utf8');
+    job.output += `✅ Successfully wrote ${filePath}\n`;
+    broadcastToClients(job, { type: 'output', data: `✅ Successfully wrote ${filePath}\n` });
+    
+  } catch (error) {
+    // Rollback if anything went wrong
+    try {
+      await copyFile(backupPath, filePath);
+      job.output += `🔄 Rolled back ${filePath} from backup\n`;
+      broadcastToClients(job, { type: 'output', data: `🔄 Rolled back ${filePath} from backup\n` });
+    } catch (rollbackError) {
+      job.output += `❌ Failed to rollback ${filePath}: ${rollbackError}\n`;
+      broadcastToClients(job, { type: 'output', data: `❌ Failed to rollback ${filePath}: ${rollbackError}\n` });
+    }
+    throw error;
+  }
+}
+
+// Cleanup backup files after successful operation
+async function cleanupBackups(changedFiles: string[], job: DevelopmentJob, broadcastToClients: Function): Promise<void> {
+  try {
+    const { unlink } = await import('fs/promises');
+    for (const filePath of changedFiles) {
+      const backupPath = `${filePath}.bak`;
+      try {
+        await unlink(backupPath);
+        job.output += `🗑️ Cleaned up backup: ${backupPath}\n`;
+      } catch (error) {
+        // Backup file might not exist, ignore cleanup errors
+      }
+    }
+    broadcastToClients(job, { type: 'output', data: `🗑️ Cleaned up backup files\n` });
+  } catch (error) {
+    // Cleanup is optional, don't fail the entire process
+    job.output += `⚠️ Backup cleanup failed (non-critical): ${error}\n`;
+    broadcastToClients(job, { type: 'output', data: `⚠️ Backup cleanup failed (non-critical): ${error}\n` });
+  }
+}
+
+// Basic file content validation
+function validateFileContent(filePath: string, content: string): boolean {
+  // Skip validation for very small files that might be intentionally minimal
+  if (content.length < 10) {
+    return false;
+  }
+  
+  const extension = filePath.split('.').pop()?.toLowerCase();
+  
+  switch (extension) {
+    case 'ts':
+    case 'tsx':
+    case 'js':
+    case 'jsx':
+      // Check for basic structure - should have some content and balanced braces
+      const openBraces = (content.match(/\{/g) || []).length;
+      const closeBraces = (content.match(/\}/g) || []).length;
+      
+      // Allow some flexibility but catch obvious truncation
+      if (Math.abs(openBraces - closeBraces) > 3) {
+        return false;
+      }
+      
+      // TypeScript/JavaScript files should typically have imports or exports
+      if (content.length > 100 && 
+          !content.includes('import') && 
+          !content.includes('export') && 
+          !content.includes('function') &&
+          !content.includes('const') &&
+          !content.includes('let') &&
+          !content.includes('var')) {
+        return false;
+      }
+      
+      // Check if it ends abruptly (like missing closing braces/parentheses)
+      const lastChar = content.trim().slice(-1);
+      if (lastChar === ',' || lastChar === '(' || lastChar === '[') {
+        return false;
+      }
+      
+      return true;
+      
+    case 'json':
+      try {
+        JSON.parse(content);
+        return true;
+      } catch {
+        return false;
+      }
+      
+    default:
+      // For other file types, just check that it's not empty and doesn't end abruptly
+      return content.trim().length > 0;
+  }
 }
 
 // Helper function to attempt error fixes with Claude
@@ -158,7 +275,7 @@ ${codebaseInfo.keyFiles}`;
         job.output += `Updating ${filePath}...\n`;
         broadcastToClients(job, { type: 'output', data: `Updating ${filePath}...\n` });
         
-        await writeFile(fullPath, fileContent, 'utf8');
+        await safeWriteFile(fullPath, fileContent, job, broadcastToClients);
         changedFiles.push(filePath);
       }
     }
@@ -218,7 +335,7 @@ ${codebaseInfo.keyFiles}`;
                   job.output += `Fixing ${filePath}...\n`;
                   broadcastToClients(job, { type: 'output', data: `Fixing ${filePath}...\n` });
                   
-                  await writeFile(fullPath, fileContent, 'utf8');
+                  await safeWriteFile(fullPath, fileContent, job, broadcastToClients);
                   if (!changedFiles.includes(filePath)) {
                     changedFiles.push(filePath);
                   }
@@ -319,7 +436,7 @@ ${codebaseInfo.keyFiles}`;
                   job.output += `Fixing ${filePath}...\n`;
                   broadcastToClients(job, { type: 'output', data: `Fixing ${filePath}...\n` });
                   
-                  await writeFile(fullPath, fileContent, 'utf8');
+                  await safeWriteFile(fullPath, fileContent, job, broadcastToClients);
                   if (!changedFiles.includes(filePath)) {
                     changedFiles.push(filePath);
                   }
@@ -345,6 +462,9 @@ ${codebaseInfo.keyFiles}`;
       throw new Error('Build failed after all attempts');
     }
 
+    // Clean up backup files after successful completion
+    await cleanupBackups(changedFiles, job, broadcastToClients);
+    
     // Mark job as completed successfully
     job.completed = true;
     job.success = true;
