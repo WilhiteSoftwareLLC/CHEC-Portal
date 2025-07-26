@@ -147,7 +147,12 @@ export default function Schedules() {
   const handlePrintSchedules = () => {
     if (!students) return;
 
-    const printContent = students.map((student: StudentWithFamily) => {
+    // Determine which students to print based on selection
+    const studentsToPrint = selectedSchedules.size > 0 
+      ? students.filter((student: StudentWithFamily) => selectedSchedules.has(student.id))
+      : students;
+
+    const printContent = studentsToPrint.map((student: StudentWithFamily) => {
       const gradeName = getCurrentGradeString(student.gradYear || '', settings, grades || []);
       const courseCount = getCourseCount(student);
       
