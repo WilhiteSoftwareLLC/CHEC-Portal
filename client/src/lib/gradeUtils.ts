@@ -1,5 +1,10 @@
 import type { Grade } from "@shared/schema";
 
+export interface SortableGrade {
+  display: string;    // "9th", "10th", "K", etc.
+  sortOrder: number;  // The numeric code for proper sorting
+}
+
 export function getCurrentGradeCode(
   gradYear: string | number | null | undefined,
   settings: any
@@ -25,4 +30,21 @@ export function getCurrentGradeString(
   
   const grade = grades.find((g: Grade) => g.code === gradeCode);
   return grade ? grade.gradeName : `Grade ${gradeCode}`;
+}
+
+export function getCurrentSortableGrade(
+  gradYear: string | number | null | undefined,
+  settings: any,
+  grades: Grade[]
+): SortableGrade {
+  if (!grades) return { display: "Unknown", sortOrder: 999 };
+  
+  const gradeCode = getCurrentGradeCode(gradYear, settings);
+  if (gradeCode === null) return { display: "Unknown", sortOrder: 999 };
+  
+  const grade = grades.find((g: Grade) => g.code === gradeCode);
+  return {
+    display: grade ? grade.gradeName : `Grade ${gradeCode}`,
+    sortOrder: gradeCode
+  };
 }

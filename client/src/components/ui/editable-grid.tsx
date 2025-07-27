@@ -13,6 +13,7 @@ export interface GridColumn {
   editable?: boolean;
   width?: string;
   type?: "text" | "email" | "tel" | "number" | "checkbox" | "dropdown" | "date";
+  sortKey?: string; // Optional different field to use for sorting
   options?: { value: any; label: string }[] | ((row: any) => { value: any; label: string }[]);
   onCheckboxChange?: (id: number, checked: boolean) => void;
   selectAllCheckbox?: {
@@ -61,12 +62,26 @@ export default function EditableGrid({
   const sortedData = [...data].sort((a, b) => {
     if (!sortColumn || !sortDirection) return 0;
     
-    const aVal = a[sortColumn];
-    const bVal = b[sortColumn];
+    // Find the column configuration to check for custom sortKey
+    const column = columns.find(col => col.key === sortColumn);
+    const sortField = column?.sortKey || sortColumn;
+    
+    const aVal = a[sortField];
+    const bVal = b[sortField];
     
     if (aVal === null || aVal === undefined) return 1;
     if (bVal === null || bVal === undefined) return -1;
     
+    // For numeric values, compare numerically
+    if (typeof aVal === 'number' && typeof bVal === 'number') {
+      if (sortDirection === "asc") {
+        return aVal - bVal;
+      } else {
+        return bVal - aVal;
+      }
+    }
+    
+    // For string values, compare lexicographically
     const aStr = String(aVal).toLowerCase();
     const bStr = String(bVal).toLowerCase();
     

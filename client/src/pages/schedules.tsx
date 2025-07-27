@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, ChevronUp, ChevronDown } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
-import { getCurrentGradeString } from "@/lib/gradeUtils";
+import { getCurrentGradeString, getCurrentSortableGrade } from "@/lib/gradeUtils";
 import { useToast } from "@/hooks/use-toast";
 import type { Student, Course, Grade } from "@shared/schema";
 
@@ -233,8 +233,10 @@ export default function Schedules() {
           bValue = b.firstName || '';
           break;
         case 'currentGrade':
-          aValue = getCurrentGradeString(a.gradYear || '', settings, grades || []);
-          bValue = getCurrentGradeString(b.gradYear || '', settings, grades || []);
+          const aGrade = getCurrentSortableGrade(a.gradYear || '', settings, grades || []);
+          const bGrade = getCurrentSortableGrade(b.gradYear || '', settings, grades || []);
+          aValue = aGrade.sortOrder;
+          bValue = bGrade.sortOrder;
           break;
         case 'gradYear':
           aValue = parseInt(a.gradYear || '0') || 0;

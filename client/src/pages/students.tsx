@@ -8,7 +8,7 @@ import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddStudentDialog from "@/components/dialogs/add-student-dialog";
 import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
-import { getCurrentGradeString, getCurrentGradeCode } from "@/lib/gradeUtils";
+import { getCurrentGradeString, getCurrentGradeCode, getCurrentSortableGrade } from "@/lib/gradeUtils";
 import type { StudentWithFamily } from "@shared/schema";
 
 export default function Students() {
@@ -211,12 +211,16 @@ export default function Students() {
   };
 
   // Prepare data with computed grade and selected status
-  const studentsWithGrade = students?.map((student: StudentWithFamily) => ({
-    ...student,
-    currentGrade: getCurrentGradeString(student.gradYear, settings, grades || []),
-    familyName: student.family.lastName,
-    selected: selectedStudents.has(student.id)
-  })) || [];
+  const studentsWithGrade = students?.map((student: StudentWithFamily) => {
+    const sortableGrade = getCurrentSortableGrade(student.gradYear, settings, grades || []);
+    return {
+      ...student,
+      currentGrade: sortableGrade.display,
+      currentGradeSortOrder: sortableGrade.sortOrder,
+      familyName: student.family.lastName,
+      selected: selectedStudents.has(student.id)
+    };
+  }) || [];
 
   const handleStudentSelection = (studentId: number, selected: boolean) => {
     setSelectedStudents(prev => {
@@ -338,7 +342,7 @@ export default function Students() {
     { key: "lastName", label: "Last Name", sortable: true, editable: true, width: "40" },
     { key: "firstName", label: "First Name", sortable: true, editable: true, width: "40" },
     { key: "familyName", label: "Family", sortable: true, editable: false, width: "40" },
-    { key: "currentGrade", label: "Current Grade", sortable: true, editable: false, width: "32" },
+    { key: "currentGrade", label: "Current Grade", sortable: true, editable: false, width: "32", sortKey: "currentGradeSortOrder" },
     { key: "gradYear", label: "Grad Year", sortable: true, editable: true, type: "number", width: "28" },
     { key: "birthdate", label: "Birth Date", sortable: true, editable: true, type: "date", width: "32" },
     { key: "comment1", label: "Comments", sortable: true, editable: true, type: "text", width: "48" },
