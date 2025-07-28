@@ -140,7 +140,8 @@ export const classes = pgTable("classes", {
 export const courses = pgTable("courses", {
   id: serial("id").primaryKey(),
   courseName: varchar("course_name", { length: 255 }).notNull(),
-  classId: integer("class_id").references(() => classes.id),
+  fromGrade: integer("from_grade"),
+  toGrade: integer("to_grade"),
   offeredFall: boolean("offered_fall").default(true),
   offeredSpring: boolean("offered_spring").default(true),
   hour: integer("hour"),
@@ -182,13 +183,17 @@ export const studentsRelations = relations(students, ({ one }) => ({
 }));
 
 export const coursesRelations = relations(courses, ({ one }) => ({
-  class: one(classes, {
-    fields: [courses.classId],
-    references: [classes.id],
-  }),
   hour: one(hours, {
     fields: [courses.hour],
     references: [hours.id],
+  }),
+  fromGradeRef: one(grades, {
+    fields: [courses.fromGrade],
+    references: [grades.code],
+  }),
+  toGradeRef: one(grades, {
+    fields: [courses.toGrade],
+    references: [grades.code],
   }),
 }));
 
