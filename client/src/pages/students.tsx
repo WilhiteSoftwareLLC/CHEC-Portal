@@ -390,7 +390,7 @@ export default function Students() {
     { 
       key: "selected", 
       label: "Selected", 
-      sortable: false, 
+      sortable: true, 
       editable: false, 
       width: "20", 
       type: "checkbox",

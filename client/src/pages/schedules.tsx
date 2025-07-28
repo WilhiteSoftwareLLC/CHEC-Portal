@@ -155,31 +155,64 @@ export default function Schedules() {
 
     const printContent = studentsToPrint.map((student: StudentWithFamily) => {
       const gradeName = getCurrentGradeString(student.gradYear || '', settings, grades || []);
-      const courseCount = getCourseCount(student);
       
-      const studentCoursesList = [
-        { label: hours?.find((h: any) => h.id === 0)?.description || 'Math Hour', course: student.mathHour },
-        { label: hours?.find((h: any) => h.id === 1)?.description || '1st Hour', course: student.firstHour },
-        { label: hours?.find((h: any) => h.id === 2)?.description || '2nd Hour', course: student.secondHour },
-        { label: hours?.find((h: any) => h.id === 3)?.description || '3rd Hour', course: student.thirdHour },
-        { label: hours?.find((h: any) => h.id === 4)?.description || '4th Hour', course: student.fourthHour },
-        { label: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Fall', course: student.fifthHourFall },
-        { label: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Spring', course: student.fifthHourSpring },
+      // Create course schedule data with location information - always show all hours
+      const studentCourses = [
+        { hour: hours?.find((h: any) => h.id === 0)?.description || 'Math Hour', courseName: student.mathHour },
+        { hour: hours?.find((h: any) => h.id === 1)?.description || '1st Hour', courseName: student.firstHour },
+        { hour: hours?.find((h: any) => h.id === 2)?.description || '2nd Hour', courseName: student.secondHour },
+        { hour: hours?.find((h: any) => h.id === 3)?.description || '3rd Hour', courseName: student.thirdHour },
+        { hour: hours?.find((h: any) => h.id === 4)?.description || '4th Hour', courseName: student.fourthHour },
+        { hour: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Fall', courseName: student.fifthHourFall },
+        { hour: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Spring', courseName: student.fifthHourSpring },
       ]
-        .filter(item => item.course && item.course !== 'NO_COURSE')
-        .map(item => `${item.label}: ${item.course}`)
-        .join('\n');
+        .map(item => {
+          // Show 'No Course' if student isn't enrolled, otherwise find course for location
+          if (!item.courseName || item.courseName === 'NO_COURSE') {
+            return {
+              hour: item.hour,
+              courseName: 'No Course',
+              location: ''
+            };
+          }
+          
+          // Find the course to get location information
+          const course = (courses || []).find((c: any) => c.courseName === item.courseName);
+          return {
+            hour: item.hour,
+            courseName: item.courseName,
+            location: course?.location || ''
+          };
+        });
+
+      // Generate table rows for all hours
+      const scheduleTableRows = studentCourses.map(item => `
+        <tr>
+          <td style="padding: 8px; border: 1px solid #ccc; text-align: left;">${item.hour}</td>
+          <td style="padding: 8px; border: 1px solid #ccc; text-align: left;">${item.courseName}</td>
+          <td style="padding: 8px; border: 1px solid #ccc; text-align: left;">${item.location}</td>
+        </tr>
+      `).join('');
 
       return `
         <div style="page-break-after: always; margin-bottom: 2rem; padding: 1rem; border: 1px solid #ccc;">
           <h2>${student.lastName}, ${student.firstName}</h2>
           <p>Grade: ${gradeName}</p>
-          <p>Family: ${student.family.lastName}</p>
           <div style="margin-top: 1rem;">
             <h3>Course Schedule:</h3>
-            <pre style="white-space: pre-line; font-family: inherit;">${studentCoursesList || 'No courses scheduled'}</pre>
+            <table style="width: 100%; border-collapse: collapse; margin-top: 8px;">
+              <thead>
+                <tr style="background-color: #f5f5f5;">
+                  <th style="padding: 8px; border: 1px solid #ccc; text-align: left; font-weight: bold;">Hour</th>
+                  <th style="padding: 8px; border: 1px solid #ccc; text-align: left; font-weight: bold;">Course Name</th>
+                  <th style="padding: 8px; border: 1px solid #ccc; text-align: left; font-weight: bold;">Location</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${scheduleTableRows}
+              </tbody>
+            </table>
           </div>
-          <p style="margin-top: 1rem;">Total Courses: ${courseCount}</p>
         </div>
       `;
     }).join('');
@@ -350,7 +383,7 @@ export default function Schedules() {
     { 
       key: "selected", 
       label: "Selected", 
-      sortable: false, 
+      sortable: true, 
       editable: false, 
       width: "12", 
       type: "checkbox",
@@ -486,19 +519,17 @@ export default function Schedules() {
   };
 
   const handleSelectionFilter = (columnKey: string, filterValue: any, filterType: 'equals' | 'contains' | 'range') => {
-    const sortedStudents = getSortedStudents();
     const matchingStudentIds = new Set<number>();
     
-    sortedStudents.forEach((student: StudentWithFamily) => {
+    studentsWithComputedData.forEach((student: any) => {
       let cellValue: any;
       
-      // Handle special cases for computed values
-      switch (columnKey) {
-        case 'currentGrade':
-          cellValue = getCurrentGradeString(student.gradYear, settings, grades || []);
-          break;
-        default:
-          cellValue = (student as any)[columnKey];
+      // Handle special cases for computed values - use sortKey for currentGrade
+      if (columnKey === 'currentGrade') {
+        // Use the numeric sortKey for filtering instead of display string
+        cellValue = student.currentGradeSortOrder;
+      } else {
+        cellValue = student[columnKey];
       }
       
       let matches = false;
