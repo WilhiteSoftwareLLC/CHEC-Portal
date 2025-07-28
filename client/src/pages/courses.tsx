@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { PrinterCheck } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { PrinterCheck, Users } from "lucide-react";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddCourseDialog from "@/components/dialogs/add-course-dialog";
 import PageHeader from "@/components/layout/page-header";
@@ -13,6 +15,8 @@ import type { Course } from "@shared/schema";
 export default function Courses() {
   const { toast } = useToast();
   const { addCourseOpen, setAddCourseOpen } = useDialogs();
+  const [rosterDialogOpen, setRosterDialogOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
 
   const { data: courses, isLoading } = useQuery({
     queryKey: ["/api/courses"],
@@ -128,7 +132,10 @@ export default function Courses() {
   };
 
   const handleDeleteCourse = async (courseId: number) => {
-    if (confirm("Are you sure you want to delete this course?")) {
+    const course = courses?.find((c: any) => c.id === courseId);
+    const courseName = course?.courseName || "this course";
+    
+    if (confirm(`Are you sure you want to delete "${courseName}"? This action cannot be undone.`)) {
       await deleteCourseMutation.mutateAsync(courseId);
     }
   };
@@ -255,6 +262,45 @@ export default function Courses() {
     return phone; // Return original if not 10 digits
   };
 
+  const getEnrolledStudents = (courseName: string) => {
+    if (!students) return [];
+    
+    // Get students enrolled in this course, excluding inactive students
+    const enrolledStudents = (students || []).filter((student: any) => {
+      // Skip inactive students
+      if (student.inactive) return false;
+      
+      return student.mathHour === courseName ||
+             student.firstHour === courseName ||
+             student.secondHour === courseName ||
+             student.thirdHour === courseName ||
+             student.fourthHour === courseName ||
+             student.fifthHourFall === courseName ||
+             student.fifthHourSpring === courseName;
+    });
+
+    // Sort students by grade (inverse grad year), then by last name, then by first name
+    return enrolledStudents.sort((a: any, b: any) => {
+      // First sort by grade (inverse grad year - higher grad year = younger student = lower grade)
+      const gradYearA = parseInt(a.gradYear) || 0;
+      const gradYearB = parseInt(b.gradYear) || 0;
+      const gradeCompare = gradYearB - gradYearA; // Higher grad year first (younger students)
+      if (gradeCompare !== 0) return gradeCompare;
+      
+      // Then sort by last name
+      const lastNameCompare = a.lastName.localeCompare(b.lastName);
+      if (lastNameCompare !== 0) return lastNameCompare;
+      
+      // Finally sort by first name
+      return a.firstName.localeCompare(b.firstName);
+    });
+  };
+
+  const handleViewRoster = (course: Course) => {
+    setSelectedCourse(course);
+    setRosterDialogOpen(true);
+  };
+
   const generateSingleRosterHTML = (course: any, addPageBreak: boolean = false) => {
     // Get students enrolled in this course, excluding inactive students
     const enrolledStudents = (students || []).filter((student: any) => {
@@ -365,12 +411,62 @@ export default function Courses() {
           onRowUpdate={handleUpdateCourse}
           onRowDelete={handleDeleteCourse}
           isLoading={isLoading}
+          customRowAction={{
+            label: "View Roster",
+            icon: Users,
+            onClick: handleViewRoster
+          }}
         />
 
         <AddCourseDialog 
           open={addCourseOpen} 
           onOpenChange={setAddCourseOpen} 
         />
+
+        {/* Course Roster Dialog */}
+        <Dialog open={rosterDialogOpen} onOpenChange={setRosterDialogOpen}>
+          <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Course Roster - {selectedCourse?.courseName}
+              </DialogTitle>
+            </DialogHeader>
+            {selectedCourse && (() => {
+              const enrolledStudents = getEnrolledStudents(selectedCourse.courseName);
+              const rosterColumns: GridColumn[] = [
+                { key: "lastName", label: "Last Name", sortable: true, editable: false, width: "40" },
+                { key: "firstName", label: "First Name", sortable: true, editable: false, width: "40" },
+                { key: "currentGrade", label: "Grade", sortable: true, editable: false, width: "24" },
+              ];
+
+              const rosterData = enrolledStudents.map((student: any) => ({
+                ...student,
+                currentGrade: getCurrentGradeString(student.gradYear, settings, grades || [])
+              }));
+
+              return (
+                <div className="space-y-4">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    Total Students: {enrolledStudents.length}
+                  </div>
+                  
+                  {enrolledStudents.length > 0 ? (
+                    <EditableGrid
+                      data={rosterData}
+                      columns={rosterColumns}
+                      onRowUpdate={async () => {}} // No-op since this is read-only
+                      isLoading={false}
+                    />
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      No students enrolled in this course
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
