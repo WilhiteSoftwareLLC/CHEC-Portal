@@ -248,6 +248,66 @@ export default function Students() {
   const isAllSelected = studentsWithGrade.length > 0 && selectedStudents.size === studentsWithGrade.length;
   const isIndeterminate = selectedStudents.size > 0 && selectedStudents.size < studentsWithGrade.length;
 
+  const handleSelectionFilter = (columnKey: string, filterValue: any, filterType: 'equals' | 'contains' | 'range') => {
+    if (!studentsWithGrade) return;
+    
+    const matchingStudentIds = new Set<number>();
+    
+    studentsWithGrade.forEach((student: any) => {
+      const cellValue = student[columnKey];
+      let matches = false;
+      
+      // New range-based filtering logic
+      if (filterType === 'range' && filterValue && typeof filterValue === 'object') {
+        const { from, to } = filterValue;
+        
+        if (typeof cellValue === 'number') {
+          // Numeric comparison
+          const fromNum = from ? Number(from) : null;
+          const toNum = to ? Number(to) : null;
+          
+          if (fromNum !== null && toNum !== null) {
+            // Both from and to provided - range filter
+            matches = cellValue >= fromNum && cellValue <= toNum;
+          } else if (fromNum !== null) {
+            // Only from provided - greater than or equal
+            matches = cellValue >= fromNum;
+          } else if (toNum !== null) {
+            // Only to provided - less than or equal
+            matches = cellValue <= toNum;
+          }
+        } else {
+          // String comparison (lexicographic)
+          const cellStr = String(cellValue || '').toLowerCase();
+          const fromStr = from ? String(from).toLowerCase() : null;
+          const toStr = to ? String(to).toLowerCase() : null;
+          
+          if (fromStr !== null && toStr !== null) {
+            // Both from and to provided - range filter
+            matches = cellStr >= fromStr && cellStr <= toStr;
+          } else if (fromStr !== null) {
+            // Only from provided - greater than or equal
+            matches = cellStr >= fromStr;
+          } else if (toStr !== null) {
+            // Only to provided - less than or equal
+            matches = cellStr <= toStr;
+          }
+        }
+      }
+      
+      if (matches) {
+        matchingStudentIds.add(student.id);
+      }
+    });
+    
+    setSelectedStudents(matchingStudentIds);
+    
+    toast({
+      title: "Filter Applied",
+      description: `Selected ${matchingStudentIds.size} students matching the filter criteria.`,
+    });
+  };
+
   const handleExportSelected = () => {
     if (selectedStudents.size === 0) {
       toast({
@@ -272,6 +332,7 @@ export default function Students() {
       "Current Grade",
       "Grad Year",
       "Birth Date",
+      "Registered Date",
       "Comments",
       "Inactive",
       (hours || []).find((h: any) => h.id === 0)?.description || "Math Hour",
@@ -293,6 +354,7 @@ export default function Students() {
         `"${student.currentGrade || ""}"`,
         student.gradYear || "",
         student.birthdate ? new Date(student.birthdate).toLocaleDateString() : "",
+        student.registeredOn ? new Date(student.registeredOn).toLocaleDateString() : "",
         `"${student.comment1 || ""}"`,
         student.inactive ? "true" : "false",
         `"${student.mathHour || ""}"`,
@@ -345,71 +407,9 @@ export default function Students() {
     { key: "currentGrade", label: "Current Grade", sortable: true, editable: false, width: "32", sortKey: "currentGradeSortOrder" },
     { key: "gradYear", label: "Grad Year", sortable: true, editable: true, type: "number", width: "28" },
     { key: "birthdate", label: "Birth Date", sortable: true, editable: true, type: "date", width: "32" },
+    { key: "registeredOn", label: "Registered Date", sortable: true, editable: true, type: "date", width: "32" },
     { key: "comment1", label: "Comments", sortable: true, editable: true, type: "text", width: "48" },
     { key: "inactive", label: "Inactive", sortable: true, editable: true, type: "checkbox", width: "24" },
-    { 
-      key: "mathHour", 
-      label: (hours || []).find((h: any) => h.id === 0)?.description || "Math Hour", 
-      sortable: true, 
-      editable: false, 
-      width: "40", 
-      type: "dropdown", 
-      options: (row: any) => createCourseOptions(0, row.gradYear)
-    },
-    { 
-      key: "firstHour", 
-      label: (hours || []).find((h: any) => h.id === 1)?.description || "1st Hour", 
-      sortable: true, 
-      editable: false, 
-      width: "40", 
-      type: "dropdown", 
-      options: (row: any) => createCourseOptions(1, row.gradYear)
-    },
-    { 
-      key: "secondHour", 
-      label: (hours || []).find((h: any) => h.id === 2)?.description || "2nd Hour", 
-      sortable: true, 
-      editable: false, 
-      width: "40", 
-      type: "dropdown", 
-      options: (row: any) => createCourseOptions(2, row.gradYear)
-    },
-    { 
-      key: "thirdHour", 
-      label: (hours || []).find((h: any) => h.id === 3)?.description || "3rd Hour", 
-      sortable: true, 
-      editable: false, 
-      width: "40", 
-      type: "dropdown", 
-      options: (row: any) => createCourseOptions(3, row.gradYear)
-    },
-    { 
-      key: "fourthHour", 
-      label: (hours || []).find((h: any) => h.id === 4)?.description || "4th Hour", 
-      sortable: true, 
-      editable: false, 
-      width: "40", 
-      type: "dropdown", 
-      options: (row: any) => createCourseOptions(4, row.gradYear)
-    },
-    { 
-      key: "fifthHourFall", 
-      label: ((hours || []).find((h: any) => h.id === 5)?.description || "5th Hour") + " (Fall)", 
-      sortable: true, 
-      editable: false, 
-      width: "48", 
-      type: "dropdown", 
-      options: (row: any) => createCourseOptions(5, row.gradYear, 'fall')
-    },
-    { 
-      key: "fifthHourSpring", 
-      label: ((hours || []).find((h: any) => h.id === 5)?.description || "5th Hour") + " (Spring)", 
-      sortable: true, 
-      editable: false, 
-      width: "48", 
-      type: "dropdown", 
-      options: (row: any) => createCourseOptions(5, row.gradYear, 'spring')
-    },
   ];
 
   return (
@@ -436,6 +436,7 @@ export default function Students() {
           onRowUpdate={handleUpdateStudent}
           onRowDelete={handleDeleteStudent}
           isLoading={studentsLoading}
+          onSelectionFilter={handleSelectionFilter}
         />
 
         <AddStudentDialog 

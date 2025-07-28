@@ -266,6 +266,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
+      // Convert registeredOn string to Date object if provided, treating as local date
+      if (studentData.registeredOn && typeof studentData.registeredOn === 'string') {
+        // Parse as local date to avoid timezone issues
+        const dateParts = studentData.registeredOn.split('-');
+        if (dateParts.length === 3) {
+          // Create date at noon to avoid timezone shifting issues
+          studentData.registeredOn = new Date(parseInt(dateParts[0]), parseInt(dateParts[1]) - 1, parseInt(dateParts[2]), 12, 0, 0);
+        } else {
+          studentData.registeredOn = new Date(studentData.registeredOn);
+        }
+      }
+      
       const validatedData = insertStudentSchema.partial().parse(studentData);
       const student = await storage.updateStudent(id, validatedData);
       res.json(student);
@@ -309,18 +321,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/students/:id/schedule", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
-      const { mathHour, firstHour, secondHour, thirdHour, fourthHour, fifthHourFall, fifthHourSpring } = req.body;
       
-      const updateData = {
-        mathHour: mathHour || null,
-        firstHour: firstHour || null,
-        secondHour: secondHour || null,
-        thirdHour: thirdHour || null,
-        fourthHour: fourthHour || null,
-        fifthHourFall: fifthHourFall || null,
-        fifthHourSpring: fifthHourSpring || null,
-        registeredOn: new Date(),
-      };
+      // Get current student data to check if this is their first registration
+      const currentStudent = await storage.getStudent(id);
+      if (!currentStudent) {
+        return res.status(404).json({ message: "Student not found" });
+      }
+      
+      // Only update the fields that are actually provided in the request
+      const updateData: any = {};
+      
+      // Only include schedule fields that are explicitly provided
+      const scheduleFields = ['mathHour', 'firstHour', 'secondHour', 'thirdHour', 'fourthHour', 'fifthHourFall', 'fifthHourSpring'];
+      
+      for (const field of scheduleFields) {
+        if (req.body.hasOwnProperty(field)) {
+          updateData[field] = req.body[field] || null;
+        }
+      }
+      
+      // Only set registeredOn if this is the first time they're registering for any course
+      // (i.e., they currently have no courses and are now adding at least one)
+      const currentHasCourses = currentStudent.mathHour || currentStudent.firstHour || 
+                               currentStudent.secondHour || currentStudent.thirdHour || 
+                               currentStudent.fourthHour || currentStudent.fifthHourFall || 
+                               currentStudent.fifthHourSpring;
+      
+      const willHaveCourses = Object.values(updateData).some(course => course !== null) || currentHasCourses;
+      
+      if (!currentStudent.registeredOn && !currentHasCourses && willHaveCourses) {
+        updateData.registeredOn = new Date();
+      }
 
       const student = await storage.updateStudent(id, updateData);
       res.json(student);
@@ -904,7 +935,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             fee: parseCurrency(courseRow.Fee),
             bookRental: parseCurrency(courseRow.BookRental),
             location: courseRow.Location || courseRow.location || null,
-            classId: null, // Will be assigned later based on course assignments
+            fromGrade: null, // Will be assigned later based on course assignments
+            toGrade: null, // Will be assigned later based on course assignments
           };
 
           // Validate using the schema before creating
