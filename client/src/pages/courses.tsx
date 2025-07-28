@@ -335,6 +335,9 @@ export default function Courses() {
     { key: "fromGrade", label: "From Grade", sortable: true, editable: true, width: "32", type: "dropdown", options: gradeOptions },
     { key: "toGrade", label: "To Grade", sortable: true, editable: true, width: "32", type: "dropdown", options: gradeOptions },
     { key: "hour", label: "Hour", sortable: true, editable: true, width: "24", type: "dropdown", options: hourOptions },
+    { key: "location", label: "Location", sortable: true, editable: true, width: "32", type: "text" },
+    { key: "fee", label: "Course Fee", sortable: true, editable: true, width: "28", type: "text" },
+    { key: "bookRental", label: "Book Rental Fee", sortable: true, editable: true, width: "32", type: "text" },
     { key: "offeredFall", label: "Fall", sortable: true, editable: true, width: "16", type: "checkbox" },
     { key: "offeredSpring", label: "Spring", sortable: true, editable: true, width: "16", type: "checkbox" },
   ];
