@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: any = {};
       
       // Only include schedule fields that are explicitly provided
-      const scheduleFields = ['mathHour', 'firstHour', 'secondHour', 'thirdHour', 'fourthHour', 'fifthHourFall', 'fifthHourSpring'];
+      const scheduleFields = ['mathHour', 'firstHour', 'secondHour', 'thirdHour', 'thirdHour2', 'fourthHour', 'fifthHourFall', 'fifthHourSpring', 'fifthHour2'];
       
       for (const field of scheduleFields) {
         if (req.body.hasOwnProperty(field)) {

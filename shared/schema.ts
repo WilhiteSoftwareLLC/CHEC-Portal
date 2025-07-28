@@ -163,9 +163,11 @@ export const students = pgTable("students", {
   firstHour: varchar("first_hour", { length: 255 }),
   secondHour: varchar("second_hour", { length: 255 }),
   thirdHour: varchar("third_hour", { length: 255 }),
+  thirdHour2: varchar("third_hour_2", { length: 255 }),
   fourthHour: varchar("fourth_hour", { length: 255 }),
   fifthHourFall: varchar("fifth_hour_fall", { length: 255 }),
   fifthHourSpring: varchar("fifth_hour_spring", { length: 255 }),
+  fifthHour2: varchar("fifth_hour_2", { length: 255 }),
   inactive: boolean("inactive").default(false),
   registeredOn: timestamp("registered_on"),
 });

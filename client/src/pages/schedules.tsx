@@ -124,9 +124,11 @@ export default function Schedules() {
       firstHour: student.firstHour || null,
       secondHour: student.secondHour || null,
       thirdHour: student.thirdHour || null,
+      thirdHour2: (student as any).thirdHour2 || null,
       fourthHour: student.fourthHour || null,
       fifthHourFall: student.fifthHourFall || null,
       fifthHourSpring: student.fifthHourSpring || null,
+      fifthHour2: (student as any).fifthHour2 || null,
     });
     setScheduleDialogOpen(true);
   };
@@ -301,6 +303,11 @@ export default function Schedules() {
     { field: 'fourthHour', label: hours?.find((h: any) => h.id === 4)?.description || '4th Hour', hourIndex: 4 },
     { field: 'fifthHourFall', label: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Fall', hourIndex: 5 },
     { field: 'fifthHourSpring', label: (hours?.find((h: any) => h.id === 5)?.description || '5th Hour') + ' Spring', hourIndex: 5 },
+  ];
+
+  const alternateHourFields = [
+    { field: 'thirdHour2', label: '3rd - Alternate', hourIndex: 3 },
+    { field: 'fifthHour2', label: '5th - Alternate', hourIndex: 5 },
   ];
 
   // Selection handlers
@@ -596,6 +603,37 @@ export default function Schedules() {
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="NO_COURSE">No Course</SelectItem>
+                          {getAvailableCoursesForHour(hourIndex).map((course: Course) => (
+                            <SelectItem key={course.id} value={course.courseName}>
+                              {course.courseName}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Horizontal rule separator */}
+                <hr className="border-gray-300 dark:border-gray-600" />
+
+                {/* Alternate hour fields for clerical use */}
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-600 dark:text-gray-400 font-medium">
+                    Alternate Choices (for clerical use)
+                  </div>
+                  {alternateHourFields.map(({ field, label, hourIndex }) => (
+                    <div key={field} className="grid grid-cols-2 gap-4 items-center">
+                      <Label className="text-sm font-medium">{label}</Label>
+                      <Select
+                        value={studentCourses[field] || 'NO_COURSE'}
+                        onValueChange={(value) => updateCourse(field, value === 'NO_COURSE' ? null : value)}
+                      >
+                        <SelectTrigger className="w-full max-w-[300px]">
+                          <SelectValue placeholder="Select alternate course" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="NO_COURSE">No Alternate</SelectItem>
                           {getAvailableCoursesForHour(hourIndex).map((course: Course) => (
                             <SelectItem key={course.id} value={course.courseName}>
                               {course.courseName}

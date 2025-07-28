@@ -19,6 +19,13 @@ CHEC Portal is a full-stack TypeScript application for managing homeschool coope
 - `npm run db:push` - Apply schema changes to database
 - Check `drizzle.config.ts` for database configuration
 
+#### Database Backup Before Migrations
+Always create a backup before running database migrations:
+```bash
+PGPASSWORD=<password> pg_dump -h localhost -p 5432 -U <username> <database> > db/backups/backup_$(date +%Y%m%d_%H%M%S)_before_migration_name.sql
+```
+Database credentials (username, password, database name) are found in `.env` file under `DATABASE_URL`.
+
 ## Architecture Overview
 
 ### Technology Stack
