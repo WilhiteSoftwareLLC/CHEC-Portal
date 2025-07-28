@@ -1,5 +1,5 @@
-import { useState, useCallback, useRef } from "react";
-import { ChevronUp, ChevronDown, Edit, Save, X } from "lucide-react";
+import React, { useState, useCallback, useRef } from "react";
+import { ChevronUp, ChevronDown, Edit, Save, X, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,6 +21,7 @@ export interface GridColumn {
     indeterminate: boolean;
     onChange: (checked: boolean) => void;
   };
+  filterable?: boolean; // Whether this column supports filtering
 }
 
 export interface EditableGridProps {
@@ -30,6 +31,12 @@ export interface EditableGridProps {
   onRowDelete?: (id: number) => Promise<void>;
   isLoading?: boolean;
   className?: string;
+  onSelectionFilter?: (columnKey: string, filterValue: any, filterType: 'equals' | 'contains' | 'range') => void;
+  customRowAction?: {
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    onClick: (row: any) => void;
+  };
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -40,12 +47,16 @@ export default function EditableGrid({
   onRowUpdate,
   onRowDelete,
   isLoading = false,
-  className
+  className,
+  onSelectionFilter,
+  customRowAction
 }: EditableGridProps) {
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
   const [editingCell, setEditingCell] = useState<{ rowId: number; columnKey: string } | null>(null);
   const [editValue, setEditValue] = useState<string>("");
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; columnKey: string } | null>(null);
+  const [filterDialog, setFilterDialog] = useState<{ columnKey: string; column: GridColumn } | null>(null);
 
   const handleSort = useCallback((columnKey: string) => {
     if (sortColumn === columnKey) {
@@ -129,6 +140,116 @@ export default function EditableGrid({
       <ChevronDown className="h-4 w-4" />;
   };
 
+  const handleContextMenu = (e: React.MouseEvent, columnKey: string) => {
+    e.preventDefault();
+    const column = columns.find(col => col.key === columnKey);
+    if (column?.filterable !== false && onSelectionFilter) {
+      setContextMenu({
+        x: e.clientX,
+        y: e.clientY,
+        columnKey
+      });
+    }
+  };
+
+  const handleFilterClick = (columnKey: string) => {
+    const column = columns.find(col => col.key === columnKey);
+    if (column) {
+      setFilterDialog({ columnKey, column });
+      setContextMenu(null);
+    }
+  };
+
+  const FilterDialog = () => {
+    const [filterFrom, setFilterFrom] = useState<string>("");
+    const [filterTo, setFilterTo] = useState<string>("");
+    
+    if (!filterDialog) return null;
+    
+    const { columnKey, column } = filterDialog;
+    
+    const handleApplyFilter = () => {
+      if (onSelectionFilter && (filterFrom.trim() || filterTo.trim())) {
+        onSelectionFilter(columnKey, { from: filterFrom.trim() || null, to: filterTo.trim() || null }, 'range');
+      }
+      setFilterDialog(null);
+      setFilterFrom("");
+      setFilterTo("");
+    };
+    
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg min-w-[350px]">
+          <h3 className="text-lg font-semibold mb-4">Filter by {column.label}</h3>
+          
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium mb-2">Filter From</label>
+              <Input
+                type={column.type === 'number' ? 'number' : 'text'}
+                value={filterFrom}
+                onChange={(e) => setFilterFrom(e.target.value)}
+                placeholder={`Enter minimum ${column.label.toLowerCase()}...`}
+                onKeyDown={(e) => e.key === 'Enter' && handleApplyFilter()}
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium mb-2">Filter To</label>
+              <Input
+                type={column.type === 'number' ? 'number' : 'text'}
+                value={filterTo}
+                onChange={(e) => setFilterTo(e.target.value)}
+                placeholder={`Enter maximum ${column.label.toLowerCase()}...`}
+                onKeyDown={(e) => e.key === 'Enter' && handleApplyFilter()}
+              />
+            </div>
+          </div>
+          
+          <div className="flex justify-end gap-2 mt-6">
+            <Button variant="outline" onClick={() => setFilterDialog(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleApplyFilter} disabled={!filterFrom.trim() && !filterTo.trim()}>
+              Apply Filter
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+  
+  const ContextMenu = () => {
+    if (!contextMenu) return null;
+    
+    return (
+      <div 
+        className="fixed bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-600 rounded-md shadow-lg z-50 py-1"
+        style={{ left: contextMenu.x, top: contextMenu.y }}
+      >
+        <button
+          className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-gray-100 dark:hover:bg-gray-700 w-full text-left"
+          onClick={() => handleFilterClick(contextMenu.columnKey)}
+        >
+          <Filter className="h-4 w-4" />
+          Filter selections by this column
+        </button>
+      </div>
+    );
+  };
+
+  // Close context menu when clicking outside
+  React.useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      setContextMenu(null);
+    };
+    
+    if (contextMenu) {
+      document.addEventListener('click', handleDocumentClick);
+      return () => document.removeEventListener('click', handleDocumentClick);
+    }
+  }, [contextMenu]);
+
   return (
     <div className={cn("border rounded-lg", className)}>
       <div className="overflow-auto max-h-[calc(100vh-200px)]">
@@ -144,6 +265,7 @@ export default function EditableGrid({
                     column.width && `w-${column.width}`
                   )}
                   onClick={() => column.sortable && handleSort(column.key)}
+                  onContextMenu={(e) => handleContextMenu(e, column.key)}
                 >
                   <div className="flex items-center space-x-1">
                     <span>{column.label}</span>
@@ -163,7 +285,7 @@ export default function EditableGrid({
                   </div>
                 </th>
               ))}
-              {onRowDelete && (
+              {(onRowDelete || customRowAction) && (
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20 whitespace-nowrap border-b">
                   Actions
                 </th>
@@ -173,13 +295,13 @@ export default function EditableGrid({
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
             {isLoading ? (
               <tr>
-                <td colSpan={columns.length + (onRowDelete ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={columns.length + ((onRowDelete || customRowAction) ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
                   Loading...
                 </td>
               </tr>
             ) : sortedData.length === 0 ? (
               <tr>
-                <td colSpan={columns.length + (onRowDelete ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
+                <td colSpan={columns.length + ((onRowDelete || customRowAction) ? 1 : 0)} className="px-4 py-8 text-center text-gray-500">
                   No data available
                 </td>
               </tr>
@@ -334,16 +456,31 @@ export default function EditableGrid({
                       </td>
                     );
                   })}
-                  {onRowDelete && (
+                  {(onRowDelete || customRowAction) && (
                     <td className="px-4 py-3 whitespace-nowrap w-20">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => onRowDelete(row.id)}
-                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
+                      <div className="flex gap-1">
+                        {customRowAction && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => customRowAction.onClick(row)}
+                            className="h-8 w-8 p-0"
+                            title={customRowAction.label}
+                          >
+                            <customRowAction.icon className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {onRowDelete && (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => onRowDelete(row.id)}
+                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                          >
+                            <X className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
                     </td>
                   )}
                 </tr>
@@ -352,6 +489,8 @@ export default function EditableGrid({
           </tbody>
         </table>
       </div>
+      <ContextMenu />
+      <FilterDialog />
     </div>
   );
 }
