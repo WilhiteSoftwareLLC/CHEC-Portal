@@ -28,10 +28,10 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
-  const { data: classes } = useQuery({
-    queryKey: ["/api/classes"],
+  const { data: grades } = useQuery({
+    queryKey: ["/api/grades"],
     queryFn: async () => {
-      const response = await fetch("/api/classes", { credentials: "include" });
+      const response = await fetch("/api/grades", { credentials: "include" });
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
       return response.json();
     },
@@ -95,7 +95,8 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
     resolver: zodResolver(insertCourseSchema),
     defaultValues: {
       courseName: course?.courseName || "",
-      classId: course?.classId || null,
+      fromGrade: course?.fromGrade || null,
+      toGrade: course?.toGrade || null,
       offeredFall: course?.offeredFall ?? true,
       offeredSpring: course?.offeredSpring ?? true,
       hour: course?.hour || 0,
@@ -138,24 +139,53 @@ export default function CourseForm({ course, onSubmit, onCancel }: CourseFormPro
 
           <FormField
             control={form.control}
-            name="classId"
+            name="fromGrade"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Class</FormLabel>
+                <FormLabel>From Grade</FormLabel>
                 <Select 
                   onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))} 
                   value={field.value?.toString() || "null"}
                 >
                   <FormControl>
                     <SelectTrigger>
-                      <SelectValue placeholder="Select a class" />
+                      <SelectValue placeholder="Select starting grade" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="null">No Class</SelectItem>
-                    {(classes || []).map((cls: any) => (
-                      <SelectItem key={cls.id} value={cls.id.toString()}>
-                        {cls.className}
+                    <SelectItem value="null">No Minimum Grade</SelectItem>
+                    {(grades || []).map((grade: any) => (
+                      <SelectItem key={grade.code} value={grade.code.toString()}>
+                        {grade.gradeName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="toGrade"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>To Grade</FormLabel>
+                <Select 
+                  onValueChange={(value) => field.onChange(value === "null" ? null : parseInt(value))} 
+                  value={field.value?.toString() || "null"}
+                >
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select ending grade" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    <SelectItem value="null">No Maximum Grade</SelectItem>
+                    {(grades || []).map((grade: any) => (
+                      <SelectItem key={grade.code} value={grade.code.toString()}>
+                        {grade.gradeName}
                       </SelectItem>
                     ))}
                   </SelectContent>
