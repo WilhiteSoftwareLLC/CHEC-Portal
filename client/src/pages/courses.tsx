@@ -301,6 +301,23 @@ export default function Courses() {
     setRosterDialogOpen(true);
   };
 
+  const getEnrollmentCount = (courseName: string) => {
+    if (!students) return 0;
+    
+    return students.filter((student: any) => {
+      // Skip inactive students
+      if (student.inactive) return false;
+      
+      return student.mathHour === courseName ||
+             student.firstHour === courseName ||
+             student.secondHour === courseName ||
+             student.thirdHour === courseName ||
+             student.fourthHour === courseName ||
+             student.fifthHourFall === courseName ||
+             student.fifthHourSpring === courseName;
+    }).length;
+  };
+
   const generateSingleRosterHTML = (course: any, addPageBreak: boolean = false) => {
     // Get students enrolled in this course, excluding inactive students
     const enrolledStudents = (students || []).filter((student: any) => {
@@ -376,6 +393,12 @@ export default function Courses() {
     `;
   };
 
+  // Prepare courses data with enrollment counts
+  const coursesWithEnrollment = (courses || []).map((course: any) => ({
+    ...course,
+    enrollmentCount: getEnrollmentCount(course.courseName)
+  }));
+
   const columns: GridColumn[] = [
     { key: "courseName", label: "Course Name", sortable: true, editable: true, width: "48" },
     { key: "fromGrade", label: "From Grade", sortable: true, editable: true, width: "32", type: "dropdown", options: gradeOptions },
@@ -384,6 +407,7 @@ export default function Courses() {
     { key: "location", label: "Location", sortable: true, editable: true, width: "32", type: "text" },
     { key: "fee", label: "Course Fee", sortable: true, editable: true, width: "28", type: "text" },
     { key: "bookRental", label: "Book Rental Fee", sortable: true, editable: true, width: "32", type: "text" },
+    { key: "enrollmentCount", label: "# Enrolled", sortable: true, editable: false, width: "24", type: "number" },
     { key: "offeredFall", label: "Fall", sortable: true, editable: true, width: "16", type: "checkbox" },
     { key: "offeredSpring", label: "Spring", sortable: true, editable: true, width: "16", type: "checkbox" },
   ];
@@ -406,7 +430,7 @@ export default function Courses() {
       />
       <div className="flex-1 p-6 overflow-hidden">
         <EditableGrid
-          data={courses || []}
+          data={coursesWithEnrollment}
           columns={columns}
           onRowUpdate={handleUpdateCourse}
           onRowDelete={handleDeleteCourse}
