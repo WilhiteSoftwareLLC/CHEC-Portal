@@ -17,6 +17,7 @@ export default function Courses() {
   const { addCourseOpen, setAddCourseOpen } = useDialogs();
   const [rosterDialogOpen, setRosterDialogOpen] = useState(false);
   const [selectedCourse, setSelectedCourse] = useState<Course | null>(null);
+  const [selectedCourses, setSelectedCourses] = useState<Set<number>>(new Set());
 
   const { data: courses, isLoading } = useQuery({
     queryKey: ["/api/courses"],
@@ -155,11 +156,42 @@ export default function Courses() {
     }))
   ];
 
+  const handleCourseSelection = (courseId: number, selected: boolean) => {
+    setSelectedCourses(prev => {
+      const newSet = new Set(prev);
+      if (selected) {
+        newSet.add(courseId);
+      } else {
+        newSet.delete(courseId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSelectAll = (selected: boolean) => {
+    if (selected) {
+      // Select all courses
+      const allCourseIds = new Set<number>((courses || []).map((course: any) => course.id));
+      setSelectedCourses(allCourseIds);
+    } else {
+      // Deselect all courses
+      setSelectedCourses(new Set());
+    }
+  };
+
+  const isAllSelected = (courses || []).length > 0 && selectedCourses.size === (courses || []).length;
+  const isIndeterminate = selectedCourses.size > 0 && selectedCourses.size < (courses || []).length;
+
   const handlePrintCourseRosters = () => {
     if (!courses || !students) return;
     
-    // Generate roster HTML for all courses
-    const rosterHTML = generateAllRostersHTML();
+    // Determine which courses to print based on selection
+    const coursesToPrint = selectedCourses.size > 0 
+      ? courses.filter((course: any) => selectedCourses.has(course.id))
+      : courses;
+    
+    // Generate roster HTML for selected courses
+    const rosterHTML = generateRostersHTML(coursesToPrint);
     
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
@@ -171,8 +203,8 @@ export default function Courses() {
     printWindow.print();
   };
 
-  const generateAllRostersHTML = () => {
-    const sortedCourses = [...(courses || [])].sort((a, b) => 
+  const generateRostersHTML = (coursesToGenerate: any[]) => {
+    const sortedCourses = [...coursesToGenerate].sort((a, b) => 
       a.courseName.localeCompare(b.courseName)
     );
     
@@ -249,6 +281,10 @@ export default function Courses() {
         </body>
       </html>
     `;
+  };
+
+  const generateAllRostersHTML = () => {
+    return generateRostersHTML(courses || []);
   };
 
   const formatPhoneNumber = (phone: string) => {
@@ -393,13 +429,28 @@ export default function Courses() {
     `;
   };
 
-  // Prepare courses data with enrollment counts
+  // Prepare courses data with enrollment counts and selected status
   const coursesWithEnrollment = (courses || []).map((course: any) => ({
     ...course,
-    enrollmentCount: getEnrollmentCount(course.courseName)
+    enrollmentCount: getEnrollmentCount(course.courseName),
+    selected: selectedCourses.has(course.id)
   }));
 
   const columns: GridColumn[] = [
+    { 
+      key: "selected", 
+      label: "Selected", 
+      sortable: true, 
+      editable: false, 
+      width: "20", 
+      type: "checkbox",
+      onCheckboxChange: handleCourseSelection,
+      selectAllCheckbox: {
+        checked: isAllSelected,
+        indeterminate: isIndeterminate,
+        onChange: handleSelectAll
+      }
+    },
     { key: "courseName", label: "Course Name", sortable: true, editable: true, width: "48" },
     { key: "fromGrade", label: "From Grade", sortable: true, editable: true, width: "32", type: "dropdown", options: gradeOptions },
     { key: "toGrade", label: "To Grade", sortable: true, editable: true, width: "32", type: "dropdown", options: gradeOptions },
@@ -422,7 +473,9 @@ export default function Courses() {
           onClick: () => setAddCourseOpen(true)
         }}
         secondaryButton={{
-          label: "Print Course Rosters",
+          label: selectedCourses.size > 0 
+            ? `Print (${selectedCourses.size}) Course Rosters`
+            : "Print All Course Rosters",
           onClick: handlePrintCourseRosters,
           variant: "outline",
           icon: PrinterCheck
