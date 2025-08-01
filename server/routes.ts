@@ -332,7 +332,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const updateData: any = {};
       
       // Only include schedule fields that are explicitly provided
-      const scheduleFields = ['mathHour', 'firstHour', 'secondHour', 'thirdHour', 'thirdHour2', 'fourthHour', 'fifthHourFall', 'fifthHourSpring', 'fifthHour2'];
+      const scheduleFields = ['scheduleNotes', 'mathHour', 'firstHour', 'secondHour', 'thirdHour', 'thirdHour2', 'fourthHour', 'fifthHourFall', 'fifthHourSpring', 'fifthHour2'];
       
       for (const field of scheduleFields) {
         if (req.body.hasOwnProperty(field)) {
@@ -1213,6 +1213,109 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error resetting course selections:", error);
       res.status(500).json({ message: "Failed to reset course selections" });
+    }
+  });
+
+  // Backup database
+  app.post("/api/backup", requireAdmin, async (req, res) => {
+    try {
+      const { spawn } = await import('child_process');
+      const path = await import('path');
+      const fs = await import('fs').then(m => m.promises);
+      
+      // Parse DATABASE_URL to get connection details
+      const databaseUrl = process.env.DATABASE_URL;
+      if (!databaseUrl) {
+        return res.status(500).json({ message: "DATABASE_URL not configured" });
+      }
+
+      const url = new URL(databaseUrl);
+      const hostname = url.hostname;
+      const port = url.port || '5432';
+      const username = url.username;
+      const password = url.password;
+      const database = url.pathname.slice(1); // Remove leading slash
+
+      // Create backups directory if it doesn't exist
+      const backupsDir = path.join(process.cwd(), 'db', 'backups');
+      try {
+        await fs.mkdir(backupsDir, { recursive: true });
+      } catch (error) {
+        // Directory might already exist, that's fine
+      }
+
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').split('T')[0] + '_' + 
+                       new Date().toTimeString().split(' ')[0].replace(/:/g, '');
+      const filename = `backup_${timestamp}_manual.sql`;
+      const backupPath = path.join(backupsDir, filename);
+
+      // Run pg_dump command
+      const pgDumpProcess = spawn('pg_dump', [
+        '-h', hostname,
+        '-p', port,
+        '-U', username,
+        '-d', database,
+        '-f', backupPath,
+        '--verbose'
+      ], {
+        env: {
+          ...process.env,
+          PGPASSWORD: password
+        },
+        stdio: ['pipe', 'pipe', 'pipe']
+      });
+
+      let output = '';
+      let errorOutput = '';
+
+      pgDumpProcess.stdout.on('data', (data) => {
+        output += data.toString();
+      });
+
+      pgDumpProcess.stderr.on('data', (data) => {
+        errorOutput += data.toString();
+      });
+
+      const exitCode = await new Promise((resolve) => {
+        pgDumpProcess.on('close', (code) => {
+          resolve(code);
+        });
+      });
+
+      if (exitCode === 0) {
+        // Check if backup file was created and has content
+        try {
+          const stats = await fs.stat(backupPath);
+          if (stats.size > 0) {
+            res.json({
+              message: "Database backup created successfully",
+              backupPath: backupPath,
+              filename: filename,
+              size: stats.size
+            });
+          } else {
+            res.status(500).json({ 
+              message: "Backup file was created but is empty",
+              error: errorOutput 
+            });
+          }
+        } catch (error) {
+          res.status(500).json({ 
+            message: "Backup file was not created",
+            error: errorOutput 
+          });
+        }
+      } else {
+        res.status(500).json({ 
+          message: "Database backup failed",
+          error: errorOutput,
+          exitCode 
+        });
+      }
+    } catch (error) {
+      console.error("Error creating database backup:", error);
+      res.status(500).json({ message: "Failed to create database backup" });
     }
   });
 

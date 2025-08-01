@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Plus, Trash2, Save } from "lucide-react";
+import { Settings as SettingsIcon, Plus, Trash2, Save, Database } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import PageHeader from "@/components/layout/page-header";
@@ -206,6 +206,35 @@ export default function Settings() {
     },
   });
 
+  // Mutation to backup database
+  const backupDatabaseMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/backup", {
+        method: "POST",
+        credentials: "include"
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Backup failed: ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: (response) => {
+      toast({
+        title: "Database Backup Created",
+        description: `Backup saved to: ${response.backupPath}`,
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Backup Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditChange = (key: string, value: string) => {
     setEditingSettings(prev => ({ ...prev, [key]: value }));
   };
@@ -273,6 +302,12 @@ export default function Settings() {
   const handleResetCourseSelections = () => {
     if (window.confirm("Are you sure you want to remove all the students from all the courses?")) {
       resetCourseSelectionsMutation.mutate();
+    }
+  };
+
+  const handleBackupDatabase = () => {
+    if (window.confirm("Create a backup of the CHEC Portal database?")) {
+      backupDatabaseMutation.mutate();
     }
   };
 
@@ -377,9 +412,28 @@ export default function Settings() {
                 <p className="text-sm text-gray-600">Administrative tools and utilities</p>
               </div>
               
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-4">
+              <div className="space-y-4">
+                <Card>
+                  <CardContent className="pt-6">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Data Management</h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Create a backup of the CHEC Portal database for data protection and recovery.
+                      </p>
+                      <Button
+                        onClick={handleBackupDatabase}
+                        disabled={backupDatabaseMutation.isPending}
+                        variant="outline"
+                      >
+                        <Database className="h-4 w-4 mr-2" />
+                        {backupDatabaseMutation.isPending ? "Creating Backup..." : "Backup Data"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-6">
                     <div>
                       <h4 className="font-medium text-gray-900">Course Management</h4>
                       <p className="text-sm text-gray-600 mb-4">
@@ -393,9 +447,9 @@ export default function Settings() {
                         {resetCourseSelectionsMutation.isPending ? "Resetting..." : "Reset All Course Selections"}
                       </Button>
                     </div>
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </div>
             </div>
           </TabsContent>
         </Tabs>
