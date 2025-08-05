@@ -15,6 +15,21 @@ export default function Invoices() {
   
   const queryClient = useQueryClient();
 
+  const updateFamilyMutation = useMutation({
+    mutationFn: async ({ id, family }: { id: number; family: Partial<Family> }) => {
+      const response = await fetch(`/api/families/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(family),
+      });
+      if (!response.ok) throw new Error("Failed to update family");
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+    },
+  });
+
   const { data: families } = useQuery({
     queryKey: ["/api/families"],
     retry: false,
@@ -60,7 +75,11 @@ export default function Invoices() {
       return gradYearB - gradYearA; // Higher gradYear = younger student
     });
     
-    let total = familyFee + backgroundFee;
+    let total = familyFee;
+    // Only add background check fee if family needs it
+    if (family.needsBackgroundCheck) {
+      total += backgroundFee;
+    }
     total += familyStudents.length * studentFee;
     
     // Add course fees for each student (youngest first)
@@ -214,15 +233,17 @@ export default function Invoices() {
     });
     total += familyFee;
 
-    // 2. Add background check fee second
-    invoiceRows.push({
-      name: `${family.father || ''} & ${family.mother || ''}`.trim() || family.lastName,
-      grade: '',
-      hour: '',
-      item: 'Background Check',
-      fee: backgroundFee
-    });
-    total += backgroundFee;
+    // 2. Add background check fee second (only if needed)
+    if (family.needsBackgroundCheck) {
+      invoiceRows.push({
+        name: `${family.father || ''} & ${family.mother || ''}`.trim() || family.lastName,
+        grade: '',
+        hour: '',
+        item: 'Background Check',
+        fee: backgroundFee
+      });
+      total += backgroundFee;
+    }
 
     // 3. Add student fees (youngest first)
     familyStudents.forEach((student: any) => {
@@ -344,6 +365,16 @@ export default function Invoices() {
     }));
   };
 
+  const toggleBackgroundCheck = (familyId: number) => {
+    const family = (families as Family[])?.find(f => f.id === familyId);
+    if (family) {
+      updateFamilyMutation.mutate({
+        id: familyId,
+        family: { needsBackgroundCheck: !family.needsBackgroundCheck }
+      });
+    }
+  };
+
   const handleViewInvoice = (family: Family) => {
     // Cache data for invoice generation
     (window as any).cachedSettings = settings;
@@ -425,6 +456,7 @@ export default function Invoices() {
             <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
               <tr>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Family Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Background Check Fee</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Total Amount</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Status</th>
                 <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Actions</th>
@@ -437,6 +469,15 @@ export default function Invoices() {
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
                       {invoice.family.lastName}, {invoice.family.father} & {invoice.family.mother}
                     </div>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <Button
+                      variant={invoice.family.needsBackgroundCheck ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleBackgroundCheck(invoice.family.id)}
+                    >
+                      {invoice.family.needsBackgroundCheck ? "Required" : "Not Required"}
+                    </Button>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                     ${invoice.total}

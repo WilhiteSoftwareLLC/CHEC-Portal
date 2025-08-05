@@ -106,6 +106,7 @@ export const families = pgTable("families", {
   pastorName: varchar("pastor_name", { length: 255 }),
   pastorPhone: varchar("pastor_phone", { length: 20 }),
   active: boolean("active").default(true),
+  needsBackgroundCheck: boolean("needs_background_check").default(false),
 });
 
 // Former Families table - families no longer part of CHEC Portal
@@ -159,6 +160,7 @@ export const students = pgTable("students", {
   birthdate: timestamp("birthdate"),
   gradYear: varchar("grad_year", { length: 10 }),
   comment1: text("comment1"),
+  scheduleNotes: text("schedule_notes"),
   mathHour: varchar("math_hour", { length: 255 }),
   firstHour: varchar("first_hour", { length: 255 }),
   secondHour: varchar("second_hour", { length: 255 }),
