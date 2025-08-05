@@ -128,6 +128,13 @@ export default function Courses() {
     if (updates.toGrade !== undefined) {
       processedUpdates.toGrade = updates.toGrade === "null" || updates.toGrade === null ? null : parseInt(updates.toGrade);
     }
+    // Handle numeric fee fields - convert to strings for API
+    if (updates.fee !== undefined) {
+      processedUpdates.fee = updates.fee === "" ? null : String(updates.fee);
+    }
+    if (updates.bookRental !== undefined) {
+      processedUpdates.bookRental = updates.bookRental === "" ? null : String(updates.bookRental);
+    }
     
     await updateCourseMutation.mutateAsync({ id, updates: processedUpdates });
   };
@@ -456,8 +463,8 @@ export default function Courses() {
     { key: "toGrade", label: "To Grade", sortable: true, editable: true, width: "32", type: "dropdown", options: gradeOptions },
     { key: "hour", label: "Hour", sortable: true, editable: true, width: "24", type: "dropdown", options: hourOptions },
     { key: "location", label: "Location", sortable: true, editable: true, width: "32", type: "text" },
-    { key: "fee", label: "Course Fee", sortable: true, editable: true, width: "28", type: "text" },
-    { key: "bookRental", label: "Book Rental Fee", sortable: true, editable: true, width: "32", type: "text" },
+    { key: "fee", label: "Course Fee", sortable: true, editable: true, width: "28", type: "number" },
+    { key: "bookRental", label: "Book Rental Fee", sortable: true, editable: true, width: "32", type: "number" },
     { key: "enrollmentCount", label: "# Enrolled", sortable: true, editable: false, width: "24", type: "number" },
     { key: "offeredFall", label: "Fall", sortable: true, editable: true, width: "16", type: "checkbox" },
     { key: "offeredSpring", label: "Spring", sortable: true, editable: true, width: "16", type: "checkbox" },
