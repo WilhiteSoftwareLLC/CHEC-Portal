@@ -466,28 +466,6 @@ export default function Schedules() {
   // Handler for row updates - now supports schedule field updates
   const handleRowUpdate = async (id: number, updates: Record<string, any>) => {
     try {
-      // Check if user is updating fifthHourFall and auto-manage fifthHourSpring
-      if (updates.hasOwnProperty('fifthHourFall') && courses) {
-        const newFallCourse = updates.fifthHourFall;
-        
-        if (newFallCourse && newFallCourse !== 'NO_COURSE') {
-          // User selected a course for Fall - check if it's offered in both semesters
-          const selectedCourse = (courses as any[]).find((course: any) => 
-            course.courseName === newFallCourse
-          );
-          
-          // If the course is offered in both fall and spring, auto-select it for spring too
-          if (selectedCourse && selectedCourse.offeredFall && selectedCourse.offeredSpring) {
-            updates.fifthHourSpring = newFallCourse;
-          }
-        } else {
-          // User cleared the Fall course - also clear Spring if it was the same course
-          const currentStudent = studentsWithComputedData.find((student: any) => student.id === id);
-          if (currentStudent && currentStudent.fifthHourFall === currentStudent.fifthHourSpring) {
-            updates.fifthHourSpring = null;
-          }
-        }
-      }
       
       const response = await fetch(`/api/students/${id}/schedule`, {
         method: 'PATCH',
