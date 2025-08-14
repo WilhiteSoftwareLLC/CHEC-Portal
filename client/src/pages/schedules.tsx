@@ -396,7 +396,8 @@ export default function Schedules() {
     },
     { key: "lastName", label: "Last Name", sortable: true, editable: false, width: "40" },
     { key: "firstName", label: "First Name", sortable: true, editable: false, width: "40" },
-    { key: "currentGrade", label: "Current Grade", sortable: true, editable: false, width: "32", sortKey: "currentGradeSortOrder" },
+    { key: "currentGrade", label: "Grade", sortable: true, editable: false, width: "32", sortKey: "currentGradeSortOrder" },
+    { key: "scheduleNotes", label: "Schedule Notes", sortable: true, editable: true, width: "48", type: "text" },
     { 
       key: "mathHour", 
       label: (hours || []).find((h: any) => h.id === 0)?.description || "Math Hour", 
@@ -609,6 +610,7 @@ export default function Schedules() {
             icon: Eye,
             onClick: handleViewSchedule
           }}
+          actionsPosition="left"
         />
 
         {/* Schedule Edit Dialog */}

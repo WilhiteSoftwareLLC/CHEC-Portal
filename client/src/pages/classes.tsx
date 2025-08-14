@@ -2,7 +2,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { PrinterCheck } from "lucide-react";
+import { PrinterCheck, Plus } from "lucide-react";
 import EditableGrid, { type GridColumn } from "@/components/ui/editable-grid";
 import AddClassDialog from "@/components/dialogs/add-class-dialog";
 import PageHeader from "@/components/layout/page-header";
@@ -286,7 +286,8 @@ export default function Classes() {
         description="Manage grade-based class groupings"
         actionButton={{
           label: "Add Class",
-          onClick: () => setAddClassOpen(true)
+          onClick: () => setAddClassOpen(true),
+          icon: Plus
         }}
         secondaryButton={{
           label: "Print Class Rosters",

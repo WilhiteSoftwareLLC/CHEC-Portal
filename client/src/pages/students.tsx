@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Download } from "lucide-react";
+import { Download, Plus } from "lucide-react";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddStudentDialog from "@/components/dialogs/add-student-dialog";
 import PageHeader from "@/components/layout/page-header";
@@ -419,7 +419,8 @@ export default function Students() {
         description="Manage student records and enrollment"
         actionButton={{
           label: "Add Student",
-          onClick: () => setAddStudentOpen(true)
+          onClick: () => setAddStudentOpen(true),
+          icon: Plus
         }}
         secondaryButton={{
           label: `Export Selected Students (${selectedStudents.size})`,

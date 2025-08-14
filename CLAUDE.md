@@ -156,3 +156,4 @@ Students have a denormalized schedule structure with specific hour fields:
 - Production deployment uses PM2 with `ecosystem.config.cjs`
 - Build process creates optimized client bundle and server bundle
 - Database migrations handled through Drizzle Kit
+- Don't offer to 'npm run dev'. I will always run the app outside of Claude Code.

@@ -8,3 +8,5 @@ vite.config.ts.*
 .env
 .idea/
 ecosystem.config.cjs
+db/backups/
+db/migrations/

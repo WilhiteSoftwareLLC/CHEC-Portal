@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PrinterCheck, Users } from "lucide-react";
+import { PrinterCheck, Users, Plus } from "lucide-react";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddCourseDialog from "@/components/dialogs/add-course-dialog";
 import PageHeader from "@/components/layout/page-header";
@@ -477,7 +477,8 @@ export default function Courses() {
         description="Manage courses and instructors"
         actionButton={{
           label: "Add Course",
-          onClick: () => setAddCourseOpen(true)
+          onClick: () => setAddCourseOpen(true),
+          icon: Plus
         }}
         secondaryButton={{
           label: selectedCourses.size > 0 

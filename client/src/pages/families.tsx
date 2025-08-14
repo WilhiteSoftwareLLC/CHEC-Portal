@@ -5,6 +5,7 @@ import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddFamilyDialog from "@/components/dialogs/add-family-dialog";
 import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
+import { Plus } from "lucide-react";
 import type { Family } from "@shared/schema";
 
 export default function Families() {
@@ -113,7 +114,8 @@ export default function Families() {
         description="Manage family information and contacts"
         actionButton={{
           label: "Add Family",
-          onClick: () => setAddFamilyOpen(true)
+          onClick: () => setAddFamilyOpen(true),
+          icon: Plus
         }}
       />
       <div className="flex-1 p-6 overflow-hidden">

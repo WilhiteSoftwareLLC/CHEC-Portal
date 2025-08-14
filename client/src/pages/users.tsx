@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Eye, EyeOff, Edit, Trash2 } from "lucide-react";
+import { Eye, EyeOff, Edit, Trash2, Plus } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import type { AdminUser, ParentUser, Family } from "@shared/schema";
 
@@ -208,7 +208,8 @@ export default function Users() {
         description="Manage admin and parent user accounts"
         actionButton={{
           label: "Add User",
-          onClick: handleAddUser
+          onClick: handleAddUser,
+          icon: Plus
         }}
       />
       <div className="flex-1 p-6 overflow-hidden">

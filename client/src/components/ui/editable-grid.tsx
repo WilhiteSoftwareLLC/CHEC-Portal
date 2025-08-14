@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from "react";
+import React, { useState, useCallback, useRef, useMemo } from "react";
 import { ChevronUp, ChevronDown, Edit, Save, X, Filter } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -37,9 +37,68 @@ export interface EditableGridProps {
     icon: React.ComponentType<{ className?: string }>;
     onClick: (row: any) => void;
   };
+  actionsPosition?: 'left' | 'right'; // New prop to control Actions column position
 }
 
 type SortDirection = "asc" | "desc" | null;
+
+// Completely isolated TextEditor component with its own state
+interface TextEditorProps {
+  textEditor: { rowId: number; columnKey: string; x: number; y: number; initialValue: string } | null;
+  onSave: (rowId: number, columnKey: string, value: string) => void;
+  onCancel: () => void;
+}
+
+const TextEditor = React.memo(({ textEditor, onSave, onCancel }: TextEditorProps) => {
+  const [localValue, setLocalValue] = useState("");
+  
+  // Update local value when textEditor changes (when opening for a new cell)
+  React.useEffect(() => {
+    if (textEditor) {
+      setLocalValue(textEditor.initialValue);
+    }
+  }, [textEditor?.rowId, textEditor?.columnKey]);
+  
+  if (!textEditor) return null;
+  
+  const handleSave = () => {
+    onSave(textEditor.rowId, textEditor.columnKey, localValue);
+  };
+  
+  return (
+    <div 
+      className="fixed bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg z-50 p-3"
+      style={{ left: textEditor.x, top: textEditor.y, width: '300px', height: '200px' }}
+      onClick={(e) => e.stopPropagation()}
+    >
+      <textarea
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+            handleSave();
+          } else if (e.key === 'Escape') {
+            onCancel();
+          }
+        }}
+        className="w-full h-32 resize-none border-0 outline-0 bg-transparent text-sm overflow-auto"
+        placeholder="Enter text..."
+        autoFocus
+      />
+      <div className="flex justify-end gap-2 mt-2 pt-2 border-t border-gray-200 dark:border-gray-600">
+        <Button size="sm" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button size="sm" onClick={handleSave}>
+          Save
+        </Button>
+      </div>
+      <div className="text-xs text-gray-500 mt-1">
+        Ctrl+Enter to save, Esc to cancel
+      </div>
+    </div>
+  );
+});
 
 export default function EditableGrid({
   data,
@@ -49,7 +108,8 @@ export default function EditableGrid({
   isLoading = false,
   className,
   onSelectionFilter,
-  customRowAction
+  customRowAction,
+  actionsPosition = 'right'
 }: EditableGridProps) {
   const [sortColumn, setSortColumn] = useState<string | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
@@ -57,6 +117,7 @@ export default function EditableGrid({
   const [editValue, setEditValue] = useState<string>("");
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; columnKey: string } | null>(null);
   const [filterDialog, setFilterDialog] = useState<{ columnKey: string; column: GridColumn } | null>(null);
+  const [textEditor, setTextEditor] = useState<{ rowId: number; columnKey: string; x: number; y: number; initialValue: string } | null>(null);
 
   const handleSort = useCallback((columnKey: string) => {
     if (sortColumn === columnKey) {
@@ -108,8 +169,20 @@ export default function EditableGrid({
     setEditValue(String(currentValue || ""));
   };
 
+  const startTextEdit = (rowId: number, columnKey: string, currentValue: any, event: React.MouseEvent) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTextEditor({ 
+      rowId, 
+      columnKey, 
+      x: rect.left, 
+      y: rect.bottom + window.scrollY,
+      initialValue: String(currentValue || "")
+    });
+  };
+
   const cancelEdit = () => {
     setEditingCell(null);
+    setTextEditor(null);
     setEditValue("");
   };
 
@@ -123,6 +196,19 @@ export default function EditableGrid({
     } catch (error) {
       console.error("Failed to save edit:", error);
     }
+  };
+
+  const handleTextEditorSave = async (rowId: number, columnKey: string, value: string) => {
+    try {
+      await onRowUpdate(rowId, { [columnKey]: value });
+      setTextEditor(null);
+    } catch (error) {
+      console.error("Failed to save edit:", error);
+    }
+  };
+
+  const handleTextEditorCancel = () => {
+    setTextEditor(null);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -218,6 +304,7 @@ export default function EditableGrid({
       </div>
     );
   };
+
   
   const ContextMenu = () => {
     if (!contextMenu) return null;
@@ -250,12 +337,72 @@ export default function EditableGrid({
     }
   }, [contextMenu]);
 
+  // Close text editor when clicking outside (with timeout to avoid immediate closure)
+  React.useEffect(() => {
+    const handleDocumentClick = (e: MouseEvent) => {
+      setTextEditor(null);
+    };
+    
+    if (textEditor) {
+      // Add a small delay to prevent the opening click from immediately closing the editor
+      const timeoutId = setTimeout(() => {
+        document.addEventListener('click', handleDocumentClick);
+      }, 10);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        document.removeEventListener('click', handleDocumentClick);
+      };
+    }
+  }, [textEditor]);
+
+  // Helper function to render Actions column header
+  const renderActionsHeader = () => (
+    (onRowDelete || customRowAction) && (
+      <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20 whitespace-nowrap border-b">
+        Actions
+      </th>
+    )
+  );
+
+  // Helper function to render Actions column cell
+  const renderActionsCell = (row: any) => (
+    (onRowDelete || customRowAction) && (
+      <td className="px-4 py-3 whitespace-nowrap w-20">
+        <div className="flex gap-1">
+          {customRowAction && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => customRowAction.onClick(row)}
+              className="h-8 w-8 p-0"
+              title={customRowAction.label}
+            >
+              <customRowAction.icon className="h-4 w-4" />
+            </Button>
+          )}
+          {onRowDelete && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => onRowDelete(row.id)}
+              className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+            >
+              <X className="h-3 w-3" />
+            </Button>
+          )}
+        </div>
+      </td>
+    )
+  );
+
   return (
     <div className={cn("border rounded-lg", className)}>
       <div className="overflow-auto max-h-[calc(100vh-200px)]">
         <table className="w-full">
           <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
             <tr>
+              {actionsPosition === 'left' && renderActionsHeader()}
               {columns.map((column) => (
                 <th
                   key={column.key}
@@ -285,11 +432,7 @@ export default function EditableGrid({
                   </div>
                 </th>
               ))}
-              {(onRowDelete || customRowAction) && (
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider w-20 whitespace-nowrap border-b">
-                  Actions
-                </th>
-              )}
+              {actionsPosition === 'right' && renderActionsHeader()}
             </tr>
           </thead>
           <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -308,6 +451,7 @@ export default function EditableGrid({
             ) : (
               sortedData.map((row) => (
                 <tr key={row.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                  {actionsPosition === 'left' && renderActionsCell(row)}
                   {columns.map((column) => {
                     const isEditing = editingCell?.rowId === row.id && editingCell?.columnKey === column.key;
                     const value = row[column.key];
@@ -317,7 +461,8 @@ export default function EditableGrid({
                         key={column.key} 
                         className={cn(
                           "px-4 py-3 whitespace-nowrap",
-                          column.width && `w-${column.width}`
+                          column.width && `w-${column.width}`,
+                          column.type === "text" && "max-w-0 overflow-hidden"
                         )}
                       >
                         {column.type === "checkbox" ? (
@@ -446,9 +591,19 @@ export default function EditableGrid({
                           <div 
                             className={cn(
                               "text-sm text-gray-900 dark:text-gray-100",
-                              column.editable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-2 py-1 -mx-2 -my-1"
+                              column.editable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-2 py-1 -mx-2 -my-1",
+                              column.type === "text" && "truncate min-w-0"
                             )}
-                            onClick={() => column.editable && startEdit(row.id, column.key, value)}
+                            onClick={(e) => {
+                              if (column.editable) {
+                                if (column.type === "text") {
+                                  startTextEdit(row.id, column.key, value, e);
+                                } else {
+                                  startEdit(row.id, column.key, value);
+                                }
+                              }
+                            }}
+                            title={column.type === "text" && value ? String(value) : undefined}
                           >
                             {value || (column.editable ? <span className="text-gray-400 italic">Click to edit</span> : "—")}
                           </div>
@@ -456,33 +611,7 @@ export default function EditableGrid({
                       </td>
                     );
                   })}
-                  {(onRowDelete || customRowAction) && (
-                    <td className="px-4 py-3 whitespace-nowrap w-20">
-                      <div className="flex gap-1">
-                        {customRowAction && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => customRowAction.onClick(row)}
-                            className="h-8 w-8 p-0"
-                            title={customRowAction.label}
-                          >
-                            <customRowAction.icon className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {onRowDelete && (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => onRowDelete(row.id)}
-                            className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        )}
-                      </div>
-                    </td>
-                  )}
+                  {actionsPosition === 'right' && renderActionsCell(row)}
                 </tr>
               ))
             )}
@@ -491,6 +620,11 @@ export default function EditableGrid({
       </div>
       <ContextMenu />
       <FilterDialog />
+      <TextEditor 
+        textEditor={textEditor}
+        onSave={handleTextEditorSave}
+        onCancel={handleTextEditorCancel}
+      />
     </div>
   );
 }
