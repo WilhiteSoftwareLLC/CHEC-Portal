@@ -1,19 +1,27 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Download, PrinterCheck, DollarSign, Eye } from "lucide-react";
+import { FileText, Download, PrinterCheck, DollarSign, Eye, Plus, Settings, Link2 } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
-import type { Family } from "@shared/schema";
+import AddPaymentDialog from "@/components/dialogs/add-payment-dialog";
+import AdjustBillDialog from "@/components/dialogs/adjust-bill-dialog";
+import { generateFamilyHash } from "@/lib/invoice-utils";
+import type { Family, Payment, BillAdjustment } from "@shared/schema";
 
 export default function Invoices() {
   const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
-  const [invoicePaymentStatus, setInvoicePaymentStatus] = useState<Record<number, boolean>>({});
+  const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
+  const [selectedFamilyForPayment, setSelectedFamilyForPayment] = useState<Family | null>(null);
+  const [adjustBillDialogOpen, setAdjustBillDialogOpen] = useState(false);
+  const [selectedFamilyForAdjustment, setSelectedFamilyForAdjustment] = useState<Family | null>(null);
   
   const queryClient = useQueryClient();
+  const { toast } = useToast();
 
   const updateFamilyMutation = useMutation({
     mutationFn: async ({ id, family }: { id: number; family: Partial<Family> }) => {
@@ -60,8 +68,18 @@ export default function Invoices() {
     retry: false,
   });
 
+  const { data: payments } = useQuery({
+    queryKey: ["/api/payments"],
+    retry: false,
+  });
+
+  const { data: billAdjustments } = useQuery({
+    queryKey: ["/api/bill-adjustments"],
+    retry: false,
+  });
+
   // Calculate computed invoices from families and students data
-  const calculateFamilyInvoice = (family: Family, studentsData: any[], settingsData: any, gradesData: any[], coursesData: any[], hoursData: any[]) => {
+  const calculateFamilyInvoice = (family: Family, studentsData: any[], settingsData: any, gradesData: any[], coursesData: any[], hoursData: any[], paymentsData: Payment[], adjustmentsData: BillAdjustment[]) => {
     const familyFee = parseFloat(settingsData?.FamilyFee || "20");
     const backgroundFee = parseFloat(settingsData?.BackgroundFee || "0");
     const studentFee = parseFloat(settingsData?.StudentFee || "20");
@@ -113,41 +131,52 @@ export default function Invoices() {
       });
     });
 
+    // Calculate total payments made by this family
+    const familyPayments = paymentsData?.filter((payment: Payment) => payment.familyId === family.id) || [];
+    const totalPaid = familyPayments.reduce((sum, payment) => sum + parseFloat(payment.amount.toString()), 0);
+    
+    // Calculate total adjustments for this family
+    const familyAdjustments = adjustmentsData?.filter((adjustment: BillAdjustment) => adjustment.familyId === family.id) || [];
+    const totalAdjustments = familyAdjustments.reduce((sum, adjustment) => sum + parseFloat(adjustment.amount.toString()), 0);
+    
+    // Calculate adjusted total (includes adjustments in the base total)
+    const adjustedTotal = total + totalAdjustments;
+    const unpaidBalance = adjustedTotal - totalPaid;
+
     return {
       id: family.id,
       family,
-      total,
-      paid: invoicePaymentStatus[family.id] || false,
+      total: adjustedTotal, // Now includes adjustments
+      totalAdjustments,
+      adjustedTotal,
+      totalPaid,
+      unpaidBalance,
+      payments: familyPayments,
+      adjustments: familyAdjustments,
       students: sortedStudents
     };
   };
 
-  const computedInvoices = Array.isArray(families) && Array.isArray(students) && settings && Array.isArray(grades) && Array.isArray(courses) && Array.isArray(hours)
+  const computedInvoices = Array.isArray(families) && Array.isArray(students) && settings && Array.isArray(grades) && Array.isArray(courses) && Array.isArray(hours) && Array.isArray(payments) && Array.isArray(billAdjustments)
     ? (families as Family[])
         .filter(family => family.active !== false) // Only show active families
-        .map(family => calculateFamilyInvoice(family, students as any[], settings, grades as any[], courses as any[], hours as any[]))
+        .map(family => calculateFamilyInvoice(family, students as any[], settings, grades as any[], courses as any[], hours as any[], payments as Payment[], billAdjustments as BillAdjustment[]))
     : [];
 
   const calculateTotalRevenue = () => {
     return computedInvoices.reduce((total: number, invoice: any) => {
-      if (invoice.paid) {
-        return total + invoice.total;
-      }
-      return total;
+      return total + invoice.totalPaid;
     }, 0);
   };
 
   const calculatePendingAmount = () => {
     return computedInvoices.reduce((total: number, invoice: any) => {
-      if (!invoice.paid) {
-        return total + invoice.total;
-      }
-      return total;
+      return total + invoice.unpaidBalance;
     }, 0);
   };
 
   const handlePrintAllInvoices = () => {
-    if (!families || !students || !settings || !grades || !courses || !hours) return;
+    if (!families || !students || !settings || !grades || !courses || !hours || !payments || !billAdjustments) return;
     
     // Cache data for invoice generation
     (window as any).cachedSettings = settings;
@@ -155,6 +184,8 @@ export default function Invoices() {
     (window as any).cachedGrades = grades;
     (window as any).cachedCourses = courses;
     (window as any).cachedHours = hours;
+    (window as any).cachedPayments = payments;
+    (window as any).cachedBillAdjustments = billAdjustments;
     
     // Create a new window for printing
     const printWindow = window.open('', '_blank');
@@ -190,11 +221,21 @@ export default function Invoices() {
             .invoice-header h1 { font-size: 24px; margin: 0; color: #333; }
             .family-name { font-size: 18px; margin: 20px 0; font-weight: bold; color: #555; }
             table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid #ddd; }
+            th, td { padding: 8px 16px; text-align: left; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }
+            th:last-child, td:last-child { border-right: none; }
             th { background-color: #f5f5f5; font-weight: bold; }
-            .fee-column { text-align: right; }
+            .amount-column { text-align: right; }
+            .subtotal-row { border-top: 1px solid #333; font-weight: bold; background-color: #f9f9f9; }
+            .subtotal-row td { padding: 10px 16px; }
+            .payment-row { color: #059669; }
             .total-row { border-top: 2px solid #333; font-weight: bold; }
-            .total-row td { padding-top: 15px; }
+            .total-row td { padding: 15px 16px 8px 16px; }
+            .outstanding { background-color: #fef3c7; }
+            .overpaid { background-color: #dbeafe; }
+            .paid-full { background-color: #d1fae5; }
+            .outstanding .amount { color: #dc2626; }
+            .overpaid .amount { color: #2563eb; }
+            .paid-full .amount { color: #059669; }
           </style>
         </head>
         <body>
@@ -204,7 +245,7 @@ export default function Invoices() {
     `;
   };
 
-  const generateSingleInvoiceHTML = (family: Family, addPageBreak: boolean = false) => {
+  const generateSingleInvoiceHTML = (family: Family, addPageBreak: boolean = false, includeStyles: boolean = false) => {
     // Get settings for fees
     const familyFee = parseFloat((window as any).cachedSettings?.FamilyFee || "20");
     const backgroundFee = parseFloat((window as any).cachedSettings?.BackgroundFee || "0");
@@ -220,12 +261,19 @@ export default function Invoices() {
 
     const coursesData = (window as any).cachedCourses || [];
     
+    // Get payments and adjustments for this family first
+    const familyPayments = ((window as any).cachedPayments?.filter((payment: any) => payment.familyId === family.id) || [])
+      .sort((a: any, b: any) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime()); // Sort by date, oldest first
+    
+    const familyAdjustments = ((window as any).cachedBillAdjustments?.filter((adjustment: any) => adjustment.familyId === family.id) || [])
+      .sort((a: any, b: any) => new Date(a.adjustmentDate).getTime() - new Date(b.adjustmentDate).getTime()); // Sort by date, oldest first
+    
     let invoiceRows = [];
     let total = 0;
 
     // 1. Add family fee first
     invoiceRows.push({
-      name: `${family.father || ''} & ${family.mother || ''}`.trim() || family.lastName,
+      name: family.lastName + ' family',
       grade: '',
       hour: '',
       item: 'Family Fee',
@@ -236,7 +284,7 @@ export default function Invoices() {
     // 2. Add background check fee second (only if needed)
     if (family.needsBackgroundCheck) {
       invoiceRows.push({
-        name: `${family.father || ''} & ${family.mother || ''}`.trim() || family.lastName,
+        name: family.lastName + ' family',
         grade: '',
         hour: '',
         item: 'Background Check',
@@ -309,17 +357,85 @@ export default function Invoices() {
       });
     });
 
-    const rowsHTML = invoiceRows.map(row => `
-      <tr>
+    // 5. Add bill adjustments before subtotal
+    familyAdjustments.forEach((adjustment: any) => {
+      const amount = parseFloat(adjustment.amount);
+      const isCredit = amount < 0;
+      invoiceRows.push({
+        name: family.lastName + ' family',
+        grade: new Date(adjustment.adjustmentDate).toLocaleDateString(),
+        hour: isCredit ? 'Credit' : 'Charge',
+        item: adjustment.description,
+        fee: amount
+      });
+      total += amount;
+    });
+
+    const totalPaid = familyPayments.reduce((sum: number, payment: any) => sum + parseFloat(payment.amount), 0);
+    const remainingBalance = total - totalPaid; // total already includes adjustments
+
+    // Generate fee rows HTML
+    const feeRowsHTML = invoiceRows.map(row => {
+      const isCredit = row.fee < 0;
+      return `
+      <tr${isCredit ? ' class="payment-row"' : ''}>
         <td>${row.name}</td>
         <td>${row.grade}</td>
         <td>${row.hour}</td>
         <td>${row.item}</td>
-        <td class="fee-column">$${row.fee}</td>
+        <td class="amount-column">${isCredit ? '-$' + Math.abs(row.fee).toFixed(2) : '$' + row.fee.toFixed(2)}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
+
+    // Generate subtotal row
+    const subtotalRowHTML = `
+      <tr class="subtotal-row">
+        <td colspan="4"><strong>Total Amount</strong></td>
+        <td class="amount-column"><strong>$${total.toFixed(2)}</strong></td>
+      </tr>
+    `;
+
+    // Generate payment rows HTML
+    const paymentRowsHTML = familyPayments.length > 0 ? familyPayments.map((payment: any) => `
+      <tr class="payment-row">
+        <td>${family.lastName} family</td>
+        <td>${new Date(payment.paymentDate).toLocaleDateString()}</td>
+        <td>${payment.paymentMethod || ''}</td>
+        <td>Payment Received${payment.description ? ` - ${payment.description}` : ''}</td>
+        <td class="amount-column">-$${parseFloat(payment.amount).toFixed(2)}</td>
+      </tr>
+    `).join('') : '';
+
+    // Combine all rows
+    const allRowsHTML = feeRowsHTML + subtotalRowHTML + paymentRowsHTML;
+
+    const stylesHTML = includeStyles ? `
+      <style>
+        .invoice-header { text-align: center; margin-bottom: 30px; }
+        .invoice-header h1 { font-size: 24px; margin: 0; color: #333; }
+        .family-name { font-size: 18px; margin: 20px 0; font-weight: bold; color: #555; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { padding: 8px 16px; text-align: left; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }
+        th:last-child, td:last-child { border-right: none; }
+        th { background-color: #f5f5f5; font-weight: bold; }
+        .amount-column { text-align: right; }
+        .subtotal-row { border-top: 1px solid #333; font-weight: bold; background-color: #f9f9f9; }
+        .subtotal-row td { padding: 10px 16px; }
+        .payment-row { color: #059669; }
+        .total-row { border-top: 2px solid #333; font-weight: bold; }
+        .total-row td { padding: 15px 16px 8px 16px; }
+        .outstanding { background-color: #fef3c7; }
+        .overpaid { background-color: #dbeafe; }
+        .paid-full { background-color: #d1fae5; }
+        .outstanding .amount { color: #dc2626; }
+        .overpaid .amount { color: #2563eb; }
+        .paid-full .amount { color: #059669; }
+      </style>
+    ` : '';
 
     return `
+      ${stylesHTML}
       ${addPageBreak ? '<div class="page-break"></div>' : ''}
       <div class="invoice-header">
         <h1>CHEC Fees</h1>
@@ -328,18 +444,18 @@ export default function Invoices() {
       <table>
         <thead>
           <tr>
-            <th>First Name</th>
+            <th>Name</th>
             <th>Grade</th>
             <th>Hour</th>
             <th>Item</th>
-            <th class="fee-column">Fee</th>
+            <th class="amount-column">Amount</th>
           </tr>
         </thead>
         <tbody>
-          ${rowsHTML}
-          <tr class="total-row">
-            <td colspan="4"><strong>Total Fees Due</strong></td>
-            <td class="fee-column"><strong>$${total}</strong></td>
+          ${allRowsHTML}
+          <tr class="total-row ${remainingBalance > 0 ? 'outstanding' : remainingBalance < 0 ? 'overpaid' : 'paid-full'}">
+            <td colspan="4"><strong>${remainingBalance > 0 ? 'Outstanding Balance' : remainingBalance < 0 ? 'Overpaid' : 'Paid in Full'}</strong></td>
+            <td class="amount-column amount"><strong>${remainingBalance > 0 ? '$' + remainingBalance.toFixed(2) : remainingBalance < 0 ? '-$' + Math.abs(remainingBalance).toFixed(2) : '$0.00'}</strong></td>
           </tr>
         </tbody>
       </table>
@@ -358,11 +474,34 @@ export default function Invoices() {
     return grade ? grade.gradeName : "Unknown";
   };
 
-  const togglePaymentStatus = (familyId: number) => {
-    setInvoicePaymentStatus(prev => ({
-      ...prev,
-      [familyId]: !prev[familyId]
-    }));
+  const handleAddPayment = (family: Family) => {
+    setSelectedFamilyForPayment(family);
+    setPaymentDialogOpen(true);
+  };
+
+  const handleAdjustBill = (family: Family) => {
+    setSelectedFamilyForAdjustment(family);
+    setAdjustBillDialogOpen(true);
+  };
+
+  const handleCopyInvoiceLink = async (family: Family) => {
+    try {
+      const hash = await generateFamilyHash(family.id);
+      const url = `${window.location.origin}/invoice/${hash}`;
+      
+      await navigator.clipboard.writeText(url);
+      
+      toast({
+        title: "Invoice Link Copied",
+        description: `Secure invoice link for ${family.lastName} family has been copied to your clipboard.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Copy Failed", 
+        description: "Could not copy link to clipboard. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const toggleBackgroundCheck = (familyId: number) => {
@@ -382,6 +521,8 @@ export default function Invoices() {
     (window as any).cachedGrades = grades;
     (window as any).cachedCourses = courses;
     (window as any).cachedHours = hours;
+    (window as any).cachedPayments = payments;
+    (window as any).cachedBillAdjustments = billAdjustments;
     
     setSelectedFamily(family);
     setInvoiceDialogOpen(true);
@@ -389,6 +530,22 @@ export default function Invoices() {
 
   return (
     <div>
+      <style>{`
+        .invoice-grid-header {
+          padding: 0.75rem 1rem;
+          text-align: left;
+          font-size: 0.75rem;
+          font-weight: 500;
+          color: rgb(107 114 128);
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          white-space: nowrap;
+          border-bottom: 1px solid rgb(229 231 235);
+        }
+        .dark .invoice-grid-header {
+          color: rgb(156 163 175);
+        }
+      `}</style>
       <PageHeader 
         title="Invoices"
         description="Automatically computed from family and student data"
@@ -455,11 +612,12 @@ export default function Invoices() {
           <table className="w-full">
             <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
               <tr>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Family Name</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Background Check Fee</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Total Amount</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Status</th>
-                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider whitespace-nowrap border-b">Actions</th>
+                <th className="invoice-grid-header">Family Name</th>
+                <th className="invoice-grid-header">Background Check Fee</th>
+                <th className="invoice-grid-header">Total Amount</th>
+                <th className="invoice-grid-header">Total Paid</th>
+                <th className="invoice-grid-header">Balance</th>
+                <th className="invoice-grid-header">Actions</th>
               </tr>
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
@@ -480,28 +638,57 @@ export default function Invoices() {
                     </Button>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                    ${invoice.total}
+                    ${invoice.total.toFixed(2)}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
+                    ${invoice.totalPaid.toFixed(2)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    <Badge variant={invoice.paid ? "default" : "destructive"}>
-                      {invoice.paid ? "Paid" : "Unpaid"}
-                    </Badge>
+                    <div className="flex items-center">
+                      <span className={`text-sm font-medium ${invoice.unpaidBalance > 0 ? 'text-red-600' : invoice.unpaidBalance < 0 ? 'text-blue-600' : 'text-green-600'}`}>
+                        {invoice.unpaidBalance > 0 ? '$' + invoice.unpaidBalance.toFixed(2) : invoice.unpaidBalance < 0 ? '-$' + Math.abs(invoice.unpaidBalance).toFixed(2) : '$0.00'}
+                      </span>
+                      {invoice.unpaidBalance === 0 && (
+                        <Badge variant="default" className="ml-2">Paid in Full</Badge>
+                      )}
+                      {invoice.unpaidBalance < 0 && (
+                        <Badge variant="secondary" className="ml-2">Overpaid</Badge>
+                      )}
+                    </div>
                   </td>
-                  <td className="px-4 py-3 whitespace-nowrap text-right">
-                    <div className="flex items-center justify-end space-x-2">
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    <div className="flex items-center space-x-2">
                       <Button 
-                        variant="ghost" 
+                        variant="outline" 
                         size="sm"
                         onClick={() => handleViewInvoice(invoice.family)}
                       >
-                        <Eye className="h-4 w-4" />
+                        <Eye className="h-4 w-4 mr-1" />
+                        View Invoice
                       </Button>
                       <Button 
-                        variant={invoice.paid ? "outline" : "default"}
+                        variant="outline"
                         size="sm"
-                        onClick={() => togglePaymentStatus(invoice.family.id)}
+                        onClick={() => handleCopyInvoiceLink(invoice.family)}
                       >
-                        {invoice.paid ? "Mark Unpaid" : "Mark Paid"}
+                        <Link2 className="h-4 w-4 mr-1" />
+                        Copy Invoice Link
+                      </Button>
+                      <Button 
+                        variant="default"
+                        size="sm"
+                        onClick={() => handleAddPayment(invoice.family)}
+                      >
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add Payment
+                      </Button>
+                      <Button 
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => handleAdjustBill(invoice.family)}
+                      >
+                        <Settings className="h-4 w-4 mr-1" />
+                        Adjust Bill
                       </Button>
                     </div>
                   </td>
@@ -524,12 +711,32 @@ export default function Invoices() {
             <div 
               className="border rounded-lg p-6 bg-white"
               dangerouslySetInnerHTML={{ 
-                __html: generateSingleInvoiceHTML(selectedFamily, false) 
+                __html: generateSingleInvoiceHTML(selectedFamily, false, true) 
               }}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Add Payment Dialog */}
+      {selectedFamilyForPayment && (
+        <AddPaymentDialog
+          familyId={selectedFamilyForPayment.id}
+          familyName={`${selectedFamilyForPayment.father || ''} & ${selectedFamilyForPayment.mother || ''} ${selectedFamilyForPayment.lastName}`}
+          open={paymentDialogOpen}
+          onOpenChange={setPaymentDialogOpen}
+        />
+      )}
+
+      {/* Adjust Bill Dialog */}
+      {selectedFamilyForAdjustment && (
+        <AdjustBillDialog
+          familyId={selectedFamilyForAdjustment.id}
+          familyName={`${selectedFamilyForAdjustment.father || ''} & ${selectedFamilyForAdjustment.mother || ''} ${selectedFamilyForAdjustment.lastName}`}
+          open={adjustBillDialogOpen}
+          onOpenChange={setAdjustBillDialogOpen}
+        />
+      )}
       </div>
     </div>
   );

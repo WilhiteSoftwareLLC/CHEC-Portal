@@ -20,6 +20,7 @@ import Import from "@/pages/import";
 import Users from "@/pages/users";
 import Settings from "@/pages/settings";
 import Develop from "@/pages/develop";
+import PublicInvoice from "@/pages/public-invoice";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
@@ -41,6 +42,9 @@ function Router() {
 
   return (
     <Switch>
+      {/* Public routes - no authentication required */}
+      <Route path="/invoice/:hash" component={PublicInvoice} />
+      
       {!isAuthenticated ? (
         <>
           <Route path="/" component={Login} />

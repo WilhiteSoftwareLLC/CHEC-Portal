@@ -206,6 +206,28 @@ export default function Settings() {
     },
   });
 
+  // Mutation to reset all payments
+  const resetAllPaymentsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("/api/payments/all", "DELETE");
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/bill-adjustments"] });
+      toast({
+        title: "Payments and Adjustments Reset",
+        description: "All payment records and bill adjustments have been permanently deleted.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Reset Failed",
+        description: "Failed to reset payments and adjustments. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Mutation to backup database
   const backupDatabaseMutation = useMutation({
     mutationFn: async () => {
@@ -302,6 +324,12 @@ export default function Settings() {
   const handleResetCourseSelections = () => {
     if (window.confirm("Are you sure you want to remove all the students from all the courses?")) {
       resetCourseSelectionsMutation.mutate();
+    }
+  };
+
+  const handleResetAllPayments = () => {
+    if (window.confirm("Are you sure you want to permanently delete ALL payment records? This action cannot be undone.")) {
+      resetAllPaymentsMutation.mutate();
     }
   };
 
@@ -445,6 +473,24 @@ export default function Settings() {
                         variant="destructive"
                       >
                         {resetCourseSelectionsMutation.isPending ? "Resetting..." : "Reset All Course Selections"}
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-6">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Payment Management</h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Reset all payment records and bill adjustments to start fresh for a new school year. This will permanently remove all payment and adjustment history.
+                      </p>
+                      <Button
+                        onClick={handleResetAllPayments}
+                        disabled={resetAllPaymentsMutation.isPending}
+                        variant="destructive"
+                      >
+                        {resetAllPaymentsMutation.isPending ? "Resetting..." : "Reset All Payments"}
                       </Button>
                     </div>
                   </CardContent>

@@ -174,10 +174,7 @@ export const students = pgTable("students", {
   registeredOn: timestamp("registered_on"),
 });
 
-// Relations
-export const familiesRelations = relations(families, ({ many }) => ({
-  students: many(students),
-}));
+// Relations will be defined after payments table
 
 export const studentsRelations = relations(students, ({ one }) => ({
   family: one(families, {
@@ -276,7 +273,80 @@ export type Settings = typeof settings.$inferSelect;
 
 export type FormerFamily = typeof formerFamilies.$inferSelect;
 
+// Payments table - tracks payments made by families towards invoices
+export const payments = pgTable("payments", {
+  id: serial("id").primaryKey(),
+  familyId: integer("family_id").references(() => families.id).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  paymentDate: date("payment_date").notNull(),
+  paymentMethod: varchar("payment_method", { length: 50 }), // cash, check, card, etc.
+  description: text("description"), // optional note about payment
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Bill adjustments table - tracks credits and additional charges for families
+export const billAdjustments = pgTable("bill_adjustments", {
+  id: serial("id").primaryKey(),
+  familyId: integer("family_id").references(() => families.id).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(), // positive for charges, negative for credits
+  description: text("description").notNull(), // description of the adjustment
+  adjustmentDate: date("adjustment_date").notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Payment relations
+export const paymentsRelations = relations(payments, ({ one }) => ({
+  family: one(families, {
+    fields: [payments.familyId],
+    references: [families.id],
+  }),
+}));
+
+// Bill adjustment relations
+export const billAdjustmentsRelations = relations(billAdjustments, ({ one }) => ({
+  family: one(families, {
+    fields: [billAdjustments.familyId],
+    references: [families.id],
+  }),
+}));
+
+// Update families relations to include payments and bill adjustments
+export const familiesRelations = relations(families, ({ many }) => ({
+  students: many(students),
+  payments: many(payments),
+  billAdjustments: many(billAdjustments),
+}));
+
+// Insert schema for payments
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Insert schema for bill adjustments
+export const insertBillAdjustmentSchema = createInsertSchema(billAdjustments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// Payment types
+export type Payment = typeof payments.$inferSelect;
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+
+// Bill adjustment types
+export type BillAdjustment = typeof billAdjustments.$inferSelect;
+export type InsertBillAdjustment = z.infer<typeof insertBillAdjustmentSchema>;
+
 // Extended types with relations
 export type StudentWithFamily = Student & {
   family: Family;
+};
+
+export type FamilyWithPayments = Family & {
+  payments: Payment[];
+  billAdjustments: BillAdjustment[];
 };

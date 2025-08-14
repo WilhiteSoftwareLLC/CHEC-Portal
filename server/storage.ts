@@ -9,6 +9,8 @@ import {
   grades,
   hours,
   settings,
+  payments,
+  billAdjustments,
   type User,
   type UpsertUser,
   type AdminUser,
@@ -30,6 +32,10 @@ import {
   type InsertHour,
   type Settings,
   type InsertSettings,
+  type Payment,
+  type InsertPayment,
+  type BillAdjustment,
+  type InsertBillAdjustment,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, desc, like, count, sql, and, isNull, not, inArray } from "drizzle-orm";
@@ -116,6 +122,24 @@ export interface IStorage {
   deleteSetting(key: string): Promise<void>;
   deleteAllSettings(): Promise<void>;
   initializeDefaultSettings(): Promise<void>;
+
+  // Payment operations
+  getPayments(): Promise<Payment[]>;
+  getPayment(id: number): Promise<Payment | undefined>;
+  getPaymentsByFamily(familyId: number): Promise<Payment[]>;
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  updatePayment(id: number, payment: Partial<InsertPayment>): Promise<Payment>;
+  deletePayment(id: number): Promise<void>;
+  deleteAllPayments(): Promise<void>;
+
+  // Bill adjustment operations
+  getBillAdjustments(): Promise<BillAdjustment[]>;
+  getBillAdjustment(id: number): Promise<BillAdjustment | undefined>;
+  getBillAdjustmentsByFamily(familyId: number): Promise<BillAdjustment[]>;
+  createBillAdjustment(adjustment: InsertBillAdjustment): Promise<BillAdjustment>;
+  updateBillAdjustment(id: number, adjustment: Partial<InsertBillAdjustment>): Promise<BillAdjustment>;
+  deleteBillAdjustment(id: number): Promise<void>;
+  deleteAllBillAdjustments(): Promise<void>;
 
   // Dashboard stats
   getDashboardStats(): Promise<{
@@ -351,6 +375,7 @@ export class DatabaseStorage implements IStorage {
         birthdate: students.birthdate,
         gradYear: students.gradYear,
         comment1: students.comment1,
+        scheduleNotes: students.scheduleNotes,
         mathHour: students.mathHour,
         firstHour: students.firstHour,
         secondHour: students.secondHour,
@@ -379,6 +404,7 @@ export class DatabaseStorage implements IStorage {
         birthdate: students.birthdate,
         gradYear: students.gradYear,
         comment1: students.comment1,
+        scheduleNotes: students.scheduleNotes,
         mathHour: students.mathHour,
         firstHour: students.firstHour,
         secondHour: students.secondHour,
@@ -437,6 +463,7 @@ export class DatabaseStorage implements IStorage {
         birthdate: students.birthdate,
         gradYear: students.gradYear,
         comment1: students.comment1,
+        scheduleNotes: students.scheduleNotes,
         mathHour: students.mathHour,
         firstHour: students.firstHour,
         secondHour: students.secondHour,
@@ -699,6 +726,182 @@ export class DatabaseStorage implements IStorage {
       } catch (error) {
         console.error(`Failed to initialize setting ${setting.key}:`, error);
       }
+    }
+  }
+
+  // Payment operations
+  async getPayments(): Promise<Payment[]> {
+    return await db.select().from(payments).orderBy(desc(payments.paymentDate));
+  }
+
+  async getPayment(id: number): Promise<Payment | undefined> {
+    const [payment] = await db.select().from(payments).where(eq(payments.id, id));
+    return payment;
+  }
+
+  async getPaymentsByFamily(familyId: number): Promise<Payment[]> {
+    return await db
+      .select()
+      .from(payments)
+      .where(eq(payments.familyId, familyId))
+      .orderBy(desc(payments.paymentDate));
+  }
+
+  async createPayment(payment: InsertPayment): Promise<Payment> {
+    const [created] = await db.insert(payments).values(payment).returning();
+    return created;
+  }
+
+  async updatePayment(id: number, payment: Partial<InsertPayment>): Promise<Payment> {
+    const [updated] = await db
+      .update(payments)
+      .set({ ...payment, updatedAt: new Date() })
+      .where(eq(payments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deletePayment(id: number): Promise<void> {
+    await db.delete(payments).where(eq(payments.id, id));
+  }
+
+  async deleteAllPayments(): Promise<void> {
+    await db.delete(payments);
+  }
+
+  // Bill adjustment operations
+  async getBillAdjustments(): Promise<BillAdjustment[]> {
+    return await db.select().from(billAdjustments).orderBy(desc(billAdjustments.adjustmentDate));
+  }
+
+  async getBillAdjustment(id: number): Promise<BillAdjustment | undefined> {
+    const [adjustment] = await db.select().from(billAdjustments).where(eq(billAdjustments.id, id));
+    return adjustment;
+  }
+
+  async getBillAdjustmentsByFamily(familyId: number): Promise<BillAdjustment[]> {
+    return await db
+      .select()
+      .from(billAdjustments)
+      .where(eq(billAdjustments.familyId, familyId))
+      .orderBy(desc(billAdjustments.adjustmentDate));
+  }
+
+  async createBillAdjustment(adjustment: InsertBillAdjustment): Promise<BillAdjustment> {
+    const [created] = await db.insert(billAdjustments).values(adjustment).returning();
+    return created;
+  }
+
+  async updateBillAdjustment(id: number, adjustment: Partial<InsertBillAdjustment>): Promise<BillAdjustment> {
+    const [updated] = await db
+      .update(billAdjustments)
+      .set({ ...adjustment, updatedAt: new Date() })
+      .where(eq(billAdjustments.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteBillAdjustment(id: number): Promise<void> {
+    await db.delete(billAdjustments).where(eq(billAdjustments.id, id));
+  }
+
+  async deleteAllBillAdjustments(): Promise<void> {
+    await db.delete(billAdjustments);
+  }
+
+  // Find family ID by hash - checks all active families
+  async findFamilyByHash(hash: string): Promise<number | null> {
+    try {
+      console.log(`[findFamilyByHash] Starting search for hash: "${hash}"`);
+      
+      if (!hash || hash.length !== 8) {
+        console.log(`[findFamilyByHash] Invalid hash format: "${hash}", length: ${hash?.length}`);
+        return null;
+      }
+
+      // Get all active family IDs
+      console.log(`[findFamilyByHash] Fetching all families...`);
+      const families = await this.getFamilies();
+      console.log(`[findFamilyByHash] Found ${families.length} total families`);
+      
+      const activeFamilyIds = families
+        .filter(family => family.active !== false)
+        .map(family => family.id);
+      console.log(`[findFamilyByHash] Active family IDs: [${activeFamilyIds.join(', ')}]`);
+
+      // Generate hash for each active family ID until we find a match
+      const crypto = await import('crypto');
+      console.log(`[findFamilyByHash] Starting hash generation for each family...`);
+      
+      for (const familyId of activeFamilyIds) {
+        const familyHash = crypto.createHash('sha256')
+          .update(familyId.toString())
+          .digest('hex')
+          .substring(0, 8);
+          
+        console.log(`[findFamilyByHash] Family ID ${familyId} → hash "${familyHash}"`);
+        
+        if (familyHash === hash) {
+          console.log(`[findFamilyByHash] ✅ MATCH FOUND! Family ID ${familyId} matches hash "${hash}"`);
+          return familyId;
+        }
+      }
+      
+      console.log(`[findFamilyByHash] ❌ No match found for hash "${hash}"`);
+      return null;
+    } catch (error) {
+      console.error("[findFamilyByHash] Error occurred:", error);
+      return null;
+    }
+  }
+
+  // Get all data needed for a family's invoice in a single efficient query set
+  async getFamilyInvoiceData(familyId: number) {
+    try {
+      // Fetch all data in parallel for efficiency
+      const [
+        family,
+        familyStudents,
+        allCourses,
+        allGrades,
+        allHours,
+        allSettings,
+        familyPayments,
+        familyBillAdjustments,
+      ] = await Promise.all([
+        db.select().from(families).where(eq(families.id, familyId)).then(rows => rows[0] || null),
+        db.select().from(students).where(eq(students.familyId, familyId)),
+        db.select().from(courses),
+        db.select().from(grades),
+        db.select().from(hours),
+        db.select().from(settings),
+        db.select().from(payments).where(eq(payments.familyId, familyId)),
+        db.select().from(billAdjustments).where(eq(billAdjustments.familyId, familyId)),
+      ]);
+
+      if (!family) {
+        return null;
+      }
+
+      // Convert settings array to object format expected by invoice calculations
+      const settingsObject = allSettings.reduce((acc: any, setting: any) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {});
+
+      return {
+        family,
+        students: familyStudents,
+        courses: allCourses,
+        grades: allGrades,
+        hours: allHours,
+        settings: settingsObject,
+        payments: familyPayments,
+        billAdjustments: familyBillAdjustments,
+      };
+    } catch (error) {
+      console.error("Error fetching family invoice data:", error);
+      throw error;
     }
   }
 }

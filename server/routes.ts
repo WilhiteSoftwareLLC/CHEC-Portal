@@ -18,6 +18,8 @@ import {
   insertGradeSchema,
   insertHourSchema,
   insertSettingsSchema,
+  insertPaymentSchema,
+  insertBillAdjustmentSchema,
 } from "@shared/schema";
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -40,6 +42,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       req.authUser = req.session.authUser as AuthUser;
     }
     next();
+  });
+
+  // Public invoice viewing endpoint (no authentication required)
+  app.get('/api/invoice/:hash', async (req, res) => {
+    try {
+      const { hash } = req.params;
+      
+      // Find the family ID that matches this hash
+      const familyId = await storage.findFamilyByHash(hash);
+      
+      if (!familyId) {
+        return res.status(404).json({ error: "Family not found" });
+      }
+
+      // Get all invoice data for this family efficiently
+      const invoiceData = await storage.getFamilyInvoiceData(familyId);
+      
+      if (!invoiceData) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      res.json(invoiceData);
+    } catch (error) {
+      console.error("Error fetching public invoice:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
   });
 
   // Authentication routes
@@ -1173,6 +1201,211 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting setting:", error);
       res.status(500).json({ message: "Failed to delete setting" });
+    }
+  });
+
+  // Payment routes
+  app.get("/api/payments", requireAuth, async (req, res) => {
+    try {
+      const payments = await storage.getPayments();
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching payments:", error);
+      res.status(500).json({ message: "Failed to fetch payments" });
+    }
+  });
+
+  app.get("/api/payments/family/:familyId", requireParentOrAdmin, async (req, res) => {
+    try {
+      const familyId = parseInt(req.params.familyId);
+      
+      // If user is a parent, ensure they can only access their own family's payments
+      if (req.authUser?.role === 'parent' && req.authUser.familyId !== familyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const payments = await storage.getPaymentsByFamily(familyId);
+      res.json(payments);
+    } catch (error) {
+      console.error("Error fetching family payments:", error);
+      res.status(500).json({ message: "Failed to fetch family payments" });
+    }
+  });
+
+  app.post("/api/payments", requireParentOrAdmin, async (req, res) => {
+    try {
+      const paymentData = insertPaymentSchema.parse(req.body);
+      
+      // If user is a parent, ensure they can only create payments for their own family
+      if (req.authUser?.role === 'parent' && req.authUser.familyId !== paymentData.familyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const payment = await storage.createPayment(paymentData);
+      res.json(payment);
+    } catch (error) {
+      console.error("Error creating payment:", error);
+      res.status(500).json({ message: "Failed to create payment" });
+    }
+  });
+
+  app.patch("/api/payments/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const paymentData = req.body;
+      
+      // Check if payment exists and verify access
+      const existingPayment = await storage.getPayment(id);
+      if (!existingPayment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      
+      // If user is a parent, ensure they can only update their own family's payments
+      if (req.authUser?.role === 'parent' && req.authUser.familyId !== existingPayment.familyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const payment = await storage.updatePayment(id, paymentData);
+      res.json(payment);
+    } catch (error) {
+      console.error("Error updating payment:", error);
+      res.status(500).json({ message: "Failed to update payment" });
+    }
+  });
+
+  app.delete("/api/payments/all", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteAllPayments();
+      await storage.deleteAllBillAdjustments();
+      res.json({ message: "All payments and bill adjustments deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting all payments and adjustments:", error);
+      res.status(500).json({ message: "Failed to delete all payments and adjustments" });
+    }
+  });
+
+  app.delete("/api/payments/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if payment exists and verify access
+      const existingPayment = await storage.getPayment(id);
+      if (!existingPayment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      
+      // If user is a parent, ensure they can only delete their own family's payments
+      if (req.authUser?.role === 'parent' && req.authUser.familyId !== existingPayment.familyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await storage.deletePayment(id);
+      res.json({ message: "Payment deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting payment:", error);
+      res.status(500).json({ message: "Failed to delete payment" });
+    }
+  });
+
+  // Bill adjustment routes
+  app.get("/api/bill-adjustments", requireAuth, async (req, res) => {
+    try {
+      const adjustments = await storage.getBillAdjustments();
+      res.json(adjustments);
+    } catch (error) {
+      console.error("Error fetching bill adjustments:", error);
+      res.status(500).json({ message: "Failed to fetch bill adjustments" });
+    }
+  });
+
+  app.get("/api/bill-adjustments/family/:familyId", requireParentOrAdmin, async (req, res) => {
+    try {
+      const familyId = parseInt(req.params.familyId);
+      
+      // If user is a parent, ensure they can only access their own family's adjustments
+      if (req.authUser?.role === 'parent' && req.authUser.familyId !== familyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const adjustments = await storage.getBillAdjustmentsByFamily(familyId);
+      res.json(adjustments);
+    } catch (error) {
+      console.error("Error fetching family bill adjustments:", error);
+      res.status(500).json({ message: "Failed to fetch family bill adjustments" });
+    }
+  });
+
+  app.post("/api/bill-adjustments", requireParentOrAdmin, async (req, res) => {
+    try {
+      const adjustmentData = insertBillAdjustmentSchema.parse(req.body);
+      
+      // If user is a parent, ensure they can only create adjustments for their own family
+      if (req.authUser?.role === 'parent' && req.authUser.familyId !== adjustmentData.familyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const adjustment = await storage.createBillAdjustment(adjustmentData);
+      res.json(adjustment);
+    } catch (error) {
+      console.error("Error creating bill adjustment:", error);
+      res.status(500).json({ message: "Failed to create bill adjustment" });
+    }
+  });
+
+  app.patch("/api/bill-adjustments/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const adjustmentData = req.body;
+      
+      // Check if adjustment exists and verify access
+      const existingAdjustment = await storage.getBillAdjustment(id);
+      if (!existingAdjustment) {
+        return res.status(404).json({ message: "Bill adjustment not found" });
+      }
+      
+      // If user is a parent, ensure they can only update their own family's adjustments
+      if (req.authUser?.role === 'parent' && req.authUser.familyId !== existingAdjustment.familyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      const adjustment = await storage.updateBillAdjustment(id, adjustmentData);
+      res.json(adjustment);
+    } catch (error) {
+      console.error("Error updating bill adjustment:", error);
+      res.status(500).json({ message: "Failed to update bill adjustment" });
+    }
+  });
+
+  app.delete("/api/bill-adjustments/all", requireAdmin, async (req, res) => {
+    try {
+      await storage.deleteAllBillAdjustments();
+      res.json({ message: "All bill adjustments deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting all bill adjustments:", error);
+      res.status(500).json({ message: "Failed to delete all bill adjustments" });
+    }
+  });
+
+  app.delete("/api/bill-adjustments/:id", requireAuth, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      
+      // Check if adjustment exists and verify access
+      const existingAdjustment = await storage.getBillAdjustment(id);
+      if (!existingAdjustment) {
+        return res.status(404).json({ message: "Bill adjustment not found" });
+      }
+      
+      // If user is a parent, ensure they can only delete their own family's adjustments
+      if (req.authUser?.role === 'parent' && req.authUser.familyId !== existingAdjustment.familyId) {
+        return res.status(403).json({ message: "Access denied" });
+      }
+      
+      await storage.deleteBillAdjustment(id);
+      res.json({ message: "Bill adjustment deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting bill adjustment:", error);
+      res.status(500).json({ message: "Failed to delete bill adjustment" });
     }
   });
 
