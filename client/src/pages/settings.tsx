@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Settings as SettingsIcon, Plus, Trash2, Save, Database } from "lucide-react";
+import { Settings as SettingsIcon, Plus, Trash2, Save, Database, Mail, Send, TestTube } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import PageHeader from "@/components/layout/page-header";
@@ -257,6 +257,90 @@ export default function Settings() {
     },
   });
 
+  // Mutation to test email connection
+  const testEmailConnectionMutation = useMutation({
+    mutationFn: async () => {
+      const response = await fetch("/api/email/test-connection", {
+        method: "POST",
+        credentials: "include"
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Connection test failed: ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: (response) => {
+      if (response.success) {
+        toast({
+          title: "Email Connection Successful",
+          description: "SMTP connection is working correctly.",
+        });
+      } else {
+        toast({
+          title: "Email Connection Failed",
+          description: "Could not connect to SMTP server. Check configuration.",
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Connection Test Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation to send family links emails
+  const sendFamilyLinksEmailsMutation = useMutation({
+    mutationFn: async ({ testMode = false, testFamilyId = null }: { testMode?: boolean; testFamilyId?: number | null }) => {
+      const response = await fetch("/api/email/send-family-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ testMode, testFamilyId })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Email send failed: ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: (response) => {
+      if (response.testMode) {
+        if (response.success) {
+          toast({
+            title: "Test Email Sent",
+            description: `Test email sent successfully to ${response.familyTested} family.`,
+          });
+        } else {
+          toast({
+            title: "Test Email Failed",
+            description: response.error || "Failed to send test email.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Family Links Sent",
+          description: `Successfully sent ${response.totalSent} emails. ${response.totalFailed > 0 ? `${response.totalFailed} failed.` : ''}`,
+          variant: response.totalFailed > 0 ? "destructive" : "default",
+        });
+      }
+    },
+    onError: (error) => {
+      toast({
+        title: "Email Send Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEditChange = (key: string, value: string) => {
     setEditingSettings(prev => ({ ...prev, [key]: value }));
   };
@@ -339,6 +423,16 @@ export default function Settings() {
     }
   };
 
+  const handleTestEmailConnection = () => {
+    testEmailConnectionMutation.mutate();
+  };
+
+  const handleSendFamilyLinksEmails = () => {
+    if (window.confirm("Send family links emails to ALL families with email addresses? This will send invoice and schedule links to every family.")) {
+      sendFamilyLinksEmailsMutation.mutate({});
+    }
+  };
+
   if (isLoading || gradesLoading) {
     return (
       <div>
@@ -361,20 +455,20 @@ export default function Settings() {
   ];
 
   return (
-    <div>
+    <div className="h-full flex flex-col">
       <PageHeader 
         title="Settings"
         description="Manage system-wide configuration settings and grades"
       />
-      <div className="p-6">
-        <Tabs defaultValue="settings" className="w-full">
+      <div className="flex-1 p-6 overflow-hidden">
+        <Tabs defaultValue="settings" className="w-full h-full flex flex-col">
           <TabsList className="grid w-full grid-cols-3">
             <TabsTrigger value="settings">Settings</TabsTrigger>
             <TabsTrigger value="grades">Grades</TabsTrigger>
             <TabsTrigger value="tools">Tools</TabsTrigger>
           </TabsList>
           
-          <TabsContent value="settings" className="mt-6">
+          <TabsContent value="settings" className="mt-6 flex-1 overflow-y-auto">
             <Card>
               <CardContent className="pt-6">
                 {settingsArray.length === 0 ? (
@@ -410,7 +504,7 @@ export default function Settings() {
             </Card>
           </TabsContent>
           
-          <TabsContent value="grades" className="mt-6">
+          <TabsContent value="grades" className="mt-6 flex-1 overflow-y-auto">
             <div className="space-y-4">
               <div className="flex justify-between items-center">
                 <div>
@@ -433,7 +527,7 @@ export default function Settings() {
             </div>
           </TabsContent>
           
-          <TabsContent value="tools" className="mt-6">
+          <TabsContent value="tools" className="mt-6 flex-1 overflow-y-auto">
             <div className="space-y-4">
               <div>
                 <h3 className="text-lg font-semibold">Tools</h3>
@@ -492,6 +586,42 @@ export default function Settings() {
                       >
                         {resetAllPaymentsMutation.isPending ? "Resetting..." : "Reset All Payments"}
                       </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardContent className="pt-6">
+                    <div>
+                      <h4 className="font-medium text-gray-900">Family Email Notifications</h4>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Send secure links to all families via email, allowing them to access their invoices and student schedules without logging in.
+                      </p>
+                      <div className="flex gap-3 flex-wrap">
+                        <Button
+                          onClick={handleTestEmailConnection}
+                          disabled={testEmailConnectionMutation.isPending}
+                          variant="outline"
+                          size="sm"
+                        >
+                          <TestTube className="h-4 w-4 mr-2" />
+                          {testEmailConnectionMutation.isPending ? "Testing..." : "Test Connection"}
+                        </Button>
+                        <Button
+                          onClick={handleSendFamilyLinksEmails}
+                          disabled={sendFamilyLinksEmailsMutation.isPending}
+                          variant="default"
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          {sendFamilyLinksEmailsMutation.isPending ? "Sending..." : "Send Family Links"}
+                        </Button>
+                      </div>
+                      <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                        <p className="text-xs text-blue-700">
+                          <Mail className="h-3 w-3 inline mr-1" />
+                          Emails include secure links to both family invoices and student schedules. Only families with email addresses will receive notifications.
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>

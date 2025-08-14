@@ -904,6 +904,50 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+
+  // Get all data needed for a family's schedules in a single efficient query set
+  async getFamilyScheduleData(familyId: number) {
+    try {
+      // Fetch all data in parallel for efficiency
+      const [
+        family,
+        familyStudents,
+        allCourses,
+        allGrades,
+        allHours,
+        allSettings,
+      ] = await Promise.all([
+        db.select().from(families).where(eq(families.id, familyId)).then(rows => rows[0] || null),
+        db.select().from(students).where(eq(students.familyId, familyId)),
+        db.select().from(courses),
+        db.select().from(grades),
+        db.select().from(hours),
+        db.select().from(settings),
+      ]);
+
+      if (!family) {
+        return null;
+      }
+
+      // Convert settings array to object format
+      const settingsObject = allSettings.reduce((acc: any, setting: any) => {
+        acc[setting.key] = setting.value;
+        return acc;
+      }, {});
+
+      return {
+        family,
+        students: familyStudents,
+        courses: allCourses,
+        grades: allGrades,
+        hours: allHours,
+        settings: settingsObject,
+      };
+    } catch (error) {
+      console.error("Error fetching family schedule data:", error);
+      throw error;
+    }
+  }
 }
 
 export const storage = new DatabaseStorage();

@@ -6,11 +6,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye } from "lucide-react";
+import { Eye, Link2 } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import { getCurrentGradeString, getCurrentSortableGrade } from "@/lib/gradeUtils";
 import { useToast } from "@/hooks/use-toast";
+import { generateFamilyHash } from "@/lib/invoice-utils";
 import type { Student, Course, Grade } from "@shared/schema";
 
 interface StudentWithFamily extends Student {
@@ -131,6 +132,26 @@ export default function Schedules() {
       fifthHour2: (student as any).fifthHour2 || null,
     });
     setScheduleDialogOpen(true);
+  };
+
+  const handleCopySchedulesLink = async (student: StudentWithFamily) => {
+    try {
+      const hash = await generateFamilyHash(student.familyId);
+      const url = `${window.location.origin}/schedules/${hash}`;
+      
+      await navigator.clipboard.writeText(url);
+      
+      toast({
+        title: "Schedules Link Copied",
+        description: `Secure schedules link for ${student.family.lastName} family has been copied to your clipboard.`,
+      });
+    } catch (error) {
+      toast({
+        title: "Copy Failed", 
+        description: "Could not copy link to clipboard. Please try again.",
+        variant: "destructive",
+      });
+    }
   };
 
   const getAvailableCoursesForHour = (hourIndex: number) => {

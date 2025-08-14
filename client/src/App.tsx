@@ -21,6 +21,7 @@ import Users from "@/pages/users";
 import Settings from "@/pages/settings";
 import Develop from "@/pages/develop";
 import PublicInvoice from "@/pages/public-invoice";
+import PublicSchedules from "@/pages/public-schedules";
 import MainLayout from "@/components/layout/main-layout";
 
 function Router() {
@@ -44,6 +45,7 @@ function Router() {
     <Switch>
       {/* Public routes - no authentication required */}
       <Route path="/invoice/:hash" component={PublicInvoice} />
+      <Route path="/schedules/:hash" component={PublicSchedules} />
       
       {!isAuthenticated ? (
         <>

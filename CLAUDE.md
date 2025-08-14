@@ -144,6 +144,40 @@ Students have a denormalized schedule structure with specific hour fields:
 - `NODE_ENV` - Environment (development/production)
 - `SERVER_PORT` - Server port (default: 5000)
 
+### Email Configuration (for family notifications)
+- `SMTP_HOST` - SMTP server hostname (default: smtp.smtp.com)
+- `SMTP_PORT` - SMTP server port (default: 587)
+- `SMTP_SECURE` - Use SSL/TLS (true for port 465, false for others)
+- `SMTP_USER` - SMTP authentication username
+- `SMTP_PASSWORD` - SMTP authentication password
+- `SMTP_FROM_EMAIL` - From email address (defaults to SMTP_USER)
+
+## Email System Setup
+
+The application includes email functionality for sending family links to invoices and schedules.
+
+### SMTP Configuration
+1. Set up SMTP credentials in your `.env` file (see `.env.example` for template)
+2. For SMTP.com accounts:
+   - `SMTP_HOST=smtp.smtp.com`
+   - `SMTP_PORT=587`
+   - `SMTP_SECURE=false`
+   - `SMTP_USER=your-smtp-username`
+   - `SMTP_PASSWORD=your-smtp-password`
+
+### Testing Email Functionality
+1. Navigate to Settings → Tools tab
+2. Click "Test Connection" to verify SMTP configuration
+3. Use "Send Family Links" to send emails to all families with email addresses
+4. Monitor server logs for any email delivery errors
+
+### Email Features
+- **Family Links Email**: Sends secure links for both invoice and schedules to each family
+- **HTML Templates**: Professional email formatting with responsive design
+- **Bulk Sending**: Processes all families with email addresses
+- **Error Handling**: Tracks successful sends and failures
+- **Security**: Uses hash-based URLs that don't require authentication
+
 ## Authentication Flow
 1. Users log in via `/api/login` with username/password
 2. Server validates credentials and creates session

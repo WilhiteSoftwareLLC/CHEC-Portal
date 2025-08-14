@@ -21,6 +21,7 @@ import {
   insertPaymentSchema,
   insertBillAdjustmentSchema,
 } from "@shared/schema";
+import { emailService } from "./email";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session middleware for credential-based auth
@@ -66,6 +67,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(invoiceData);
     } catch (error) {
       console.error("Error fetching public invoice:", error);
+      res.status(500).json({ error: "Internal server error" });
+    }
+  });
+
+  // Public family schedules viewing endpoint (no authentication required)
+  app.get('/api/schedules/:hash', async (req, res) => {
+    try {
+      const { hash } = req.params;
+      
+      // Find the family ID that matches this hash
+      const familyId = await storage.findFamilyByHash(hash);
+      
+      if (!familyId) {
+        return res.status(404).json({ error: "Schedules not found" });
+      }
+
+      // Get all schedule data for this family efficiently
+      const scheduleData = await storage.getFamilyScheduleData(familyId);
+      
+      if (!scheduleData) {
+        return res.status(404).json({ error: "Family not found" });
+      }
+
+      res.json(scheduleData);
+    } catch (error) {
+      console.error("Error fetching public family schedules:", error);
       res.status(500).json({ error: "Internal server error" });
     }
   });
@@ -1877,6 +1904,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error in develop/deploy:", error);
       res.status(500).json({ error: "Failed to deploy application" });
+    }
+  });
+
+  // Email endpoints for sending family links
+  app.post('/api/email/test-connection', requireAdmin, async (req, res) => {
+    try {
+      const isConnected = await emailService.verifyConnection();
+      res.json({ success: isConnected });
+    } catch (error) {
+      console.error("Email connection test failed:", error);
+      res.status(500).json({ 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Connection test failed' 
+      });
+    }
+  });
+
+  app.post('/api/email/send-family-links', requireAdmin, async (req, res) => {
+    try {
+      const { testMode = false, testFamilyId = null } = req.body;
+      
+      // Get base URL from request or environment
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      
+      if (testMode && testFamilyId) {
+        // Send to a single family for testing
+        const family = await storage.getFamily(testFamilyId);
+        if (!family) {
+          return res.status(404).json({ error: 'Test family not found' });
+        }
+        
+        const result = await emailService.sendFamilyLinks(family, baseUrl);
+        return res.json({ 
+          testMode: true,
+          success: result.success,
+          error: result.error,
+          familyTested: family.lastName
+        });
+      }
+      
+      // Get all active families with email addresses
+      const allFamilies = await storage.getFamilies();
+      const emailFamilies = allFamilies.filter(family => 
+        family.active !== false && family.email && family.email.trim() !== ''
+      );
+      
+      if (emailFamilies.length === 0) {
+        return res.json({
+          totalSent: 0,
+          totalFailed: 0,
+          failedFamilies: [],
+          message: 'No families with email addresses found'
+        });
+      }
+      
+      // Send emails in batches with progress updates
+      const result = await emailService.sendBulkFamilyLinks(
+        emailFamilies,
+        baseUrl,
+        (sent, total, currentFamily) => {
+          // Could implement WebSocket progress updates here if needed
+          console.log(`Email progress: ${sent}/${total} - Currently processing: ${currentFamily}`);
+        }
+      );
+      
+      res.json({
+        totalSent: result.totalSent,
+        totalFailed: result.totalFailed,
+        failedFamilies: result.failedFamilies,
+        totalFamilies: emailFamilies.length
+      });
+      
+    } catch (error) {
+      console.error("Bulk email send failed:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to send emails' 
+      });
     }
   });
 
