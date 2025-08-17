@@ -2054,6 +2054,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Dashboard summary endpoint
+  app.get('/api/dashboard/summary', requireAuth, async (req, res) => {
+    try {
+      // Execute all queries in parallel for efficiency
+      const [families, students, courses, classes, adminUsers, parentUsers, payments, billAdjustments] = await Promise.all([
+        storage.getFamilies(),
+        storage.getStudents(),
+        storage.getCourses(),
+        storage.getClasses(),
+        storage.getAdminUsers(),
+        storage.getParentUsers(),
+        storage.getPayments(),
+        storage.getBillAdjustments()
+      ]);
+
+      // Calculate summary statistics
+      const activeFamilies = families.filter(f => f.active === true).length;
+      const inactiveFamilies = families.filter(f => f.active === false).length;
+      const activeStudents = students.filter(s => s.inactive !== true).length;
+      const inactiveStudents = students.filter(s => s.inactive === true).length;
+      const studentsWithCourses = students.filter(s => 
+        s.mathHour || s.firstHour || s.secondHour || s.thirdHour || s.fourthHour || s.fifthHourFall || s.fifthHourSpring
+      ).length;
+      
+      // Calculate payment status for families
+      const activeFamilyIds = families.filter(f => f.active === true).map(f => f.id);
+      const familiesWithPayments = new Set(payments.map(p => p.familyId));
+      
+      const familiesPaid = activeFamilyIds.filter(id => familiesWithPayments.has(id)).length;
+      const familiesUnpaid = activeFamilyIds.filter(id => !familiesWithPayments.has(id)).length;
+
+      const summary = {
+        families: {
+          active: activeFamilies,
+          inactive: inactiveFamilies
+        },
+        students: {
+          active: activeStudents,
+          inactive: inactiveStudents,
+          scheduled: studentsWithCourses
+        },
+        courses: {
+          total: courses.filter(c => c.offeredFall || c.offeredSpring).length
+        },
+        classes: {
+          total: classes.length
+        },
+        users: {
+          total: adminUsers.length + parentUsers.length
+        },
+        invoices: {
+          familiesPaid: familiesPaid,
+          familiesUnpaid: familiesUnpaid
+        }
+      };
+
+      res.json(summary);
+    } catch (error) {
+      console.error("Failed to get dashboard summary:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to get dashboard summary' 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
