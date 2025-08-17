@@ -6,7 +6,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Eye, Link2 } from "lucide-react";
+import { Eye, Link2, Mail } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import { getCurrentGradeString, getCurrentSortableGrade } from "@/lib/gradeUtils";
@@ -104,6 +104,38 @@ export default function Schedules() {
     },
   });
 
+  // Mutation to send emails to selected families
+  const sendSelectedFamilyEmailsMutation = useMutation({
+    mutationFn: async (studentIds: number[]) => {
+      const response = await fetch("/api/email/send-selected-family-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ studentIds })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Email send failed: ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: (response) => {
+      toast({
+        title: "Family Links Sent",
+        description: `Successfully sent ${response.totalSent} emails to families with selected students. ${response.totalFailed > 0 ? `${response.totalFailed} failed.` : ''}`,
+        variant: response.totalFailed > 0 ? "destructive" : "default",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Email Send Failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const getCourseCount = (student: StudentWithFamily) => {
     const studentCourses = [
       student.mathHour,
@@ -164,6 +196,24 @@ export default function Schedules() {
       ...prev,
       [field]: courseId === 'NO_COURSE' ? null : courseId
     }));
+  };
+
+  const handleEmailSelectedSchedules = () => {
+    if (selectedSchedules.size === 0) {
+      toast({
+        title: "No Students Selected",
+        description: "Please select at least one student to email their families.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const selectedStudentIds = Array.from(selectedSchedules);
+    const confirmMessage = `Send family links emails to the families of ${selectedSchedules.size} selected student${selectedSchedules.size === 1 ? '' : 's'}?`;
+    
+    if (window.confirm(confirmMessage)) {
+      sendSelectedFamilyEmailsMutation.mutate(selectedStudentIds);
+    }
   };
 
   const handlePrintSchedules = () => {
@@ -590,6 +640,15 @@ export default function Schedules() {
       <PageHeader 
         title="Schedules"
         description="Manage student course schedules"
+        secondaryButton={{
+          label: selectedSchedules.size > 0 
+            ? `Email (${selectedSchedules.size}) Selected Schedules`
+            : "Email Selected Schedules",
+          onClick: handleEmailSelectedSchedules,
+          icon: Mail,
+          variant: "outline",
+          disabled: selectedSchedules.size === 0 || sendSelectedFamilyEmailsMutation.isPending
+        }}
         actionButton={{
           label: selectedSchedules.size > 0 
             ? `Print (${selectedSchedules.size}) Selected Schedules`

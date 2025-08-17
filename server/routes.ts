@@ -1984,6 +1984,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post('/api/email/send-selected-family-links', requireAdmin, async (req, res) => {
+    try {
+      const { studentIds } = req.body;
+      
+      if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+        return res.status(400).json({ error: 'No student IDs provided' });
+      }
+      
+      // Get base URL from request
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      
+      // Get students and their families
+      const students = await storage.getStudents();
+      const selectedStudents = students.filter(student => studentIds.includes(student.id));
+      
+      if (selectedStudents.length === 0) {
+        return res.json({
+          totalSent: 0,
+          totalFailed: 0,
+          failedFamilies: [],
+          message: 'No matching students found'
+        });
+      }
+      
+      // Get unique family IDs from selected students
+      const familyIds = [...new Set(selectedStudents.map(student => student.familyId))];
+      
+      // Get all families and filter to only those with selected students
+      const allFamilies = await storage.getFamilies();
+      const selectedFamilies = allFamilies.filter(family => 
+        familyIds.includes(family.id) && 
+        family.active !== false && 
+        family.email && 
+        family.email.trim() !== ''
+      );
+      
+      if (selectedFamilies.length === 0) {
+        return res.json({
+          totalSent: 0,
+          totalFailed: 0,
+          failedFamilies: [],
+          message: 'No families with email addresses found for selected students'
+        });
+      }
+      
+      // Send emails to selected families
+      const result = await emailService.sendBulkFamilyLinks(
+        selectedFamilies,
+        baseUrl,
+        (sent, total, currentFamily) => {
+          console.log(`Selected families email progress: ${sent}/${total} - Currently processing: ${currentFamily}`);
+        }
+      );
+      
+      res.json({
+        totalSent: result.totalSent,
+        totalFailed: result.totalFailed,
+        failedFamilies: result.failedFamilies,
+        totalFamilies: selectedFamilies.length,
+        selectedStudents: selectedStudents.length
+      });
+      
+    } catch (error) {
+      console.error("Selected families email send failed:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to send emails to selected families' 
+      });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }
