@@ -210,7 +210,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const id = parseInt(req.params.id);
       const familyData = insertFamilySchema.partial().parse(req.body);
+      
+      // Check if family active status is being changed
+      const isActiveStatusChange = 'active' in familyData;
+      const newActiveStatus = familyData.active;
+      
       const family = await storage.updateFamily(id, familyData);
+      
+      // If family active status changed, update all students in that family
+      if (isActiveStatusChange) {
+        const familyStudents = await storage.getStudentsByFamily(id);
+        const studentUpdates = familyStudents.map(student => 
+          storage.updateStudent(student.id, { inactive: !newActiveStatus })
+        );
+        await Promise.all(studentUpdates);
+        
+        console.log(`Updated ${familyStudents.length} students to ${newActiveStatus ? 'active' : 'inactive'} status for family ${id}`);
+      }
+      
       res.json(family);
     } catch (error) {
       console.error("Error updating family:", error);
