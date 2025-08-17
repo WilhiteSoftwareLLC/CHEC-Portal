@@ -5,7 +5,7 @@ import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddFamilyDialog from "@/components/dialogs/add-family-dialog";
 import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
-import { Plus } from "lucide-react";
+import { Plus, Download } from "lucide-react";
 import type { Family } from "@shared/schema";
 
 export default function Families() {
@@ -80,6 +80,74 @@ export default function Families() {
     }
   };
 
+  const handleExportAllFamilies = () => {
+    if (!families || families.length === 0) {
+      toast({
+        title: "No Families Found",
+        description: "No families available to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create CSV content with all family fields
+    const headers = [
+      "ID",
+      "Last Name",
+      "Father",
+      "Mother", 
+      "Email",
+      "Second Email",
+      "Parent Cell",
+      "Parent Cell 2",
+      "Home Phone",
+      "Work Phone",
+      "Address",
+      "City",
+      "ZIP",
+      "Status"
+    ];
+
+    const csvRows = [
+      headers.join(","),
+      ...families.map((family: Family) => [
+        family.id,
+        `"${family.lastName || ""}"`,
+        `"${family.father || ""}"`,
+        `"${family.mother || ""}"`,
+        `"${family.email || ""}"`,
+        `"${family.secondEmail || ""}"`,
+        `"${family.parentCell || ""}"`,
+        `"${family.parentCell2 || ""}"`,
+        `"${family.homePhone || ""}"`,
+        `"${family.workPhone || ""}"`,
+        `"${family.address || ""}"`,
+        `"${family.city || ""}"`,
+        `"${family.zip || ""}"`,
+        family.active ? "Active" : "Inactive"
+      ].join(","))
+    ];
+
+    const csvContent = csvRows.join("\n");
+
+    // Create and download file with BOM for proper UTF-8 encoding
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `all_families_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Complete",
+      description: `Exported ${families.length} families to CSV file.`,
+    });
+  };
+
   const columns: GridColumn[] = [
     { key: "lastName", label: "Last Name", sortable: true, editable: true, width: "48" },
     { key: "father", label: "Father", sortable: true, editable: true, width: "48" },
@@ -112,6 +180,12 @@ export default function Families() {
       <PageHeader 
         title="Families"
         description="Manage family information and contacts"
+        secondaryButton={{
+          label: "Export All Families",
+          onClick: handleExportAllFamilies,
+          icon: Download,
+          variant: "outline"
+        }}
         actionButton={{
           label: "Add Family",
           onClick: () => setAddFamilyOpen(true),
