@@ -414,7 +414,7 @@ export default function Courses() {
 
     return `
       ${addPageBreak ? '<div class="page-break"></div>' : ''}
-      <div class="course-header">${course.courseName}</div>
+      <div class="course-header">${course.courseName} - Course Roster</div>
       <table>
         <thead>
           <tr>

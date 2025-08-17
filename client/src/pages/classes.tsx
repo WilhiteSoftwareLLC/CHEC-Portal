@@ -149,12 +149,12 @@ export default function Classes() {
   };
 
   const generateClassRostersHTML = () => {
-    // Filter elementary classes (6th grade and younger - grade codes 6 and below)
-    const elementaryClasses = (classes || []).filter((cls: any) => cls.endCode <= 6);
+    // Include all classes regardless of grade level
+    const allClasses = (classes || []);
     
     // Sort classes by name
-    const sortedClasses = elementaryClasses.sort((a: any, b: any) => 
-      a.className.localeCompare(b.className)
+    const sortedClasses = allClasses.sort((a: any, b: any) => 
+      Number(a.startCode) < Number(b.startCode)
     );
     
     const classRosters = sortedClasses.map((cls: any, index: number) => 
@@ -189,10 +189,10 @@ export default function Classes() {
             }
             th, td {
               border: 1px solid #000;
-              padding: 8px 12px;
+              padding: 4px 12px;
               text-align: left;
               white-space: nowrap;
-              height: 40px;
+              height: 28px;
               vertical-align: middle;
             }
             th {
@@ -251,7 +251,7 @@ export default function Classes() {
 
     return `
       ${addPageBreak ? '<div class="page-break"></div>' : ''}
-      <div class="class-header">${classData.className}</div>
+      <div class="class-header">${classData.className} - Class Roster</div>
       <table>
         <thead>
           <tr>
