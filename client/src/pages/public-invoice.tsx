@@ -1,10 +1,10 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, Download, CreditCard, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { FileText, Download, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import type { Family, Payment, BillAdjustment } from "@shared/schema";
 
 interface PublicInvoiceData {
@@ -18,11 +18,20 @@ interface PublicInvoiceData {
   billAdjustments: BillAdjustment[];
 }
 
+declare global {
+  interface Window {
+    paypal?: any;
+  }
+}
+
 export default function PublicInvoice() {
   const { hash } = useParams<{ hash: string }>();
   const [invoiceData, setInvoiceData] = useState<PublicInvoiceData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [paypalLoaded, setPaypalLoaded] = useState(false);
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const paypalButtonsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!hash) {
@@ -33,6 +42,40 @@ export default function PublicInvoice() {
 
     fetchInvoiceData();
   }, [hash]);
+
+  useEffect(() => {
+    // Load PayPal SDK
+    const loadPayPalSDK = () => {
+      if (window.paypal) {
+        setPaypalLoaded(true);
+        return;
+      }
+
+      const script = document.createElement('script');
+      const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons`;
+      script.onload = () => setPaypalLoaded(true);
+      script.onerror = () => console.error('Failed to load PayPal SDK');
+      document.head.appendChild(script);
+    };
+
+    if (invoiceData) {
+      const details = calculateInvoiceDetails();
+      if (details && details.unpaidBalance > 0) {
+        loadPayPalSDK();
+      }
+    }
+  }, [invoiceData]);
+
+  useEffect(() => {
+    // Render PayPal buttons when SDK is loaded and we have invoice data
+    if (paypalLoaded && invoiceData && paypalButtonsRef.current) {
+      const details = calculateInvoiceDetails(true);
+      if (details && details.unpaidBalanceWithPayPalFee > 0) {
+        renderPayPalButtons(details.unpaidBalanceWithPayPalFee);
+      }
+    }
+  }, [paypalLoaded, invoiceData]);
 
   const fetchInvoiceData = async () => {
     try {
@@ -57,7 +100,7 @@ export default function PublicInvoice() {
     }
   };
 
-  const calculateInvoiceDetails = () => {
+  const calculateInvoiceDetails = (includePayPalFee: boolean = false) => {
     if (!invoiceData) return null;
 
     const { family, students, settings, courses, payments, billAdjustments } = invoiceData;
@@ -107,27 +150,40 @@ export default function PublicInvoice() {
       sum + parseFloat(adjustment.amount.toString()), 0);
     const adjustedTotal = total + totalAdjustments;
 
+    // Calculate PayPal processing fee if requested
+    let paypalFee = 0;
+    if (includePayPalFee && settings?.PayPalPercentage && settings?.PayPalFixedRate) {
+      const paypalPercentage = parseFloat(settings.PayPalPercentage) / 100;
+      const paypalFixedRate = parseFloat(settings.PayPalFixedRate);
+      paypalFee = (adjustedTotal * paypalPercentage) + paypalFixedRate;
+    }
+    const totalWithPayPalFee = adjustedTotal + paypalFee;
+
     // Calculate payments
     const totalPaid = payments.reduce((sum, payment) => 
       sum + parseFloat(payment.amount.toString()), 0);
     
     const unpaidBalance = adjustedTotal - totalPaid;
+    const unpaidBalanceWithPayPalFee = totalWithPayPalFee - totalPaid;
 
     return {
       baseTotal: total,
       totalAdjustments,
       adjustedTotal,
+      paypalFee,
+      totalWithPayPalFee,
       totalPaid,
       unpaidBalance,
+      unpaidBalanceWithPayPalFee,
     };
   };
 
-  const generateInvoiceHTML = () => {
-    if (!invoiceData) return "";
+  const generateInvoiceHTML = (includePayPalFee: boolean = false): Array<{name: string, grade: string, hour: string, item: string, fee: number}> => {
+    if (!invoiceData) return [];
 
     const { family, students, settings, courses, hours, billAdjustments } = invoiceData;
-    const details = calculateInvoiceDetails();
-    if (!details) return "";
+    const details = calculateInvoiceDetails(includePayPalFee);
+    if (!details) return [];
 
     const familyFee = parseFloat(settings?.FamilyFee || "20");
     const backgroundFee = parseFloat(settings?.BackgroundFee || "0");
@@ -235,6 +291,19 @@ export default function PublicInvoice() {
       total += amount;
     });
 
+    // Add PayPal processing fee if requested
+    if (includePayPalFee && details.paypalFee > 0 && settings?.PayPalPercentage && settings?.PayPalFixedRate) {
+      const paypalPercentage = parseFloat(settings.PayPalPercentage);
+      const paypalFixedRate = parseFloat(settings.PayPalFixedRate);
+      invoiceRows.push({
+        name: family.lastName + ' family',
+        grade: '',
+        hour: 'Online',
+        item: `PayPal Processing Fee ({paypalPercentage}% + ${paypalFixedRate})`,
+        fee: details.paypalFee
+      });
+    }
+
     return invoiceRows;
   };
 
@@ -251,10 +320,89 @@ export default function PublicInvoice() {
     window.print();
   };
 
-  const handlePayOnline = () => {
-    // Placeholder for future online payment integration
-    alert("Online payment feature coming soon!");
+  const renderPayPalButtons = (amount: number) => {
+    if (!window.paypal || !paypalButtonsRef.current) return;
+
+    // Clear existing buttons
+    paypalButtonsRef.current.innerHTML = '';
+
+    window.paypal.Buttons({
+      style: {
+        layout: 'vertical',
+        color: 'blue',
+        shape: 'rect',
+        label: 'pay'
+      },
+      createOrder: async () => {
+        try {
+          setIsProcessingPayment(true);
+          const response = await fetch('/api/paypal/create-order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              amount: amount.toFixed(2),
+              familyId: invoiceData!.family.id,
+              invoiceHash: hash
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to create PayPal order');
+          }
+
+          const data = await response.json();
+          return data.orderID;
+        } catch (error) {
+          console.error('Error creating PayPal order:', error);
+          setError('Failed to initialize payment. Please try again.');
+          setIsProcessingPayment(false);
+          throw error;
+        }
+      },
+      onApprove: async (data: any) => {
+        try {
+          const response = await fetch('/api/paypal/capture-order', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              orderID: data.orderID,
+              familyId: invoiceData!.family.id
+            }),
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to capture PayPal payment');
+          }
+
+          const captureData = await response.json();
+          
+          // Refresh invoice data to show updated payment status
+          await fetchInvoiceData();
+          
+          setError(null);
+          alert('Payment successful! Thank you for your payment.');
+        } catch (error) {
+          console.error('Error capturing PayPal payment:', error);
+          setError('Payment failed to process. Please contact support.');
+        } finally {
+          setIsProcessingPayment(false);
+        }
+      },
+      onError: (err: any) => {
+        console.error('PayPal error:', err);
+        setError('Payment failed. Please try again or contact support.');
+        setIsProcessingPayment(false);
+      },
+      onCancel: () => {
+        setIsProcessingPayment(false);
+      }
+    }).render(paypalButtonsRef.current);
   };
+
 
   if (isLoading) {
     return (
@@ -289,9 +437,11 @@ export default function PublicInvoice() {
   if (!invoiceData) return null;
 
   const details = calculateInvoiceDetails();
-  if (!details) return null;
+  const detailsWithPayPal = calculateInvoiceDetails(true);
+  if (!details || !detailsWithPayPal) return null;
 
   const invoiceRows = generateInvoiceHTML();
+  const invoiceRowsWithPayPal = generateInvoiceHTML(true);
   const { family, payments } = invoiceData;
 
   // Payment status styling and messaging
@@ -337,6 +487,23 @@ export default function PublicInvoice() {
           .print-only { display: block !important; }
           body { background: white !important; }
           .bg-gray-50 { background: white !important; }
+          .container { padding: 0.5rem !important; }
+          .py-8 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+          .px-4 { padding-left: 0.5rem !important; padding-right: 0.5rem !important; }
+          .text-2xl { font-size: 1.25rem !important; }
+          .text-xl { font-size: 1.125rem !important; }
+          .text-lg { font-size: 1rem !important; }
+          .text-sm { font-size: 0.75rem !important; }
+          .py-3 { padding-top: 0.25rem !important; padding-bottom: 0.25rem !important; }
+          .py-2 { padding-top: 0.125rem !important; padding-bottom: 0.125rem !important; }
+          .py-4 { padding-top: 0.5rem !important; padding-bottom: 0.5rem !important; }
+          .px-4 { padding-left: 0.25rem !important; padding-right: 0.25rem !important; }
+          .mb-6 { margin-bottom: 0.75rem !important; }
+          .mb-4 { margin-bottom: 0.5rem !important; }
+          .mb-2 { margin-bottom: 0.25rem !important; }
+          .p-6 { padding: 0.75rem !important; }
+          table { font-size: 0.8rem !important; }
+          th, td { padding: 0.125rem 0.25rem !important; }
         }
         .print-only { display: none; }
       `}</style>
@@ -355,12 +522,6 @@ export default function PublicInvoice() {
               <Download className="h-4 w-4 mr-2" />
               Print Invoice
             </Button>
-            {details.unpaidBalance > 0 && (
-              <Button onClick={handlePayOnline} className="bg-green-600 hover:bg-green-700">
-                <CreditCard className="h-4 w-4 mr-2" />
-                Pay Online
-              </Button>
-            )}
           </div>
         </div>
 
@@ -427,6 +588,25 @@ export default function PublicInvoice() {
                     <td className="py-3 px-4 text-right">${details.adjustedTotal.toFixed(2)}</td>
                   </tr>
 
+                  {/* PayPal fee row - only show if unpaid balance exists */}
+                  {details.unpaidBalance > 0 && (
+                    <tr className="border-b border-gray-200 text-blue-600">
+                      <td className="py-2 px-4">{family.lastName} family</td>
+                      <td className="py-2 px-4"></td>
+                      <td className="py-2 px-4">Online</td>
+                      <td className="py-2 px-4">PayPal Processing Fee</td>
+                      <td className="py-2 px-4 text-right">${detailsWithPayPal.paypalFee.toFixed(2)}</td>
+                    </tr>
+                  )}
+
+                  {/* PayPal total row - only show if unpaid balance exists */}
+                  {details.unpaidBalance > 0 && (
+                    <tr className="border-t border-gray-400 font-semibold bg-blue-50 text-blue-800">
+                      <td colSpan={4} className="py-3 px-4">Total with PayPal Fee</td>
+                      <td className="py-3 px-4 text-right">${detailsWithPayPal.totalWithPayPalFee.toFixed(2)}</td>
+                    </tr>
+                  )}
+
                   {/* Payment rows */}
                   {payments.map((payment, index) => (
                     <tr key={`payment-${index}`} className="text-green-600">
@@ -457,6 +637,14 @@ export default function PublicInvoice() {
                        '$0.00'}
                     </td>
                   </tr>
+
+                  {/* PayPal balance row - only show if unpaid balance exists */}
+                  {details.unpaidBalance > 0 && (
+                    <tr className="border-t border-blue-400 font-bold text-lg bg-blue-100 text-blue-900">
+                      <td colSpan={4} className="py-4 px-4">PayPal Payment Amount</td>
+                      <td className="py-4 px-4 text-right">${detailsWithPayPal.unpaidBalanceWithPayPalFee.toFixed(2)}</td>
+                    </tr>
+                  )}
                 </tbody>
               </table>
             </div>
@@ -466,17 +654,19 @@ export default function PublicInvoice() {
               <div className="no-print mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <h3 className="font-semibold text-yellow-800 mb-2">Payment Instructions</h3>
                 <p className="text-yellow-700 text-sm mb-3">
-                  Please remit payment of <strong>${details.unpaidBalance.toFixed(2)}</strong> by the due date.
+                  Please remit payment of <strong>${details.unpaidBalance.toFixed(2)}</strong> at or before orientation.
                 </p>
-                <div className="flex gap-3">
-                  <Button onClick={handlePayOnline} size="sm" className="bg-green-600 hover:bg-green-700">
-                    <CreditCard className="h-4 w-4 mr-2" />
-                    Pay Online
-                  </Button>
-                  <p className="text-xs text-yellow-600 self-center">
-                    Or mail check to the address on file
+                <p className="text-xs text-yellow-600 mb-2">
+                  Pay with check or cash at orientation, or pay securely online with PayPal below.
+                </p>
+                {invoiceData.settings?.PayPalPercentage && invoiceData.settings?.PayPalFixedRate && detailsWithPayPal.paypalFee > 0 && (
+                  <p className="text-xs text-blue-600 mb-4">
+                    <strong>PayPal Payment: ${detailsWithPayPal.unpaidBalanceWithPayPalFee.toFixed(2)}</strong> (includes {parseFloat(invoiceData.settings.PayPalPercentage)}% + ${parseFloat(invoiceData.settings.PayPalFixedRate)} processing fee)
                   </p>
-                </div>
+                )}
+                
+                {/* PayPal buttons container */}
+                <div ref={paypalButtonsRef} className="mt-4"></div>
               </div>
             )}
           </CardContent>

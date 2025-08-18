@@ -279,8 +279,12 @@ export const payments = pgTable("payments", {
   familyId: integer("family_id").references(() => families.id).notNull(),
   amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
   paymentDate: date("payment_date").notNull(),
-  paymentMethod: varchar("payment_method", { length: 50 }), // cash, check, card, etc.
+  paymentMethod: varchar("payment_method", { length: 50 }), // cash, check, card, paypal, etc.
   description: text("description"), // optional note about payment
+  paypalOrderId: varchar("paypal_order_id", { length: 100 }), // PayPal order ID
+  paypalPaymentId: varchar("paypal_payment_id", { length: 100 }), // PayPal payment/capture ID
+  paypalPayerEmail: varchar("paypal_payer_email", { length: 255 }), // Payer's PayPal email
+  status: varchar("status", { length: 20 }).default("completed"), // pending, completed, failed, refunded
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

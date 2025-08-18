@@ -22,6 +22,7 @@ import {
   insertBillAdjustmentSchema,
 } from "@shared/schema";
 import { emailService } from "./email";
+import { createPayPalOrder, capturePayPalOrder, verifyPayPalWebhook, createPayPalWebhook } from "./paypal";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Session middleware for credential-based auth
@@ -1453,6 +1454,145 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // PayPal payment routes
+  app.post("/api/paypal/create-order", async (req, res) => {
+    try {
+      const { amount, familyId, invoiceHash } = req.body;
+      
+      if (!amount || !familyId || !invoiceHash) {
+        return res.status(400).json({ message: "Missing required fields: amount, familyId, invoiceHash" });
+      }
+
+      // Verify the invoice hash is valid and get family data
+      const hashFamilyId = await storage.findFamilyByHash(invoiceHash);
+      if (!hashFamilyId || hashFamilyId !== familyId) {
+        return res.status(404).json({ message: "Invalid invoice or family ID" });
+      }
+
+      const order = await createPayPalOrder({ amount, familyId, invoiceHash });
+      res.json({ orderID: order.id });
+    } catch (error) {
+      console.error("Error creating PayPal order:", error);
+      res.status(500).json({ message: "Failed to create PayPal order" });
+    }
+  });
+
+  app.post("/api/paypal/capture-order", async (req, res) => {
+    try {
+      const { orderID, familyId } = req.body;
+      
+      if (!orderID || !familyId) {
+        return res.status(400).json({ message: "Missing required fields: orderID, familyId" });
+      }
+
+      const captureData = await capturePayPalOrder(orderID);
+      
+      // Extract payment details
+      const capture = captureData.purchase_units?.[0]?.payments?.captures?.[0];
+      if (!capture) {
+        return res.status(400).json({ message: "No capture data found" });
+      }
+
+      // Create payment record in database
+      const paymentRecord = await storage.createPayment({
+        familyId,
+        amount: capture.amount.value,
+        paymentDate: new Date().toISOString().split('T')[0],
+        paymentMethod: 'paypal',
+        description: `PayPal payment - Order ID: ${orderID}`,
+        paypalOrderId: orderID,
+        paypalPaymentId: capture.id,
+        paypalPayerEmail: captureData.payer?.email_address,
+        status: 'completed'
+      });
+
+      res.json({ 
+        success: true, 
+        captureID: capture.id,
+        payment: paymentRecord 
+      });
+    } catch (error) {
+      console.error("Error capturing PayPal order:", error);
+      res.status(500).json({ message: "Failed to capture PayPal order" });
+    }
+  });
+
+  app.post("/api/paypal/webhook", async (req, res) => {
+    try {
+      const rawBody = JSON.stringify(req.body);
+      const headers = req.headers as Record<string, string>;
+      
+      // Verify webhook signature
+      const isValid = await verifyPayPalWebhook(rawBody, headers);
+      if (!isValid) {
+        return res.status(401).json({ message: "Invalid webhook signature" });
+      }
+
+      const event = req.body;
+      console.log('PayPal webhook received:', event.event_type);
+
+      // Handle different webhook events
+      if (event.event_type === 'PAYMENT.CAPTURE.COMPLETED') {
+        const resource = event.resource;
+        const customId = resource.custom_id;
+        
+        // Extract family ID from custom_id format: family_{id}_invoice_{hash}
+        const familyIdMatch = customId?.match(/family_(\d+)_invoice_/);
+        const familyId = familyIdMatch ? parseInt(familyIdMatch[1]) : null;
+        
+        if (familyId) {
+          // Check if payment already exists
+          const existingPayments = await storage.getPaymentsByFamily(familyId);
+          const paymentExists = existingPayments.some(p => p.paypalPaymentId === resource.id);
+          
+          if (!paymentExists) {
+            // Create payment record
+            await storage.createPayment({
+              familyId,
+              amount: resource.amount.value,
+              paymentDate: new Date().toISOString().split('T')[0],
+              paymentMethod: 'paypal',
+              description: `PayPal payment - Webhook capture`,
+              paypalOrderId: resource.supplementary_data?.related_ids?.order_id,
+              paypalPaymentId: resource.id,
+              paypalPayerEmail: event.resource.payer?.email_address,
+              status: 'completed'
+            });
+          }
+        }
+      }
+
+      // Always respond with 200 to acknowledge webhook receipt
+      res.status(200).json({ message: "Webhook processed successfully" });
+    } catch (error) {
+      console.error("Error processing PayPal webhook:", error);
+      res.status(500).json({ message: "Failed to process webhook" });
+    }
+  });
+
+  app.post("/api/paypal/create-webhook", requireAdmin, async (req, res) => {
+    try {
+      const { webhookUrl } = req.body;
+      
+      if (!webhookUrl) {
+        return res.status(400).json({ message: "Missing required field: webhookUrl" });
+      }
+
+      const webhook = await createPayPalWebhook(webhookUrl);
+      
+      res.json({ 
+        success: true, 
+        webhookId: webhook.id,
+        url: webhook.url,
+        eventTypes: webhook.event_types,
+        message: `Webhook created successfully. Add PAYPAL_WEBHOOK_ID=${webhook.id} to your .env file`
+      });
+    } catch (error) {
+      console.error("Error creating PayPal webhook:", error);
+      res.status(500).json({ message: "Failed to create PayPal webhook" });
+    }
+  });
+
   // Get courses by hour for dropdown selection
   app.get("/api/courses/by-hour/:hour", async (req, res) => {
     try {
@@ -2026,7 +2166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Get unique family IDs from selected students
-      const familyIds = [...new Set(selectedStudents.map(student => student.familyId))];
+      const familyIds = Array.from(new Set(selectedStudents.map(student => student.familyId)));
       
       // Get all families and filter to only those with selected students
       const allFamilies = await storage.getFamilies();

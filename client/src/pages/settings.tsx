@@ -469,39 +469,93 @@ export default function Settings() {
           </TabsList>
           
           <TabsContent value="settings" className="mt-6 flex-1 overflow-y-auto">
-            <Card>
-              <CardContent className="pt-6">
-                {settingsArray.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    No settings configured.
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    {settingsArray.map(({ key, value }) => (
-                      <div key={key} className="flex items-center gap-4 p-4 border rounded-lg">
-                        <div className="flex-1 space-y-1">
-                          <Label className="font-medium">{key}</Label>
-                          <Input
-                            value={editingSettings[key] ?? value ?? ""}
-                            onChange={(e) => handleEditChange(key, e.target.value)}
-                            placeholder="Setting value"
-                          />
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            size="sm"
-                            onClick={() => handleSave(key)}
-                            disabled={editingSettings[key] === undefined || updateSettingMutation.isPending}
-                          >
-                            <Save className="h-4 w-4" />
-                          </Button>
-                        </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <div>
+                  <h3 className="text-lg font-semibold">System Settings</h3>
+                  <p className="text-sm text-gray-600">Configure system-wide settings and fees</p>
+                </div>
+                <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button disabled={addSettingMutation.isPending}>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Setting
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Add New Setting</DialogTitle>
+                      <DialogDescription>
+                        Create a new system setting with key and value.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="setting-key">Setting Key</Label>
+                        <Input
+                          id="setting-key"
+                          value={newKey}
+                          onChange={(e) => setNewKey(e.target.value)}
+                          placeholder="e.g., PayPalPercentage"
+                        />
                       </div>
-                    ))}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                      <div>
+                        <Label htmlFor="setting-value">Setting Value</Label>
+                        <Input
+                          id="setting-value"
+                          value={newValue}
+                          onChange={(e) => setNewValue(e.target.value)}
+                          placeholder="e.g., 2.9"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="setting-description">Description (Optional)</Label>
+                        <Input
+                          id="setting-description"
+                          value={newDescription}
+                          onChange={(e) => setNewDescription(e.target.value)}
+                          placeholder="e.g., Percentage fee charged per PayPal transaction"
+                        />
+                      </div>
+                      <Button
+                        onClick={handleAdd}
+                        disabled={!newKey || !newValue || addSettingMutation.isPending}
+                        className="w-full"
+                      >
+                        Add Setting
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+              
+              <EditableGrid
+                data={settingsArray.map(({ key, value }) => ({ 
+                  id: key, 
+                  key, 
+                  value: value ?? "", 
+                  description: settings?.[key + '_description'] || ""
+                }))}
+                columns={[
+                  { key: "key", label: "Setting Key", sortable: true, editable: false, width: "30" },
+                  { key: "value", label: "Value", sortable: false, editable: true, width: "25" },
+                  { key: "description", label: "Description", sortable: false, editable: true, width: "45" }
+                ]}
+                onRowUpdate={async (id: string, updates: Record<string, any>) => {
+                  await updateSettingMutation.mutateAsync({ 
+                    key: id, 
+                    value: updates.value,
+                    description: updates.description 
+                  });
+                }}
+                onRowDelete={async (id: string) => {
+                  if (confirm(`Are you sure you want to delete the setting "${id}"?`)) {
+                    await deleteSettingMutation.mutateAsync(id);
+                  }
+                }}
+                isLoading={isLoading}
+              />
+            </div>
           </TabsContent>
           
           <TabsContent value="grades" className="mt-6 flex-1 overflow-y-auto">
