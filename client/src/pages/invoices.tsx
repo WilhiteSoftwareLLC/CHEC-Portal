@@ -84,7 +84,7 @@ export default function Invoices() {
     const backgroundFee = parseFloat(settingsData?.BackgroundFee || "0");
     const studentFee = parseFloat(settingsData?.StudentFee || "20");
 
-    const familyStudents = studentsData.filter((s: any) => s.familyId === family.id);
+    const familyStudents = studentsData.filter((s: any) => s.familyId === family.id && !s.inactive);
     
     // Sort students by gradYear in reverse order (younger students first)
     const sortedStudents = familyStudents.sort((a: any, b: any) => {
@@ -252,7 +252,7 @@ export default function Invoices() {
     const studentFee = parseFloat((window as any).cachedSettings?.StudentFee || "20");
 
     // Get students for this family and sort by gradYear (youngest first)
-    const familyStudents = ((window as any).cachedStudents?.filter((s: any) => s.familyId === family.id) || [])
+    const familyStudents = ((window as any).cachedStudents?.filter((s: any) => s.familyId === family.id && !s.inactive) || [])
       .sort((a: any, b: any) => {
         const gradYearA = parseInt(a.gradYear) || 0;
         const gradYearB = parseInt(b.gradYear) || 0;

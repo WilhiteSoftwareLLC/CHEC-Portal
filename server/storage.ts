@@ -870,7 +870,7 @@ export class DatabaseStorage implements IStorage {
         familyBillAdjustments,
       ] = await Promise.all([
         db.select().from(families).where(eq(families.id, familyId)).then(rows => rows[0] || null),
-        db.select().from(students).where(eq(students.familyId, familyId)),
+        db.select().from(students).where(and(eq(students.familyId, familyId), not(eq(students.inactive, true)))),
         db.select().from(courses),
         db.select().from(grades),
         db.select().from(hours),
@@ -918,7 +918,7 @@ export class DatabaseStorage implements IStorage {
         allSettings,
       ] = await Promise.all([
         db.select().from(families).where(eq(families.id, familyId)).then(rows => rows[0] || null),
-        db.select().from(students).where(eq(students.familyId, familyId)),
+        db.select().from(students).where(and(eq(students.familyId, familyId), not(eq(students.inactive, true)))),
         db.select().from(courses),
         db.select().from(grades),
         db.select().from(hours),
