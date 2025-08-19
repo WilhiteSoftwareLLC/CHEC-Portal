@@ -666,7 +666,14 @@ export default function PublicInvoice() {
                 )}
                 
                 {/* PayPal buttons container */}
-                <div ref={paypalButtonsRef} className="mt-4"></div>
+                {/* <div ref={paypalButtonsRef} className="mt-4"></div> */}
+                <form action="https://www.paypal.com/donate" method="post" target="_top">
+                  <input type="hidden" name="hosted_button_id" value="LSP6ESUQWYW92" />
+                  <input type="image" src="https://tse1.mm.bing.net/th?id=OIP.JzIAJEPpncLSN_MWst60QAHaFX&pid=Api&rs=1&c=1&qlt=95&w=155&h=112" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+                  <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+                  <input type="hidden" name="amount" value={detailsWithPayPal.unpaidBalance.toFixed(2)} />
+                  <input type="hidden" name="currency_code" value="USD" />
+                </form>
               </div>
             )}
           </CardContent>
