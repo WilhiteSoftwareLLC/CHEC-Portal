@@ -119,10 +119,13 @@ export default function Invoices() {
         if (courseName && courseName !== 'NO_COURSE') {
           // Find the actual course to get its fee
           const course = coursesData?.find((c: any) => c.courseName === courseName);
-          if (course && course.fee && parseFloat(course.fee) > 0) {
-            total += parseFloat(course.fee);
+          if (course) {
+            // Add course fee if it exists and is greater than 0
+            if (course.fee && parseFloat(course.fee) > 0) {
+              total += parseFloat(course.fee);
+            }
             
-            // Add book rental fee if it exists
+            // Add book rental fee if it exists and is greater than 0
             if (course.bookRental && parseFloat(course.bookRental) > 0) {
               total += parseFloat(course.bookRental);
             }
@@ -323,24 +326,27 @@ export default function Invoices() {
         { hour: 5, field: 'fifthHourSpring', hourName: ((window as any).cachedHours?.find((h: any) => h.id === 5)?.description || '5th') + ' Spring' },
       ];
 
-      // Process courses in hour order, only include those with fees
+      // Process courses in hour order, include those with fees or book rentals
       hourMappings.forEach(mapping => {
         const courseName = student[mapping.field];
         if (courseName && courseName !== 'NO_COURSE') {
           // Find the actual course to get its fee
           const course = coursesData.find((c: any) => c.courseName === courseName);
-          if (course && course.fee && parseFloat(course.fee) > 0) {
-            const courseFee = parseFloat(course.fee);
-            invoiceRows.push({
-              name: student.firstName,
-              grade: currentGrade,
-              hour: mapping.hourName,
-              item: courseName,
-              fee: courseFee
-            });
-            total += courseFee;
+          if (course) {
+            // Add course fee if it exists and is greater than 0
+            if (course.fee && parseFloat(course.fee) > 0) {
+              const courseFee = parseFloat(course.fee);
+              invoiceRows.push({
+                name: student.firstName,
+                grade: currentGrade,
+                hour: mapping.hourName,
+                item: courseName,
+                fee: courseFee
+              });
+              total += courseFee;
+            }
 
-            // Add book rental fee immediately after course fee if it exists
+            // Add book rental fee if it exists and is greater than 0
             if (course.bookRental && parseFloat(course.bookRental) > 0) {
               const bookRentalFee = parseFloat(course.bookRental);
               invoiceRows.push({

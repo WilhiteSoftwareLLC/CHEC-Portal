@@ -7,6 +7,9 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { FileText, Download, AlertCircle, CheckCircle, Clock } from "lucide-react";
 import type { Family, Payment, BillAdjustment } from "@shared/schema";
 
+// Feature flag to enable/disable PayPal fee functionality
+const ENABLE_PAYPAL_FEES = false;
+
 interface PublicInvoiceData {
   family: Family;
   students: any[];
@@ -70,7 +73,7 @@ export default function PublicInvoice() {
   useEffect(() => {
     // Render PayPal buttons when SDK is loaded and we have invoice data
     if (paypalLoaded && invoiceData && paypalButtonsRef.current) {
-      const details = calculateInvoiceDetails(true);
+      const details = calculateInvoiceDetails(ENABLE_PAYPAL_FEES);
       if (details && details.unpaidBalanceWithPayPalFee > 0) {
         renderPayPalButtons(details.unpaidBalanceWithPayPalFee);
       }
@@ -134,9 +137,13 @@ export default function PublicInvoice() {
         const courseName = student[mapping.field];
         if (courseName && courseName !== 'NO_COURSE') {
           const course = courses?.find((c: any) => c.courseName === courseName);
-          if (course && course.fee && parseFloat(course.fee) > 0) {
-            total += parseFloat(course.fee);
+          if (course) {
+            // Add course fee if it exists and is greater than 0
+            if (course.fee && parseFloat(course.fee) > 0) {
+              total += parseFloat(course.fee);
+            }
             
+            // Add book rental fee if it exists and is greater than 0
             if (course.bookRental && parseFloat(course.bookRental) > 0) {
               total += parseFloat(course.bookRental);
             }
@@ -250,17 +257,21 @@ export default function PublicInvoice() {
         const courseName = student[mapping.field];
         if (courseName && courseName !== 'NO_COURSE') {
           const course = courses?.find((c: any) => c.courseName === courseName);
-          if (course && course.fee && parseFloat(course.fee) > 0) {
-            const courseFee = parseFloat(course.fee);
-            invoiceRows.push({
-              name: student.firstName,
-              grade: currentGrade,
-              hour: mapping.hourName,
-              item: courseName,
-              fee: courseFee
-            });
-            total += courseFee;
+          if (course) {
+            // Add course fee if it exists and is greater than 0
+            if (course.fee && parseFloat(course.fee) > 0) {
+              const courseFee = parseFloat(course.fee);
+              invoiceRows.push({
+                name: student.firstName,
+                grade: currentGrade,
+                hour: mapping.hourName,
+                item: courseName,
+                fee: courseFee
+              });
+              total += courseFee;
+            }
 
+            // Add book rental fee if it exists and is greater than 0
             if (course.bookRental && parseFloat(course.bookRental) > 0) {
               const bookRentalFee = parseFloat(course.bookRental);
               invoiceRows.push({
@@ -437,11 +448,11 @@ export default function PublicInvoice() {
   if (!invoiceData) return null;
 
   const details = calculateInvoiceDetails();
-  const detailsWithPayPal = calculateInvoiceDetails(true);
+  const detailsWithPayPal = calculateInvoiceDetails(ENABLE_PAYPAL_FEES);
   if (!details || !detailsWithPayPal) return null;
 
   const invoiceRows = generateInvoiceHTML();
-  const invoiceRowsWithPayPal = generateInvoiceHTML(true);
+  const invoiceRowsWithPayPal = generateInvoiceHTML(ENABLE_PAYPAL_FEES);
   const { family, payments } = invoiceData;
 
   // Payment status styling and messaging
@@ -588,8 +599,8 @@ export default function PublicInvoice() {
                     <td className="py-3 px-4 text-right">${details.adjustedTotal.toFixed(2)}</td>
                   </tr>
 
-                  {/* PayPal fee row - only show if unpaid balance exists */}
-                  {details.unpaidBalance > 0 && (
+                  {/* PayPal fee row - only show if unpaid balance exists and PayPal fees enabled */}
+                  {ENABLE_PAYPAL_FEES && details.unpaidBalance > 0 && (
                     <tr className="border-b border-gray-200 text-blue-600">
                       <td className="py-2 px-4">{family.lastName} family</td>
                       <td className="py-2 px-4"></td>
@@ -599,8 +610,8 @@ export default function PublicInvoice() {
                     </tr>
                   )}
 
-                  {/* PayPal total row - only show if unpaid balance exists */}
-                  {details.unpaidBalance > 0 && (
+                  {/* PayPal total row - only show if unpaid balance exists and PayPal fees enabled */}
+                  {ENABLE_PAYPAL_FEES && details.unpaidBalance > 0 && (
                     <tr className="border-t border-gray-400 font-semibold bg-blue-50 text-blue-800">
                       <td colSpan={4} className="py-3 px-4">Total with PayPal Fee</td>
                       <td className="py-3 px-4 text-right">${detailsWithPayPal.totalWithPayPalFee.toFixed(2)}</td>
@@ -638,8 +649,8 @@ export default function PublicInvoice() {
                     </td>
                   </tr>
 
-                  {/* PayPal balance row - only show if unpaid balance exists */}
-                  {details.unpaidBalance > 0 && (
+                  {/* PayPal balance row - only show if unpaid balance exists and PayPal fees enabled */}
+                  {ENABLE_PAYPAL_FEES && details.unpaidBalance > 0 && (
                     <tr className="border-t border-blue-400 font-bold text-lg bg-blue-100 text-blue-900">
                       <td colSpan={4} className="py-4 px-4">PayPal Payment Amount</td>
                       <td className="py-4 px-4 text-right">${detailsWithPayPal.unpaidBalanceWithPayPalFee.toFixed(2)}</td>
@@ -659,21 +670,27 @@ export default function PublicInvoice() {
                 <p className="text-xs text-yellow-600 mb-2">
                   Pay with check or cash at orientation, or pay securely online with PayPal below.
                 </p>
-                {invoiceData.settings?.PayPalPercentage && invoiceData.settings?.PayPalFixedRate && detailsWithPayPal.paypalFee > 0 && (
+                {ENABLE_PAYPAL_FEES && invoiceData.settings?.PayPalPercentage && invoiceData.settings?.PayPalFixedRate && detailsWithPayPal.paypalFee > 0 && (
                   <p className="text-xs text-blue-600 mb-4">
                     <strong>PayPal Payment: ${detailsWithPayPal.unpaidBalanceWithPayPalFee.toFixed(2)}</strong> (includes {parseFloat(invoiceData.settings.PayPalPercentage)}% + ${parseFloat(invoiceData.settings.PayPalFixedRate)} processing fee)
                   </p>
                 )}
                 
-                {/* PayPal buttons container */}
-                {/* <div ref={paypalButtonsRef} className="mt-4"></div> */}
-                <form action="https://www.paypal.com/donate" method="post" target="_top">
-                  <input type="hidden" name="hosted_button_id" value="LSP6ESUQWYW92" />
-                  <input type="image" src="https://tse1.mm.bing.net/th?id=OIP.JzIAJEPpncLSN_MWst60QAHaFX&pid=Api&rs=1&c=1&qlt=95&w=155&h=112" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-                  <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
-                  <input type="hidden" name="amount" value={detailsWithPayPal.unpaidBalance.toFixed(2)} />
-                  <input type="hidden" name="currency_code" value="USD" />
-                </form>
+                {/* Advanced PayPal buttons container - shown when fees are enabled */}
+                {ENABLE_PAYPAL_FEES && (
+                  <div ref={paypalButtonsRef} className="mt-4"></div>
+                )}
+                
+                {/* Simple PayPal donate form - shown when fees are disabled (PayPal handles fees) */}
+                {!ENABLE_PAYPAL_FEES && (
+                  <form action="https://www.paypal.com/donate" method="post" target="_top">
+                    <input type="hidden" name="hosted_button_id" value="LSP6ESUQWYW92" />
+                    <input type="image" src="https://tse1.mm.bing.net/th?id=OIP.JzIAJEPpncLSN_MWst60QAHaFX&pid=Api&rs=1&c=1&qlt=95&w=155&h=112" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
+                    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
+                    <input type="hidden" name="amount" value={details.unpaidBalance.toFixed(2)} />
+                    <input type="hidden" name="currency_code" value="USD" />
+                  </form>
+                )}
               </div>
             )}
           </CardContent>
