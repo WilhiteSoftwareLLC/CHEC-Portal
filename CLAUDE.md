@@ -152,6 +152,11 @@ Students have a denormalized schedule structure with specific hour fields:
 - `SMTP_PASSWORD` - SMTP authentication password
 - `SMTP_FROM_EMAIL` - From email address (defaults to SMTP_USER)
 
+### SMS Configuration (for emergency messaging)
+- `TWILIO_ACCOUNT_SID` - Twilio account SID
+- `TWILIO_AUTH_TOKEN` - Twilio authentication token
+- `TWILIO_PHONE_NUMBER` - Twilio phone number (format: +1234567890)
+
 ## Email System Setup
 
 The application includes email functionality for sending family links to invoices and schedules.
@@ -177,6 +182,31 @@ The application includes email functionality for sending family links to invoice
 - **Bulk Sending**: Processes all families with email addresses
 - **Error Handling**: Tracks successful sends and failures
 - **Security**: Uses hash-based URLs that don't require authentication
+
+## SMS Messaging System
+
+The application includes emergency SMS messaging functionality for sending urgent notifications to all families.
+
+### Twilio Configuration
+1. Set up Twilio credentials in your `.env` file (see `.env.example` for template)
+2. Required Twilio account information:
+   - `TWILIO_ACCOUNT_SID` - Your Twilio account SID
+   - `TWILIO_AUTH_TOKEN` - Your Twilio authentication token
+   - `TWILIO_PHONE_NUMBER` - Your Twilio phone number (e.g., +1234567890)
+
+### Using Emergency Messaging
+1. Navigate to Messaging page (admin access only)
+2. Compose your emergency message (keep under 160 characters for single SMS)
+3. Click "Send Emergency SMS" to send to all families with registered phone numbers
+4. Monitor results showing successful sends and any failures
+
+### SMS Features
+- **Emergency Alerts**: Sends urgent notifications to all families with phone numbers
+- **Bulk SMS**: Processes all active families with registered phone numbers
+- **Message Formatting**: Automatically prefixes messages with "CHEC Emergency Alert: "
+- **Error Tracking**: Detailed reporting of successful sends and failures
+- **Admin Only**: Restricted to administrator users for security
+- **Length Warnings**: Alerts when messages exceed single SMS length
 
 ## Authentication Flow
 1. Users log in via `/api/login` with username/password

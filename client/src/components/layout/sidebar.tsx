@@ -17,6 +17,7 @@ import {
   Upload,
   UserCog,
   Terminal,
+  MessageSquare,
   X,
 } from "lucide-react";
 
@@ -36,6 +37,7 @@ const navigation = [
   { name: "Invoices", href: "/invoices", icon: FileText },
   { name: "Import Data", href: "/import", icon: Upload },
   { name: "Users", href: "/users", icon: UserCog },
+  { name: "Messaging", href: "/messaging", icon: MessageSquare },
   { name: "Develop", href: "/develop", icon: Terminal },
 ];
 

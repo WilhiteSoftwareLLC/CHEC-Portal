@@ -247,6 +247,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Messaging routes
+  app.get("/api/families/with-phones", requireAdmin, async (req, res) => {
+    try {
+      const families = await storage.getFamilies();
+      res.json(families);
+    } catch (error) {
+      console.error("Error fetching families:", error);
+      res.status(500).json({ message: "Failed to fetch families" });
+    }
+  });
+
+  app.post("/api/messaging/send-emergency-sms", requireAdmin, async (req, res) => {
+    try {
+      const { message } = req.body;
+      
+      if (!message || typeof message !== 'string' || !message.trim()) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Message is required" 
+        });
+      }
+
+      // Get all families with phone numbers
+      const families = await storage.getFamilies();
+      const familiesWithPhones = families.filter(f => f.parentCell && f.active);
+      
+      if (familiesWithPhones.length === 0) {
+        return res.json({
+          success: false,
+          message: "No active families with phone numbers found",
+          totalFamilies: families.length,
+          sentCount: 0,
+          failedCount: 0,
+          failures: []
+        });
+      }
+
+      // Initialize Twilio client
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+
+      if (!accountSid || !authToken || !fromNumber) {
+        return res.status(500).json({
+          success: false,
+          message: "Twilio configuration is missing. Please check environment variables."
+        });
+      }
+
+      const twilio = require('twilio')(accountSid, authToken);
+      
+      let sentCount = 0;
+      let failedCount = 0;
+      const failures: Array<{familyId: number, lastName: string, error: string}> = [];
+
+      // Send SMS to each family
+      for (const family of familiesWithPhones) {
+        try {
+          await twilio.messages.create({
+            body: `CHEC Emergency Alert: ${message}`,
+            from: fromNumber,
+            to: family.parentCell
+          });
+          sentCount++;
+        } catch (error) {
+          failedCount++;
+          failures.push({
+            familyId: family.id,
+            lastName: family.lastName,
+            error: error instanceof Error ? error.message : 'Unknown error'
+          });
+        }
+      }
+
+      res.json({
+        success: sentCount > 0,
+        message: sentCount > 0 ? 
+          `Successfully sent ${sentCount} SMS messages` : 
+          'No messages were sent successfully',
+        totalFamilies: familiesWithPhones.length,
+        sentCount,
+        failedCount,
+        failures
+      });
+
+    } catch (error) {
+      console.error("Error sending emergency SMS:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to send emergency SMS",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
+    }
+  });
+
   // Student routes
   app.get("/api/students", async (req, res) => {
     try {

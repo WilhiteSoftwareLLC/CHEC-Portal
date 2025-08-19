@@ -10,3 +10,5 @@ vite.config.ts.*
 ecosystem.config.cjs
 db/backups/
 db/migrations/
+*~
+.*~

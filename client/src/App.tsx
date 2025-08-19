@@ -19,6 +19,7 @@ import Invoices from "@/pages/invoices";
 import Import from "@/pages/import";
 import Users from "@/pages/users";
 import Settings from "@/pages/settings";
+import Messaging from "@/pages/messaging";
 import Develop from "@/pages/develop";
 import PublicInvoice from "@/pages/public-invoice";
 import PublicSchedules from "@/pages/public-schedules";
@@ -65,6 +66,7 @@ function Router() {
             <Route path="/invoices" component={Invoices} />
             <Route path="/import" component={Import} />
             <Route path="/users" component={Users} />
+            <Route path="/messaging" component={Messaging} />
             <Route path="/settings" component={Settings} />
             <Route path="/develop" component={Develop} />
           </MainLayout>
