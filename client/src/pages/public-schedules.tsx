@@ -239,7 +239,6 @@ export default function PublicSchedules() {
                         <tr className="border-b-2 border-gray-300">
                           <th className="text-left py-3 px-4 font-semibold bg-gray-50">Hour</th>
                           <th className="text-left py-3 px-4 font-semibold bg-gray-50">Course</th>
-                          <th className="text-left py-3 px-4 font-semibold bg-gray-50">Instructor</th>
                           <th className="text-left py-3 px-4 font-semibold bg-gray-50">Location</th>
                         </tr>
                       </thead>
@@ -254,20 +253,11 @@ export default function PublicSchedules() {
                                 item.courseName
                               )}
                             </td>
-                            <td className="py-2 px-4">{item.instructor || '-'}</td>
                             <td className="py-2 px-4">{item.location || '-'}</td>
                           </tr>
                         ))}
                       </tbody>
                     </table>
-                  </div>
-                  
-                  {/* Course count summary */}
-                  <div className="mt-4 p-3 bg-gray-50 rounded-lg">
-                    <p className="text-sm text-gray-600">
-                      <strong>Total Courses:</strong>{' '}
-                      {schedule.filter(item => item.courseName && item.courseName !== 'No Course').length} courses
-                    </p>
                   </div>
                 </CardContent>
               </Card>

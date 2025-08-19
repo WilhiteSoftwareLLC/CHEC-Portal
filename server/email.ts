@@ -1,5 +1,10 @@
 import nodemailer from 'nodemailer';
 import crypto from 'crypto';
+import { exec } from 'child_process';
+import { promisify } from 'util';
+import { promises as fs } from 'fs';
+
+const execAsync = promisify(exec);
 
 // Server-side hash generation function
 function generateFamilyHash(familyId: number): string {
@@ -13,9 +18,9 @@ interface EmailConfig {
   host: string;
   port: number;
   secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
+  auth?: {
+    user?: string;
+    pass?: string;
   };
 }
 
@@ -28,22 +33,38 @@ interface FamilyData {
 }
 
 class EmailService {
-  private transporter: nodemailer.Transporter;
+  private transporter: nodemailer.Transporter | null = null;
+  private useSmtp: boolean;
 
   constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.smtp.com',
-      port: parseInt(process.env.SMTP_PORT || '587'),
-      secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
-      auth: {
-        user: process.env.SMTP_USER || '',
-        pass: process.env.SMTP_PASSWORD || '',
-      },
-    });
+    this.useSmtp = process.env.USE_SMTP !== '0';
+    
+    if (this.useSmtp) {
+      this.transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'localhost',
+        port: parseInt(process.env.SMTP_PORT || '25'),
+        secure: process.env.SMTP_SECURE === 'true', // true for 465, false for other ports
+        // No authentication needed for local mail server
+      });
+    }
   }
 
   async verifyConnection(): Promise<boolean> {
+    if (!this.useSmtp) {
+      // Test mail command availability
+      try {
+        await execAsync('which mail');
+        return true;
+      } catch (error) {
+        console.error('mail command not found:', error);
+        return false;
+      }
+    }
+
     try {
+      if (!this.transporter) {
+        throw new Error('SMTP transporter not initialized');
+      }
       await this.transporter.verify();
       return true;
     } catch (error) {
@@ -161,44 +182,68 @@ class EmailService {
             Dear ${displayName},
         </div>
         
-        <p>We're excited to share your personalized family links for easy access to your CHEC information. These secure links provide convenient access to your family's invoice and student schedules without requiring a login.</p>
+        <p>Here are your personalized family links for easy access to your CHEC information.</p>
         
         <div class="link-section">
             <h3 style="margin-top: 0; color: #2563eb;">📋 Family Invoice</h3>
-            <p>View your complete family invoice including all fees, payments, and current balance.</p>
+            <p>View your family invoice including all fees, payments, and current balance.</p>
             <a href="${invoiceUrl}" class="link-button">View Family Invoice</a>
             <div class="description">See all charges, payments made, and outstanding balance</div>
         </div>
         
         <div class="link-section">
             <h3 style="margin-top: 0; color: #059669;">🎓 Student Schedules</h3>
-            <p>Access the complete course schedules for all students in your family.</p>
+            <p>Access the course schedules for all students in your family.</p>
             <a href="${schedulesUrl}" class="link-button secondary">View Student Schedules</a>
             <div class="description">See courses, instructors, locations, and time slots</div>
         </div>
         
-        <div class="security-note">
-            <strong>🔒 Security Note:</strong> These links are unique to your family and do not require a password. Please keep them secure and do not share them with others. If you need to report a security concern, contact the administrator immediately.
-        </div>
-        
-        <p>Both links work on any device - computer, tablet, or smartphone - and are optimized for printing if you need hard copies.</p>
-        
-        <p>If you have any questions about your invoice, student schedules, or need assistance accessing these links, please don't hesitate to contact us.</p>
+        <p>Both links should work on any device and are optimized for printing if you need hard copies.</p>
         
         <div class="footer">
             <p><strong>CHEC Portal</strong><br>
-            This email was sent to families enrolled in the co-op.<br>
-            Please contact the administrator if you received this in error.</p>
+            This email was sent automatically from the CHEC Portal.
+            </p>
         </div>
     </div>
 </body>
 </html>`;
   }
 
+  private async sendEmailWithMailCommand(
+    to: string,
+    subject: string,
+    htmlContent: string,
+    textContent: string,
+    fromEmail: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Create a temporary file for the email content
+      const tempFile = `/tmp/email_${Date.now()}.txt`;
+      
+      await fs.writeFile(tempFile, textContent);
+      
+      // Use mail command to send email
+      const command = `mail -s "${subject}" -r "${fromEmail}" "${to}" < "${tempFile}"`;
+      await execAsync(command);
+      
+      // Clean up temp file
+      await fs.unlink(tempFile);
+      
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to send email with mail command:', error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
   async sendFamilyLinks(
     family: FamilyData,
     baseUrl: string,
-    fromEmail: string = process.env.SMTP_FROM_EMAIL || process.env.SMTP_USER || '',
+    fromEmail: string = process.env.FROM_EMAIL || '',
     fromName: string = 'CHEC Portal'
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -206,27 +251,46 @@ class EmailService {
         return { success: false, error: 'No email address for family' };
       }
 
+      if (!fromEmail) {
+        throw new Error('FROM_EMAIL environment variable is required');
+      }
+
       const htmlContent = this.generateFamilyLinksEmail(family, baseUrl);
       const displayName = [family.father, family.mother].filter(Boolean).join(' & ');
       const familyDisplayName = displayName ? `${displayName} ${family.lastName}` : `${family.lastName} family`;
 
-      const mailOptions = {
-        from: `"${fromName}" <${fromEmail}>`,
-        to: family.email,
-        subject: 'CHEC Family Portal - Your Invoice and Schedule Links',
-        html: htmlContent,
-        text: `Dear ${familyDisplayName},
+      const subject = 'CHEC Family Invoice and Schedule Links';
+      const textContent = `Dear ${familyDisplayName},
 
-Your personalized CHEC family links:
+Here are your personalized family links for easy access to your CHEC information:
 
 Family Invoice: ${baseUrl}/invoice/${generateFamilyHash(family.id)}
 Student Schedules: ${baseUrl}/schedules/${generateFamilyHash(family.id)}
 
-These secure links provide access to your family's invoice and student schedules without requiring login.
+This email was sent automatically from the CHEC Portal.`;
 
-Keep these links secure and contact us if you have any questions.
+      if (!this.useSmtp) {
+        // Use mail command
+        return await this.sendEmailWithMailCommand(
+          family.email,
+          subject,
+          htmlContent,
+          textContent,
+          fromEmail
+        );
+      }
 
-CHEC Portal`,
+      // Use SMTP
+      if (!this.transporter) {
+        throw new Error('SMTP transporter not initialized');
+      }
+
+      const mailOptions = {
+        from: `"${fromName}" <${fromEmail}>`,
+        to: family.email,
+        subject,
+        html: htmlContent,
+        text: textContent,
       };
 
       await this.transporter.sendMail(mailOptions);

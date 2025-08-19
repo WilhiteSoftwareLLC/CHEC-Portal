@@ -145,12 +145,11 @@ Students have a denormalized schedule structure with specific hour fields:
 - `SERVER_PORT` - Server port (default: 5000)
 
 ### Email Configuration (for family notifications)
-- `SMTP_HOST` - SMTP server hostname (default: smtp.smtp.com)
-- `SMTP_PORT` - SMTP server port (default: 587)
-- `SMTP_SECURE` - Use SSL/TLS (true for port 465, false for others)
-- `SMTP_USER` - SMTP authentication username
-- `SMTP_PASSWORD` - SMTP authentication password
-- `SMTP_FROM_EMAIL` - From email address (defaults to SMTP_USER)
+- `USE_SMTP` - Use SMTP (1) or mail command (0) for sending emails (default: 1)
+- `SMTP_HOST` - Mail server hostname (default: localhost, used when USE_SMTP=1)
+- `SMTP_PORT` - Mail server port (default: 25, used when USE_SMTP=1)
+- `SMTP_SECURE` - Use SSL/TLS (true for port 465, false for others, used when USE_SMTP=1)
+- `FROM_EMAIL` - From email address (required for both SMTP and mail command)
 
 ### SMS Configuration (for emergency messaging)
 - `TWILIO_ACCOUNT_SID` - Twilio account SID
@@ -161,18 +160,23 @@ Students have a denormalized schedule structure with specific hour fields:
 
 The application includes email functionality for sending family links to invoices and schedules.
 
-### SMTP Configuration
-1. Set up SMTP credentials in your `.env` file (see `.env.example` for template)
-2. For SMTP.com accounts:
-   - `SMTP_HOST=smtp.smtp.com`
-   - `SMTP_PORT=587`
+### Email Configuration Options
+1. Set up email configuration in your `.env` file (see `.env.example` for template)
+
+**Option 1: Using mail command (recommended for production)**
+   - `USE_SMTP=0`
+   - `FROM_EMAIL=your-email@domain.com`
+
+**Option 2: Using SMTP server**
+   - `USE_SMTP=1`
+   - `SMTP_HOST=localhost`
+   - `SMTP_PORT=25`
    - `SMTP_SECURE=false`
-   - `SMTP_USER=your-smtp-username`
-   - `SMTP_PASSWORD=your-smtp-password`
+   - `FROM_EMAIL=your-email@domain.com`
 
 ### Testing Email Functionality
 1. Navigate to Settings → Tools tab
-2. Click "Test Connection" to verify SMTP configuration
+2. Click "Test Connection" to verify email configuration (tests 'mail' command availability when USE_SMTP=0, or SMTP connection when USE_SMTP=1)
 3. Use "Send Family Links" to send emails to all families with email addresses
 4. Monitor server logs for any email delivery errors
 
