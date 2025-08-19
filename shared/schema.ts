@@ -15,6 +15,15 @@ import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
+// Phone number validation schema
+const phoneSchema = z.string().optional().transform((val) => {
+  if (!val) return null;
+  // Remove all non-digits
+  const digits = val.replace(/\D/g, '');
+  // Return 10-digit string if valid, null otherwise
+  return digits.length === 10 ? digits : null;
+}).nullable();
+
 // Session storage table for Replit Auth
 export const sessions = pgTable(
   "sessions",
@@ -210,7 +219,13 @@ export const classesRelations = relations(classes, ({ one, one: startGrade, one:
 }));
 
 // Insert schemas
-export const insertFamilySchema = createInsertSchema(families).omit({
+export const insertFamilySchema = createInsertSchema(families, {
+  parentCell: phoneSchema,
+  homePhone: phoneSchema,
+  parentCell2: phoneSchema,
+  workPhone: phoneSchema,
+  pastorPhone: phoneSchema,
+}).omit({
   id: true,
 });
 

@@ -13,6 +13,7 @@ import {
   Settings,
   School,
   UserCog,
+  MessageSquare,
 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -81,6 +82,9 @@ export default function Dashboard() {
       
       case "Settings":
         return "System configuration";
+      
+      case "Messages":
+        return "Emergency SMS alerts";
       
       default:
         return "Loading...";
@@ -161,6 +165,13 @@ export default function Dashboard() {
       path: "/users",
       color: "bg-amber-500",
       hoverColor: "hover:bg-amber-600"
+    },
+    {
+      title: "Messages",
+      icon: MessageSquare,
+      path: "/messaging",
+      color: "bg-rose-500",
+      hoverColor: "hover:bg-rose-600"
     },
     {
       title: "Settings",

@@ -8,6 +8,7 @@ import AddClassDialog from "@/components/dialogs/add-class-dialog";
 import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
 import { getCurrentGradeString, getCurrentGradeCode } from "@/lib/gradeUtils";
+import { formatPhoneNumber } from "@/lib/phoneUtils";
 import type { Class, Grade, InsertClass } from "@shared/schema";
 
 export default function Classes() {
@@ -120,16 +121,6 @@ export default function Classes() {
     label: grade.gradeName
   })) : [];
 
-  const formatPhoneNumber = (phone: string) => {
-    if (!phone) return '';
-    // Remove all non-digits
-    const digits = phone.replace(/\D/g, '');
-    // Format as XXX-XXX-XXXX if we have 10 digits
-    if (digits.length === 10) {
-      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-    }
-    return phone; // Return original if not 10 digits
-  };
 
 
   const handlePrintClassRosters = () => {

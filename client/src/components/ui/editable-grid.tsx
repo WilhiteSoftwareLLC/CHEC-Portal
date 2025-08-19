@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { formatPhoneNumber, normalizePhoneNumber } from "@/lib/phoneUtils";
 
 export interface GridColumn {
   key: string;
@@ -100,6 +101,26 @@ const TextEditor = React.memo(({ textEditor, onSave, onCancel }: TextEditorProps
   );
 });
 
+// Helper function to get display value for a cell
+const getDisplayValue = (value: any, column: GridColumn): string => {
+  if (value === null || value === undefined) return '';
+  
+  if (column.type === 'tel') {
+    return formatPhoneNumber(String(value));
+  }
+  
+  return String(value);
+};
+
+// Helper function to get storage value for a cell
+const getStorageValue = (value: string, column: GridColumn): any => {
+  if (column.type === 'tel') {
+    return normalizePhoneNumber(value);
+  }
+  
+  return value;
+};
+
 export default function EditableGrid({
   data,
   columns,
@@ -166,17 +187,21 @@ export default function EditableGrid({
 
   const startEdit = (rowId: number, columnKey: string, currentValue: any) => {
     setEditingCell({ rowId, columnKey });
-    setEditValue(String(currentValue || ""));
+    const column = columns.find(col => col.key === columnKey);
+    const displayValue = column ? getDisplayValue(currentValue, column) : String(currentValue || "");
+    setEditValue(displayValue);
   };
 
   const startTextEdit = (rowId: number, columnKey: string, currentValue: any, event: React.MouseEvent) => {
     const rect = event.currentTarget.getBoundingClientRect();
+    const column = columns.find(col => col.key === columnKey);
+    const displayValue = column ? getDisplayValue(currentValue, column) : String(currentValue || "");
     setTextEditor({ 
       rowId, 
       columnKey, 
       x: rect.left, 
       y: rect.bottom + window.scrollY,
-      initialValue: String(currentValue || "")
+      initialValue: displayValue
     });
   };
 
@@ -190,7 +215,9 @@ export default function EditableGrid({
     if (!editingCell) return;
     
     try {
-      await onRowUpdate(editingCell.rowId, { [editingCell.columnKey]: editValue });
+      const column = columns.find(col => col.key === editingCell.columnKey);
+      const storageValue = column ? getStorageValue(editValue, column) : editValue;
+      await onRowUpdate(editingCell.rowId, { [editingCell.columnKey]: storageValue });
       setEditingCell(null);
       setEditValue("");
     } catch (error) {
@@ -200,7 +227,9 @@ export default function EditableGrid({
 
   const handleTextEditorSave = async (rowId: number, columnKey: string, value: string) => {
     try {
-      await onRowUpdate(rowId, { [columnKey]: value });
+      const column = columns.find(col => col.key === columnKey);
+      const storageValue = column ? getStorageValue(value, column) : value;
+      await onRowUpdate(rowId, { [columnKey]: storageValue });
       setTextEditor(null);
     } catch (error) {
       console.error("Failed to save edit:", error);
@@ -605,7 +634,7 @@ export default function EditableGrid({
                             }}
                             title={column.type === "text" && value ? String(value) : undefined}
                           >
-                            {value || (column.editable ? <span className="text-gray-400 italic">Click to edit</span> : "—")}
+                            {getDisplayValue(value, column) || (column.editable ? <span className="text-gray-400 italic">Click to edit</span> : "—")}
                           </div>
                         )}
                       </td>

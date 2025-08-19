@@ -10,6 +10,7 @@ import AddCourseDialog from "@/components/dialogs/add-course-dialog";
 import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
 import { getCurrentGradeString } from "@/lib/gradeUtils";
+import { formatPhoneNumber } from "@/lib/phoneUtils";
 import type { Course } from "@shared/schema";
 
 export default function Courses() {
@@ -294,16 +295,6 @@ export default function Courses() {
     return generateRostersHTML(courses || []);
   };
 
-  const formatPhoneNumber = (phone: string) => {
-    if (!phone) return '';
-    // Remove all non-digits
-    const digits = phone.replace(/\D/g, '');
-    // Format as XXX-XXX-XXXX if we have 10 digits
-    if (digits.length === 10) {
-      return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6, 10)}`;
-    }
-    return phone; // Return original if not 10 digits
-  };
 
   const getEnrolledStudents = (courseName: string) => {
     if (!students) return [];
