@@ -221,7 +221,7 @@ export default function Classes() {
     });
 
     const rowsHTML = sortedStudents.map((student: any, index: number) => {
-      const birthDate = student.birthdate ? new Date(student.birthdate).toLocaleDateString() : '';
+      const birthDate = student.birthdate ? new Date(student.birthdate).toLocaleDateString('en-US', { timeZone: 'UTC' }) : '';
       const gradeName = getCurrentGradeString(student.gradYear, settings, grades || []);
       const formattedPhone = formatPhoneNumber(student.family?.parentCell || '');
       
