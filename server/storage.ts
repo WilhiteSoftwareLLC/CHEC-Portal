@@ -148,6 +148,10 @@ export interface IStorage {
     totalCourses: number;
     totalClasses: number;
   }>;
+
+  // Utility methods
+  findFamilyByHash(hash: string): Promise<number | null>;
+  getFamilyInvoiceData(familyId: number): Promise<any>;
 }
 
 export class DatabaseStorage implements IStorage {
