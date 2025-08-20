@@ -11,4 +11,4 @@ ecosystem.config.cjs
 db/backups/
 db/migrations/
 *~
-.*~
+.*~docs/development-plan.md
