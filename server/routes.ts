@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import session from "express-session";
 import { storage } from "./storage";
 import { authenticateCredentials, requireAuth, requireAdmin, requireParentOrAdmin, requireFamilyAccess, type AuthUser } from "./auth";
+import { InvoiceService } from "./invoice-service";
 
 // Extend session data interface
 declare module 'express-session' {
@@ -25,6 +26,9 @@ import { emailService } from "./email";
 import { createPayPalOrder, capturePayPalOrder, verifyPayPalWebhook, createPayPalWebhook } from "./paypal";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Initialize invoice service
+  const invoiceService = new InvoiceService(storage);
+
   // Session middleware for credential-based auth
   app.use(session({
     secret: process.env.SESSION_SECRET || 'dev-secret-key',
@@ -46,26 +50,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   });
 
-  // Public invoice viewing endpoint (no authentication required)
-  app.get('/api/invoice/:hash', async (req, res) => {
+  // Invoice routes - specific routes must come before parameterized routes
+  
+  // Get summary data for all families (for invoices grid)
+  app.get("/api/invoices/summary", requireAuth, async (req, res) => {
     try {
-      const { hash } = req.params;
+      const summaries = await invoiceService.calculateAllFamilySummaries();
+      res.json(summaries);
+    } catch (error) {
+      console.error("Error fetching invoice summaries:", error);
+      res.status(500).json({ message: "Failed to fetch invoice summaries" });
+    }
+  });
+
+  // Get detailed invoice for a single family (admin access)
+  app.get("/api/invoices/family/:familyId", requireAuth, async (req, res) => {
+    try {
+      const familyId = parseInt(req.params.familyId);
       
-      // Find the family ID that matches this hash
-      const familyId = await storage.findFamilyByHash(hash);
-      
-      if (!familyId) {
-        return res.status(404).json({ error: "Family not found" });
+      if (isNaN(familyId)) {
+        return res.status(400).json({ error: "Invalid family ID" });
       }
 
-      // Get all invoice data for this family efficiently
-      const invoiceData = await storage.getFamilyInvoiceData(familyId);
+      const invoice = await invoiceService.calculateFamilyInvoice(familyId, false);
       
-      if (!invoiceData) {
+      if (!invoice) {
         return res.status(404).json({ error: "Invoice not found" });
       }
 
-      res.json(invoiceData);
+      res.json(invoice);
+    } catch (error) {
+      console.error("Error fetching family invoice:", error);
+      res.status(500).json({ message: "Failed to fetch family invoice" });
+    }
+  });
+
+  // Get PayPal-specific calculation for a family
+  app.get("/api/invoices/family/:familyId/paypal", requireAuth, async (req, res) => {
+    try {
+      const familyId = parseInt(req.params.familyId);
+      
+      if (isNaN(familyId)) {
+        return res.status(400).json({ error: "Invalid family ID" });
+      }
+
+      const paypalCalculation = await invoiceService.calculatePayPalFees(familyId);
+      
+      if (!paypalCalculation) {
+        return res.status(404).json({ error: "PayPal calculation not available" });
+      }
+
+      res.json(paypalCalculation);
+    } catch (error) {
+      console.error("Error calculating PayPal fees:", error);
+      res.status(500).json({ message: "Failed to calculate PayPal fees" });
+    }
+  });
+
+  // Get invoice by hash (public access, no authentication)
+  // This must come AFTER all specific routes to avoid conflicts
+  app.get('/api/invoices/:hash', async (req, res) => {
+    try {
+      const { hash } = req.params;
+      
+      const invoice = await invoiceService.getFamilyInvoiceByHash(hash, true);
+      
+      if (!invoice) {
+        return res.status(404).json({ error: "Invoice not found" });
+      }
+
+      res.json(invoice);
     } catch (error) {
       console.error("Error fetching public invoice:", error);
       res.status(500).json({ error: "Internal server error" });
@@ -185,6 +239,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/families/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid family ID" });
+      }
       const family = await storage.getFamily(id);
       if (!family) {
         return res.status(404).json({ message: "Family not found" });
@@ -210,6 +267,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.patch("/api/families/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid family ID" });
+      }
       const familyData = insertFamilySchema.partial().parse(req.body);
       
       // Check if family active status is being changed
@@ -239,6 +299,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.delete("/api/families/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid family ID" });
+      }
       await storage.deleteFamily(id);
       res.status(204).send();
     } catch (error) {
@@ -251,7 +314,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/families/with-phones", requireAdmin, async (req, res) => {
     try {
       const families = await storage.getFamilies();
-      res.json(families);
+      // Filter families that have a parentCell phone number
+      const familiesWithPhones = families.filter(family => {
+        const phone = family.parentCell;
+        if (!phone) return false;
+        // Remove all non-digits and check if we have at least 10 digits
+        const digits = phone.replace(/\D/g, '');
+        return digits.length >= 10;
+      });
+      res.json(familiesWithPhones);
     } catch (error) {
       console.error("Error fetching families:", error);
       res.status(500).json({ message: "Failed to fetch families" });
@@ -891,17 +962,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Invoices routes - returns placeholder data for now
-  app.get("/api/invoices", async (req, res) => {
-    try {
-      // Return empty array since invoices are generated on demand
-      res.json([]);
-    } catch (error) {
-      console.error("Error fetching invoices:", error);
-      res.status(500).json({ message: "Failed to fetch invoices" });
-    }
-  });
-
   // CSV Import routes
   app.post("/api/import/families", async (req, res) => {
     try {
@@ -1475,15 +1535,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/bill-adjustments", requireParentOrAdmin, async (req, res) => {
+  app.post("/api/bill-adjustments", requireAdmin, async (req, res) => {
     try {
       const adjustmentData = insertBillAdjustmentSchema.parse(req.body);
-      
-      // If user is a parent, ensure they can only create adjustments for their own family
-      if (req.authUser?.role === 'parent' && req.authUser.familyId !== adjustmentData.familyId) {
-        return res.status(403).json({ message: "Access denied" });
-      }
-      
       const adjustment = await storage.createBillAdjustment(adjustmentData);
       res.json(adjustment);
     } catch (error) {
@@ -1501,11 +1555,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const existingAdjustment = await storage.getBillAdjustment(id);
       if (!existingAdjustment) {
         return res.status(404).json({ message: "Bill adjustment not found" });
-      }
-      
-      // If user is a parent, ensure they can only update their own family's adjustments
-      if (req.authUser?.role === 'parent' && req.authUser.familyId !== existingAdjustment.familyId) {
-        return res.status(403).json({ message: "Access denied" });
       }
       
       const adjustment = await storage.updateBillAdjustment(id, adjustmentData);
@@ -1601,6 +1650,37 @@ export async function registerRoutes(app: Express): Promise<Server> {
         status: 'completed'
       });
 
+      // Add bill adjustment for PayPal processing fee
+      try {
+        const settings = await storage.getSettings();
+        const paypalPercentage = parseFloat(settings?.PayPalPercentage || "0") / 100;
+        const paypalFixedRate = parseFloat(settings?.PayPalFixedRate || "0");
+        
+        if (paypalPercentage > 0 || paypalFixedRate > 0) {
+          // Calculate the original invoice balance that was paid
+          const paidAmount = parseFloat(capture.amount.value);
+          // Reverse calculate the original balance before PayPal fee was added
+          // If total paid = balance + fee, and fee = balance * percentage + fixed
+          // Then: paidAmount = originalBalance + (originalBalance * percentage + fixed)
+          // So: paidAmount = originalBalance * (1 + percentage) + fixed
+          // Therefore: originalBalance = (paidAmount - fixed) / (1 + percentage)
+          const originalBalance = (paidAmount - paypalFixedRate) / (1 + paypalPercentage);
+          const paypalFee = (originalBalance * paypalPercentage) + paypalFixedRate;
+
+          if (paypalFee > 0) {
+            await storage.createBillAdjustment({
+              familyId,
+              amount: paypalFee.toString(),
+              description: 'PayPal Processing Fee',
+              adjustmentDate: new Date().toISOString().split('T')[0]
+            });
+          }
+        }
+      } catch (feeError) {
+        console.error('Error adding PayPal fee bill adjustment:', feeError);
+        // Don't fail the transaction if fee adjustment fails
+      }
+          
       res.json({ 
         success: true, 
         captureID: capture.id,

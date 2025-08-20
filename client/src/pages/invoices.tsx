@@ -5,16 +5,19 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { FileText, Download, PrinterCheck, DollarSign, Eye, Plus, Settings, Link2 } from "lucide-react";
+import { FileText, DollarSign, Eye, Plus, Settings, Link2, Printer, Mail } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import AddPaymentDialog from "@/components/dialogs/add-payment-dialog";
 import AdjustBillDialog from "@/components/dialogs/adjust-bill-dialog";
 import { generateFamilyHash } from "@/lib/invoice-utils";
-import type { Family, Payment, BillAdjustment } from "@shared/schema";
+import type { Family } from "@shared/schema";
 
 export default function Invoices() {
   const [selectedFamily, setSelectedFamily] = useState<Family | null>(null);
   const [invoiceDialogOpen, setInvoiceDialogOpen] = useState(false);
+  const [invoiceHTML, setInvoiceHTML] = useState<string>("");
+  const [invoiceLoading, setInvoiceLoading] = useState(false);
+  const [printingAllInvoices, setPrintingAllInvoices] = useState(false);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
   const [selectedFamilyForPayment, setSelectedFamilyForPayment] = useState<Family | null>(null);
   const [adjustBillDialogOpen, setAdjustBillDialogOpen] = useState(false);
@@ -35,7 +38,60 @@ export default function Invoices() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/families"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/summary"] });
     },
+  });
+
+  const sendFamilyEmailMutation = useMutation({
+    mutationFn: async (familyId: number) => {
+      const response = await fetch("/api/email/send-family-links", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ 
+          testMode: true, 
+          testFamilyId: familyId 
+        })
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Email send failed: ${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: (response, familyId) => {
+      const family = (families as Family[])?.find(f => f.id === familyId);
+      const familyName = family?.lastName || 'Unknown';
+      
+      if (response.success) {
+        toast({
+          title: "Email Sent Successfully",
+          description: `Invoice and schedule links sent to ${familyName} family.`,
+        });
+      } else {
+        toast({
+          title: "Email Failed",
+          description: `Failed to send email to ${familyName} family: ${response.error}`,
+          variant: "destructive",
+        });
+      }
+    },
+    onError: (error, familyId) => {
+      const family = (families as Family[])?.find(f => f.id === familyId);
+      const familyName = family?.lastName || 'Unknown';
+      
+      toast({
+        title: "Email Error",
+        description: `Error sending email to ${familyName} family: ${error.message}`,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const { data: invoiceSummaries } = useQuery({
+    queryKey: ["/api/invoices/summary"],
+    retry: false,
   });
 
   const { data: families } = useQuery({
@@ -43,128 +99,8 @@ export default function Invoices() {
     retry: false,
   });
 
-  const { data: students } = useQuery({
-    queryKey: ["/api/students"],
-    retry: false,
-  });
-
-  const { data: settings } = useQuery({
-    queryKey: ["/api/settings"],
-    retry: false,
-  });
-
-  const { data: grades } = useQuery({
-    queryKey: ["/api/grades"],
-    retry: false,
-  });
-
-  const { data: courses } = useQuery({
-    queryKey: ["/api/courses"],
-    retry: false,
-  });
-
-  const { data: hours } = useQuery({
-    queryKey: ["/api/hours"],
-    retry: false,
-  });
-
-  const { data: payments } = useQuery({
-    queryKey: ["/api/payments"],
-    retry: false,
-  });
-
-  const { data: billAdjustments } = useQuery({
-    queryKey: ["/api/bill-adjustments"],
-    retry: false,
-  });
-
-  // Calculate computed invoices from families and students data
-  const calculateFamilyInvoice = (family: Family, studentsData: any[], settingsData: any, gradesData: any[], coursesData: any[], hoursData: any[], paymentsData: Payment[], adjustmentsData: BillAdjustment[]) => {
-    const familyFee = parseFloat(settingsData?.FamilyFee || "20");
-    const backgroundFee = parseFloat(settingsData?.BackgroundFee || "0");
-    const studentFee = parseFloat(settingsData?.StudentFee || "20");
-
-    const familyStudents = studentsData.filter((s: any) => s.familyId === family.id && !s.inactive);
-    
-    // Sort students by gradYear in reverse order (younger students first)
-    const sortedStudents = familyStudents.sort((a: any, b: any) => {
-      const gradYearA = parseInt(a.gradYear) || 0;
-      const gradYearB = parseInt(b.gradYear) || 0;
-      return gradYearB - gradYearA; // Higher gradYear = younger student
-    });
-    
-    let total = familyFee;
-    // Only add background check fee if family needs it
-    if (family.needsBackgroundCheck) {
-      total += backgroundFee;
-    }
-    total += familyStudents.length * studentFee;
-    
-    // Add course fees for each student (youngest first)
-    sortedStudents.forEach((student: any) => {
-      // Define hour order and corresponding student field names
-      const hourMappings = [
-        { hour: 0, field: 'mathHour' },
-        { hour: 1, field: 'firstHour' },
-        { hour: 2, field: 'secondHour' },
-        { hour: 3, field: 'thirdHour' },
-        { hour: 4, field: 'fourthHour' },
-        { hour: 5, field: 'fifthHourFall' },
-        { hour: 5, field: 'fifthHourSpring' },
-      ];
-
-      // Process courses in hour order
-      hourMappings.forEach(mapping => {
-        const courseName = student[mapping.field];
-        if (courseName && courseName !== 'NO_COURSE') {
-          // Find the actual course to get its fee
-          const course = coursesData?.find((c: any) => c.courseName === courseName);
-          if (course) {
-            // Add course fee if it exists and is greater than 0
-            if (course.fee && parseFloat(course.fee) > 0) {
-              total += parseFloat(course.fee);
-            }
-            
-            // Add book rental fee if it exists and is greater than 0
-            if (course.bookRental && parseFloat(course.bookRental) > 0) {
-              total += parseFloat(course.bookRental);
-            }
-          }
-        }
-      });
-    });
-
-    // Calculate total payments made by this family
-    const familyPayments = paymentsData?.filter((payment: Payment) => payment.familyId === family.id) || [];
-    const totalPaid = familyPayments.reduce((sum, payment) => sum + parseFloat(payment.amount.toString()), 0);
-    
-    // Calculate total adjustments for this family
-    const familyAdjustments = adjustmentsData?.filter((adjustment: BillAdjustment) => adjustment.familyId === family.id) || [];
-    const totalAdjustments = familyAdjustments.reduce((sum, adjustment) => sum + parseFloat(adjustment.amount.toString()), 0);
-    
-    // Calculate adjusted total (includes adjustments in the base total)
-    const adjustedTotal = total + totalAdjustments;
-    const unpaidBalance = adjustedTotal - totalPaid;
-
-    return {
-      id: family.id,
-      family,
-      total: adjustedTotal, // Now includes adjustments
-      totalAdjustments,
-      adjustedTotal,
-      totalPaid,
-      unpaidBalance,
-      payments: familyPayments,
-      adjustments: familyAdjustments,
-      students: sortedStudents
-    };
-  };
-
-  const computedInvoices = Array.isArray(families) && Array.isArray(students) && settings && Array.isArray(grades) && Array.isArray(courses) && Array.isArray(hours) && Array.isArray(payments) && Array.isArray(billAdjustments)
-    ? (families as Family[])
-        .filter(family => family.active !== false) // Only show active families
-        .map(family => calculateFamilyInvoice(family, students as any[], settings, grades as any[], courses as any[], hours as any[], payments as Payment[], billAdjustments as BillAdjustment[]))
-    : [];
+  // Use invoice summaries directly from the server
+  const computedInvoices = Array.isArray(invoiceSummaries) ? invoiceSummaries : [];
 
   const calculateTotalRevenue = () => {
     return computedInvoices.reduce((total: number, invoice: any) => {
@@ -174,310 +110,211 @@ export default function Invoices() {
 
   const calculatePendingAmount = () => {
     return computedInvoices.reduce((total: number, invoice: any) => {
-      return total + invoice.unpaidBalance;
+      return total + invoice.balance;
     }, 0);
   };
 
-  const handlePrintAllInvoices = () => {
-    if (!families || !students || !settings || !grades || !courses || !hours || !payments || !billAdjustments) return;
-    
-    // Cache data for invoice generation
-    (window as any).cachedSettings = settings;
-    (window as any).cachedStudents = students;
-    (window as any).cachedGrades = grades;
-    (window as any).cachedCourses = courses;
-    (window as any).cachedHours = hours;
-    (window as any).cachedPayments = payments;
-    (window as any).cachedBillAdjustments = billAdjustments;
-    
-    // Create a new window for printing
-    const printWindow = window.open('', '_blank');
-    if (!printWindow) return;
+  const handlePrintAllInvoices = async () => {
+    try {
+      setPrintingAllInvoices(true);
+      
+      if (!families || !Array.isArray(families)) {
+        toast({
+          title: "Error",
+          description: "Unable to load family data for printing",
+          variant: "destructive",
+        });
+        return;
+      }
 
-    // Generate invoice HTML for all families
-    const invoiceHTML = generateAllInvoicesHTML();
-    
-    printWindow.document.write(invoiceHTML);
-    printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
-  };
-
-  const generateAllInvoicesHTML = () => {
-    if (!families) return '';
-
-    const invoicePages = (families as Family[]).map((family, index) => 
-      generateSingleInvoiceHTML(family, index > 0)
-    ).join('');
-
-    return `
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <title>CHEC Invoices</title>
-          <style>
-            @media print {
-              .page-break { page-break-before: always; }
-            }
-            body { font-family: Arial, sans-serif; margin: 20px; }
-            .invoice-header { text-align: center; margin-bottom: 30px; }
-            .invoice-header h1 { font-size: 24px; margin: 0; color: #333; }
-            .family-name { font-size: 18px; margin: 20px 0; font-weight: bold; color: #555; }
-            table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-            th, td { padding: 8px 16px; text-align: left; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }
-            th:last-child, td:last-child { border-right: none; }
-            th { background-color: #f5f5f5; font-weight: bold; }
-            .amount-column { text-align: right; }
-            .subtotal-row { border-top: 1px solid #333; font-weight: bold; background-color: #f9f9f9; }
-            .subtotal-row td { padding: 10px 16px; }
-            .payment-row { color: #059669; }
-            .total-row { border-top: 2px solid #333; font-weight: bold; }
-            .total-row td { padding: 15px 16px 8px 16px; }
-            .outstanding { background-color: #fef3c7; }
-            .overpaid { background-color: #dbeafe; }
-            .paid-full { background-color: #d1fae5; }
-            .outstanding .amount { color: #dc2626; }
-            .overpaid .amount { color: #2563eb; }
-            .paid-full .amount { color: #059669; }
-          </style>
-        </head>
-        <body>
-          ${invoicePages}
-        </body>
-      </html>
-    `;
-  };
-
-  const generateSingleInvoiceHTML = (family: Family, addPageBreak: boolean = false, includeStyles: boolean = false) => {
-    // Get settings for fees
-    const familyFee = parseFloat((window as any).cachedSettings?.FamilyFee || "20");
-    const backgroundFee = parseFloat((window as any).cachedSettings?.BackgroundFee || "0");
-    const studentFee = parseFloat((window as any).cachedSettings?.StudentFee || "20");
-
-    // Get students for this family and sort by gradYear (youngest first)
-    const familyStudents = ((window as any).cachedStudents?.filter((s: any) => s.familyId === family.id && !s.inactive) || [])
-      .sort((a: any, b: any) => {
-        const gradYearA = parseInt(a.gradYear) || 0;
-        const gradYearB = parseInt(b.gradYear) || 0;
-        return gradYearB - gradYearA; // Higher gradYear = younger student
+      const activeFamilies = (families as Family[]).filter(f => f.active !== false);
+      
+      toast({
+        title: "Generating Invoices",
+        description: `Preparing ${activeFamilies.length} invoices for printing...`,
       });
 
-    const coursesData = (window as any).cachedCourses || [];
-    
-    // Get payments and adjustments for this family first
-    const familyPayments = ((window as any).cachedPayments?.filter((payment: any) => payment.familyId === family.id) || [])
-      .sort((a: any, b: any) => new Date(a.paymentDate).getTime() - new Date(b.paymentDate).getTime()); // Sort by date, oldest first
-    
-    const familyAdjustments = ((window as any).cachedBillAdjustments?.filter((adjustment: any) => adjustment.familyId === family.id) || [])
-      .sort((a: any, b: any) => new Date(a.adjustmentDate).getTime() - new Date(b.adjustmentDate).getTime()); // Sort by date, oldest first
-    
-    let invoiceRows = [];
-    let total = 0;
+      // Generate HTML for all families with invoices
+      let allInvoicesHTML = `
+        <html>
+          <head>
+            <title>CHEC All Invoices</title>
+            <style>
+              body { font-family: Arial, sans-serif; font-size: 12px; margin: 0; padding: 0; }
+              .invoice-container { margin: 20px; }
+              .invoice-container:not(:first-child) { page-break-before: always; }
+              .invoice-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+              .family-info { font-size: 16px; font-weight: bold; margin-bottom: 20px; }
+              .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+              .invoice-table th, .invoice-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+              .invoice-table th { background-color: #f5f5f5; font-weight: bold; }
+              .total-row { background-color: #f0f0f0; font-weight: bold; }
+              .balance-row { background-color: #fff2f0; font-weight: bold; font-size: 14px; }
+              .balance-paid { background-color: #f0fff0; }
+              .balance-overpaid { background-color: #f0f8ff; }
+              .credit-amount { color: #16a085; }
+              .text-right { text-align: right; }
+              @media print {
+                .invoice-container:not(:first-child) { page-break-before: always; }
+              }
+            </style>
+          </head>
+          <body>
+      `;
 
-    // 1. Add family fee first
-    invoiceRows.push({
-      name: family.lastName + ' family',
-      grade: '',
-      hour: '',
-      item: 'Family Fee',
-      fee: familyFee
-    });
-    total += familyFee;
+      // Generate invoices for all families
+      for (let i = 0; i < activeFamilies.length; i++) {
+        const family = activeFamilies[i];
+        const invoiceHTML = await generateSingleInvoiceHTML(family, i > 0, false);
+        allInvoicesHTML += invoiceHTML;
+      }
 
-    // 2. Add background check fee second (only if needed)
-    if (family.needsBackgroundCheck) {
-      invoiceRows.push({
-        name: family.lastName + ' family',
-        grade: '',
-        hour: '',
-        item: 'Background Check',
-        fee: backgroundFee
+      allInvoicesHTML += `
+          </body>
+        </html>
+      `;
+
+      // Open print window
+      const printWindow = window.open('', '_blank');
+      if (printWindow) {
+        printWindow.document.write(allInvoicesHTML);
+        printWindow.document.close();
+        printWindow.focus();
+        
+        // Wait for content to load then print
+        printWindow.onload = () => {
+          setTimeout(() => {
+            printWindow.print();
+          }, 500);
+        };
+      } else {
+        toast({
+          title: "Print Error",
+          description: "Unable to open print window. Please check your browser's popup settings.",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      console.error('Error printing all invoices:', error);
+      toast({
+        title: "Print Error",
+        description: "Failed to generate invoices for printing",
+        variant: "destructive",
       });
-      total += backgroundFee;
+    } finally {
+      setPrintingAllInvoices(false);
     }
-
-    // 3. Add student fees (youngest first)
-    familyStudents.forEach((student: any) => {
-      const currentGrade = getCurrentGradeForStudent(student);
-      
-      // Student fee
-      invoiceRows.push({
-        name: student.firstName,
-        grade: currentGrade,
-        hour: '',
-        item: 'Student Fee',
-        fee: studentFee
-      });
-      total += studentFee;
-    });
-
-    // 4. Add course fees for each student (youngest first), in hour order
-    familyStudents.forEach((student: any) => {
-      const currentGrade = getCurrentGradeForStudent(student);
-      
-      // Define hour order and corresponding student field names
-      const hourMappings = [
-        { hour: 0, field: 'mathHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 0)?.description || 'Math' },
-        { hour: 1, field: 'firstHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 1)?.description || '1st' },
-        { hour: 2, field: 'secondHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 2)?.description || '2nd' },
-        { hour: 3, field: 'thirdHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 3)?.description || '3rd' },
-        { hour: 4, field: 'fourthHour', hourName: (window as any).cachedHours?.find((h: any) => h.id === 4)?.description || '4th' },
-        { hour: 5, field: 'fifthHourFall', hourName: ((window as any).cachedHours?.find((h: any) => h.id === 5)?.description || '5th') + ' Fall' },
-        { hour: 5, field: 'fifthHourSpring', hourName: ((window as any).cachedHours?.find((h: any) => h.id === 5)?.description || '5th') + ' Spring' },
-      ];
-
-      // Process courses in hour order, include those with fees or book rentals
-      hourMappings.forEach(mapping => {
-        const courseName = student[mapping.field];
-        if (courseName && courseName !== 'NO_COURSE') {
-          // Find the actual course to get its fee
-          const course = coursesData.find((c: any) => c.courseName === courseName);
-          if (course) {
-            // Add course fee if it exists and is greater than 0
-            if (course.fee && parseFloat(course.fee) > 0) {
-              const courseFee = parseFloat(course.fee);
-              invoiceRows.push({
-                name: student.firstName,
-                grade: currentGrade,
-                hour: mapping.hourName,
-                item: courseName,
-                fee: courseFee
-              });
-              total += courseFee;
-            }
-
-            // Add book rental fee if it exists and is greater than 0
-            if (course.bookRental && parseFloat(course.bookRental) > 0) {
-              const bookRentalFee = parseFloat(course.bookRental);
-              invoiceRows.push({
-                name: student.firstName,
-                grade: currentGrade,
-                hour: mapping.hourName,
-                item: `${courseName} - Book Rental`,
-                fee: bookRentalFee
-              });
-              total += bookRentalFee;
-            }
-          }
-        }
-      });
-    });
-
-    // 5. Add bill adjustments before subtotal
-    familyAdjustments.forEach((adjustment: any) => {
-      const amount = parseFloat(adjustment.amount);
-      const isCredit = amount < 0;
-      invoiceRows.push({
-        name: family.lastName + ' family',
-        grade: new Date(adjustment.adjustmentDate).toLocaleDateString(),
-        hour: isCredit ? 'Credit' : 'Charge',
-        item: adjustment.description,
-        fee: amount
-      });
-      total += amount;
-    });
-
-    const totalPaid = familyPayments.reduce((sum: number, payment: any) => sum + parseFloat(payment.amount), 0);
-    const remainingBalance = total - totalPaid; // total already includes adjustments
-
-    // Generate fee rows HTML
-    const feeRowsHTML = invoiceRows.map(row => {
-      const isCredit = row.fee < 0;
-      return `
-      <tr${isCredit ? ' class="payment-row"' : ''}>
-        <td>${row.name}</td>
-        <td>${row.grade}</td>
-        <td>${row.hour}</td>
-        <td>${row.item}</td>
-        <td class="amount-column">${isCredit ? '-$' + Math.abs(row.fee).toFixed(2) : '$' + row.fee.toFixed(2)}</td>
-      </tr>
-    `;
-    }).join('');
-
-    // Generate subtotal row
-    const subtotalRowHTML = `
-      <tr class="subtotal-row">
-        <td colspan="4"><strong>Total Amount</strong></td>
-        <td class="amount-column"><strong>$${total.toFixed(2)}</strong></td>
-      </tr>
-    `;
-
-    // Generate payment rows HTML
-    const paymentRowsHTML = familyPayments.length > 0 ? familyPayments.map((payment: any) => `
-      <tr class="payment-row">
-        <td>${family.lastName} family</td>
-        <td>${new Date(payment.paymentDate).toLocaleDateString()}</td>
-        <td>${payment.paymentMethod || ''}</td>
-        <td>Payment Received${payment.description ? ` - ${payment.description}` : ''}</td>
-        <td class="amount-column">-$${parseFloat(payment.amount).toFixed(2)}</td>
-      </tr>
-    `).join('') : '';
-
-    // Combine all rows
-    const allRowsHTML = feeRowsHTML + subtotalRowHTML + paymentRowsHTML;
-
-    const stylesHTML = includeStyles ? `
-      <style>
-        .invoice-header { text-align: center; margin-bottom: 30px; }
-        .invoice-header h1 { font-size: 24px; margin: 0; color: #333; }
-        .family-name { font-size: 18px; margin: 20px 0; font-weight: bold; color: #555; }
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        th, td { padding: 8px 16px; text-align: left; border-bottom: 1px solid #ddd; border-right: 1px solid #ddd; }
-        th:last-child, td:last-child { border-right: none; }
-        th { background-color: #f5f5f5; font-weight: bold; }
-        .amount-column { text-align: right; }
-        .subtotal-row { border-top: 1px solid #333; font-weight: bold; background-color: #f9f9f9; }
-        .subtotal-row td { padding: 10px 16px; }
-        .payment-row { color: #059669; }
-        .total-row { border-top: 2px solid #333; font-weight: bold; }
-        .total-row td { padding: 15px 16px 8px 16px; }
-        .outstanding { background-color: #fef3c7; }
-        .overpaid { background-color: #dbeafe; }
-        .paid-full { background-color: #d1fae5; }
-        .outstanding .amount { color: #dc2626; }
-        .overpaid .amount { color: #2563eb; }
-        .paid-full .amount { color: #059669; }
-      </style>
-    ` : '';
-
-    return `
-      ${stylesHTML}
-      ${addPageBreak ? '<div class="page-break"></div>' : ''}
-      <div class="invoice-header">
-        <h1>CHEC Fees</h1>
-      </div>
-      <div class="family-name">${family.lastName}, ${family.father || ''} & ${family.mother || ''}</div>
-      <table>
-        <thead>
-          <tr>
-            <th>Name</th>
-            <th>Grade</th>
-            <th>Hour</th>
-            <th>Item</th>
-            <th class="amount-column">Amount</th>
-          </tr>
-        </thead>
-        <tbody>
-          ${allRowsHTML}
-          <tr class="total-row ${remainingBalance > 0 ? 'outstanding' : remainingBalance < 0 ? 'overpaid' : 'paid-full'}">
-            <td colspan="4"><strong>${remainingBalance > 0 ? 'Outstanding Balance' : remainingBalance < 0 ? 'Overpaid' : 'Paid in Full'}</strong></td>
-            <td class="amount-column amount"><strong>${remainingBalance > 0 ? '$' + remainingBalance.toFixed(2) : remainingBalance < 0 ? '-$' + Math.abs(remainingBalance).toFixed(2) : '$0.00'}</strong></td>
-          </tr>
-        </tbody>
-      </table>
-    `;
   };
 
-  const getCurrentGradeForStudent = (student: any) => {
-    const settingsCache = (window as any).cachedSettings;
-    const gradesCache = (window as any).cachedGrades;
-    
-    if (!settingsCache || !gradesCache || !student.gradYear) return "Unknown";
-    
-    const schoolYear = parseInt(settingsCache.SchoolYear || "2024");
-    const gradeCode = schoolYear - parseInt(student.gradYear) + 13;
-    const grade = gradesCache.find((g: any) => g.code === gradeCode);
-    return grade ? grade.gradeName : "Unknown";
+
+  const generateSingleInvoiceHTML = async (family: Family, addPageBreak: boolean = false, includeStyles: boolean = false): Promise<string> => {
+    try {
+      // Fetch invoice data from server
+      const response = await fetch(`/api/invoices/family/${family.id}`, {
+        credentials: "include",
+      });
+      
+      if (!response.ok) {
+        return `<div class="p-4 text-red-600">Error loading invoice for ${family.lastName} family</div>`;
+      }
+      
+      const invoiceData = await response.json();
+      const { calculation, invoiceRows } = invoiceData;
+      
+      const pageBreakStyle = addPageBreak ? 'page-break-before: always;' : '';
+      const styles = includeStyles ? `
+        <style>
+          body { font-family: Arial, sans-serif; font-size: 12px; }
+          .invoice-container { margin: 20px; ${pageBreakStyle} }
+          .invoice-header { text-align: center; margin-bottom: 20px; border-bottom: 2px solid #333; padding-bottom: 10px; }
+          .family-info { font-size: 16px; font-weight: bold; margin-bottom: 20px; }
+          .invoice-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+          .invoice-table th, .invoice-table td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+          .invoice-table th { background-color: #f5f5f5; font-weight: bold; }
+          .total-row { background-color: #f0f0f0; font-weight: bold; }
+          .balance-row { background-color: #fff2f0; font-weight: bold; font-size: 14px; }
+          .balance-paid { background-color: #f0fff0; }
+          .balance-overpaid { background-color: #f0f8ff; }
+          .credit-amount { color: #16a085; }
+          .text-right { text-align: right; }
+        </style>
+      ` : '';
+      
+      return `
+        ${styles}
+        <div class="invoice-container">
+          <div class="invoice-header">
+            <h1>CHEC Fees</h1>
+          </div>
+          
+          <div class="family-info">
+            ${family.lastName}, ${family.father || ''} & ${family.mother || ''}
+          </div>
+          
+          <table class="invoice-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Grade</th>
+                <th>Hour</th>
+                <th>Item</th>
+                <th class="text-right">Amount</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${invoiceRows.map((row: any) => {
+                const isCredit = row.fee < 0;
+                return `
+                  <tr>
+                    <td>${row.studentName || family.lastName + ' family'}</td>
+                    <td>${row.grade || ''}</td>
+                    <td>${row.hour || ''}</td>
+                    <td>${row.itemDescription}</td>
+                    <td class="text-right ${isCredit ? 'credit-amount' : ''}">
+                      ${isCredit ? '-$' + Math.abs(row.fee).toFixed(2) : '$' + row.fee.toFixed(2)}
+                    </td>
+                  </tr>
+                `;
+              }).join('')}
+              
+              <!-- Total Amount Row -->
+              <tr class="total-row">
+                <td colspan="4">Total Amount</td>
+                <td class="text-right">$${calculation.totalAmount.toFixed(2)}</td>
+              </tr>
+              
+              <!-- Payment Rows -->
+              ${invoiceData.payments.map((payment: any) => `
+                <tr class="credit-amount">
+                  <td>Payment</td>
+                  <td>${new Date(payment.paymentDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}</td>
+                  <td>${payment.paymentMethod || ''}</td>
+                  <td>Payment Received${payment.description ? ` - ${payment.description}` : ''}</td>
+                  <td class="text-right">-$${parseFloat(payment.amount.toString()).toFixed(2)}</td>
+                </tr>
+              `).join('')}
+              
+              <!-- Balance Row -->
+              <tr class="balance-row ${calculation.balance === 0 ? 'balance-paid' : calculation.balance < 0 ? 'balance-overpaid' : ''}">
+                <td colspan="4">
+                  ${calculation.balance > 0 ? 'Outstanding Balance' : 
+                    calculation.balance < 0 ? 'Overpaid' : 
+                    'Paid in Full'}
+                </td>
+                <td class="text-right">
+                  ${calculation.balance > 0 ? '$' + calculation.balance.toFixed(2) : 
+                    calculation.balance < 0 ? '-$' + Math.abs(calculation.balance).toFixed(2) : 
+                    '$0.00'}
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      `;
+    } catch (error) {
+      console.error('Error generating invoice HTML:', error);
+      return `<div class="p-4 text-red-600">Error generating invoice for ${family.lastName} family</div>`;
+    }
   };
 
   const handleAddPayment = (family: Family) => {
@@ -488,6 +325,22 @@ export default function Invoices() {
   const handleAdjustBill = (family: Family) => {
     setSelectedFamilyForAdjustment(family);
     setAdjustBillDialogOpen(true);
+  };
+
+  const handleEmailFamily = (family: Family) => {
+    if (!family.email || family.email.trim() === '') {
+      toast({
+        title: "No Email Address",
+        description: `${family.lastName} family does not have an email address on file.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const confirmMessage = `Send invoice and schedule links to ${family.lastName} family (${family.email})?`;
+    if (window.confirm(confirmMessage)) {
+      sendFamilyEmailMutation.mutate(family.id);
+    }
   };
 
   const handleCopyInvoiceLink = async (family: Family) => {
@@ -520,18 +373,21 @@ export default function Invoices() {
     }
   };
 
-  const handleViewInvoice = (family: Family) => {
-    // Cache data for invoice generation
-    (window as any).cachedSettings = settings;
-    (window as any).cachedStudents = students;
-    (window as any).cachedGrades = grades;
-    (window as any).cachedCourses = courses;
-    (window as any).cachedHours = hours;
-    (window as any).cachedPayments = payments;
-    (window as any).cachedBillAdjustments = billAdjustments;
-    
+  const handleViewInvoice = async (family: Family) => {
     setSelectedFamily(family);
     setInvoiceDialogOpen(true);
+    setInvoiceLoading(true);
+    setInvoiceHTML("");
+    
+    try {
+      const html = await generateSingleInvoiceHTML(family, false, true);
+      setInvoiceHTML(html);
+    } catch (error) {
+      console.error('Error loading invoice:', error);
+      setInvoiceHTML(`<div class="p-4 text-red-600">Error loading invoice for ${family.lastName} family</div>`);
+    } finally {
+      setInvoiceLoading(false);
+    }
   };
 
   return (
@@ -556,8 +412,10 @@ export default function Invoices() {
         title="Invoices"
         description="Automatically computed from family and student data"
         actionButton={{
-          label: "Print All Invoices",
-          onClick: handlePrintAllInvoices
+          label: printingAllInvoices ? "Generating Invoices..." : "Print All Invoices",
+          onClick: handlePrintAllInvoices,
+          icon: Printer,
+          disabled: printingAllInvoices
         }}
       />
       <div className="p-6">
@@ -572,7 +430,7 @@ export default function Invoices() {
               <div className="ml-3">
                 <p className="text-xs font-medium text-gray-600">Total Revenue</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  ${calculateTotalRevenue()}
+                  ${calculateTotalRevenue().toFixed(2)}
                 </p>
               </div>
             </div>
@@ -588,7 +446,7 @@ export default function Invoices() {
               <div className="ml-3">
                 <p className="text-xs font-medium text-gray-600">Pending Amount</p>
                 <p className="text-lg font-semibold text-gray-900">
-                  ${calculatePendingAmount()}
+                  ${calculatePendingAmount().toFixed(2)}
                 </p>
               </div>
             </div>
@@ -628,36 +486,36 @@ export default function Invoices() {
             </thead>
             <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
               {computedInvoices.map((invoice: any) => (
-                <tr key={invoice.id} className="hover:bg-gray-50 dark:hover:bg-gray-800">
+                <tr key={invoice.familyId} className="hover:bg-gray-50 dark:hover:bg-gray-800">
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                      {invoice.family.lastName}, {invoice.family.father} & {invoice.family.mother}
+                      {invoice.lastName}, {invoice.father || ''} & {invoice.mother || ''}
                     </div>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <Button
-                      variant={invoice.family.needsBackgroundCheck ? "default" : "outline"}
+                      variant={invoice.needsBackgroundCheck ? "default" : "outline"}
                       size="sm"
-                      onClick={() => toggleBackgroundCheck(invoice.family.id)}
+                      onClick={() => toggleBackgroundCheck(invoice.familyId)}
                     >
-                      {invoice.family.needsBackgroundCheck ? "Required" : "Not Required"}
+                      {invoice.needsBackgroundCheck ? "Required" : "Not Required"}
                     </Button>
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
-                    ${invoice.total.toFixed(2)}
+                    ${invoice.totalAmount.toFixed(2)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 dark:text-gray-100">
                     ${invoice.totalPaid.toFixed(2)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     <div className="flex items-center">
-                      <span className={`text-sm font-medium ${invoice.unpaidBalance > 0 ? 'text-red-600' : invoice.unpaidBalance < 0 ? 'text-blue-600' : 'text-green-600'}`}>
-                        {invoice.unpaidBalance > 0 ? '$' + invoice.unpaidBalance.toFixed(2) : invoice.unpaidBalance < 0 ? '-$' + Math.abs(invoice.unpaidBalance).toFixed(2) : '$0.00'}
+                      <span className={`text-sm font-medium ${invoice.balance > 0 ? 'text-red-600' : invoice.balance < 0 ? 'text-blue-600' : 'text-green-600'}`}>
+                        {invoice.balance > 0 ? '$' + invoice.balance.toFixed(2) : invoice.balance < 0 ? '-$' + Math.abs(invoice.balance).toFixed(2) : '$0.00'}
                       </span>
-                      {invoice.unpaidBalance === 0 && (
+                      {invoice.balance === 0 && (
                         <Badge variant="default" className="ml-2">Paid in Full</Badge>
                       )}
-                      {invoice.unpaidBalance < 0 && (
+                      {invoice.balance < 0 && (
                         <Badge variant="secondary" className="ml-2">Overpaid</Badge>
                       )}
                     </div>
@@ -667,23 +525,44 @@ export default function Invoices() {
                       <Button 
                         variant="outline" 
                         size="sm"
-                        onClick={() => handleViewInvoice(invoice.family)}
+                        title="View Invoice"
+                        onClick={() => {
+                          const family = (families as Family[])?.find(f => f.id === invoice.familyId);
+                          if (family) handleViewInvoice(family);
+                        }}
                       >
-                        <Eye className="h-4 w-4 mr-1" />
-                        View Invoice
+                        <Eye className="h-4 w-4" />
                       </Button>
                       <Button 
                         variant="outline"
                         size="sm"
-                        onClick={() => handleCopyInvoiceLink(invoice.family)}
+                        title="Copy Invoice Link"
+                        onClick={() => {
+                          const family = (families as Family[])?.find(f => f.id === invoice.familyId);
+                          if (family) handleCopyInvoiceLink(family);
+                        }}
                       >
-                        <Link2 className="h-4 w-4 mr-1" />
-                        Copy Invoice Link
+                        <Link2 className="h-4 w-4" />
+                      </Button>
+                      <Button 
+                        variant="outline"
+                        size="sm"
+                        title={sendFamilyEmailMutation.isPending ? "Sending..." : "Email Links"}
+                        onClick={() => {
+                          const family = (families as Family[])?.find(f => f.id === invoice.familyId);
+                          if (family) handleEmailFamily(family);
+                        }}
+                        disabled={sendFamilyEmailMutation.isPending}
+                      >
+                        <Mail className="h-4 w-4" />
                       </Button>
                       <Button 
                         variant="default"
                         size="sm"
-                        onClick={() => handleAddPayment(invoice.family)}
+                        onClick={() => {
+                          const family = (families as Family[])?.find(f => f.id === invoice.familyId);
+                          if (family) handleAddPayment(family);
+                        }}
                       >
                         <Plus className="h-4 w-4 mr-1" />
                         Add Payment
@@ -691,7 +570,10 @@ export default function Invoices() {
                       <Button 
                         variant="secondary"
                         size="sm"
-                        onClick={() => handleAdjustBill(invoice.family)}
+                        onClick={() => {
+                          const family = (families as Family[])?.find(f => f.id === invoice.familyId);
+                          if (family) handleAdjustBill(family);
+                        }}
                       >
                         <Settings className="h-4 w-4 mr-1" />
                         Adjust Bill
@@ -713,11 +595,17 @@ export default function Invoices() {
               Invoice Preview - {selectedFamily?.lastName}
             </DialogTitle>
           </DialogHeader>
-          {selectedFamily && (
+          {invoiceLoading && (
+            <div className="flex items-center justify-center p-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mr-3"></div>
+              <span>Loading invoice...</span>
+            </div>
+          )}
+          {!invoiceLoading && selectedFamily && (
             <div 
               className="border rounded-lg p-6 bg-white"
               dangerouslySetInnerHTML={{ 
-                __html: generateSingleInvoiceHTML(selectedFamily, false, true) 
+                __html: invoiceHTML 
               }}
             />
           )}
