@@ -4,22 +4,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { FileText, Download, AlertCircle, CheckCircle, Clock } from "lucide-react";
+import { AlertCircle, CheckCircle, Clock, Download } from "lucide-react";
 import type { Family, Payment, BillAdjustment } from "@shared/schema";
+import type { FamilyInvoice } from "@shared/invoice-types";
 
-// Feature flag to enable/disable PayPal fee functionality
-const ENABLE_PAYPAL_FEES = false;
 
-interface PublicInvoiceData {
-  family: Family;
-  students: any[];
-  courses: any[];
-  grades: any[];
-  hours: any[];
-  settings: any;
-  payments: Payment[];
-  billAdjustments: BillAdjustment[];
-}
 
 declare global {
   interface Window {
@@ -29,7 +18,7 @@ declare global {
 
 export default function PublicInvoice() {
   const { hash } = useParams<{ hash: string }>();
-  const [invoiceData, setInvoiceData] = useState<PublicInvoiceData | null>(null);
+  const [invoiceData, setInvoiceData] = useState<FamilyInvoice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [paypalLoaded, setPaypalLoaded] = useState(false);
@@ -63,8 +52,7 @@ export default function PublicInvoice() {
     };
 
     if (invoiceData) {
-      const details = calculateInvoiceDetails();
-      if (details && details.unpaidBalance > 0) {
+      if (invoiceData.calculation.balance > 0) {
         loadPayPalSDK();
       }
     }
@@ -73,9 +61,10 @@ export default function PublicInvoice() {
   useEffect(() => {
     // Render PayPal buttons when SDK is loaded and we have invoice data
     if (paypalLoaded && invoiceData && paypalButtonsRef.current) {
-      const details = calculateInvoiceDetails(ENABLE_PAYPAL_FEES);
-      if (details && details.unpaidBalanceWithPayPalFee > 0) {
-        renderPayPalButtons(details.unpaidBalanceWithPayPalFee);
+      // Calculate PayPal amount (for now, use balance - will be updated to use server calculation)
+      const paypalAmount = invoiceData.calculation.balanceWithPayPal || invoiceData.calculation.balance;
+      if (paypalAmount > 0) {
+        renderPayPalButtons(paypalAmount);
       }
     }
   }, [paypalLoaded, invoiceData]);
@@ -83,7 +72,7 @@ export default function PublicInvoice() {
   const fetchInvoiceData = async () => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/invoice/${hash}`, {
+      const response = await fetch(`/api/invoices/${hash}`, {
         credentials: "include",
       });
 
@@ -103,228 +92,16 @@ export default function PublicInvoice() {
     }
   };
 
-  const calculateInvoiceDetails = (includePayPalFee: boolean = false) => {
+  // Invoice details are now calculated server-side
+  const getInvoiceDetails = () => {
     if (!invoiceData) return null;
-
-    const { family, students, settings, courses, payments, billAdjustments } = invoiceData;
-    
-    const familyFee = parseFloat(settings?.FamilyFee || "20");
-    const backgroundFee = parseFloat(settings?.BackgroundFee || "0");
-    const studentFee = parseFloat(settings?.StudentFee || "20");
-
-    let total = familyFee;
-    
-    // Add background check fee if needed
-    if (family.needsBackgroundCheck) {
-      total += backgroundFee;
-    }
-    
-    // Add student fees and course fees
-    total += students.length * studentFee;
-    
-    students.forEach((student: any) => {
-      const hourMappings = [
-        { field: 'mathHour' },
-        { field: 'firstHour' },
-        { field: 'secondHour' },
-        { field: 'thirdHour' },
-        { field: 'fourthHour' },
-        { field: 'fifthHourFall' },
-        { field: 'fifthHourSpring' },
-      ];
-
-      hourMappings.forEach(mapping => {
-        const courseName = student[mapping.field];
-        if (courseName && courseName !== 'NO_COURSE') {
-          const course = courses?.find((c: any) => c.courseName === courseName);
-          if (course) {
-            // Add course fee if it exists and is greater than 0
-            if (course.fee && parseFloat(course.fee) > 0) {
-              total += parseFloat(course.fee);
-            }
-            
-            // Add book rental fee if it exists and is greater than 0
-            if (course.bookRental && parseFloat(course.bookRental) > 0) {
-              total += parseFloat(course.bookRental);
-            }
-          }
-        }
-      });
-    });
-
-    // Add bill adjustments to total
-    const totalAdjustments = billAdjustments.reduce((sum, adjustment) => 
-      sum + parseFloat(adjustment.amount.toString()), 0);
-    const adjustedTotal = total + totalAdjustments;
-
-    // Calculate PayPal processing fee if requested
-    let paypalFee = 0;
-    if (includePayPalFee && settings?.PayPalPercentage && settings?.PayPalFixedRate) {
-      const paypalPercentage = parseFloat(settings.PayPalPercentage) / 100;
-      const paypalFixedRate = parseFloat(settings.PayPalFixedRate);
-      paypalFee = (adjustedTotal * paypalPercentage) + paypalFixedRate;
-    }
-    const totalWithPayPalFee = adjustedTotal + paypalFee;
-
-    // Calculate payments
-    const totalPaid = payments.reduce((sum, payment) => 
-      sum + parseFloat(payment.amount.toString()), 0);
-    
-    const unpaidBalance = adjustedTotal - totalPaid;
-    const unpaidBalanceWithPayPalFee = totalWithPayPalFee - totalPaid;
-
-    return {
-      baseTotal: total,
-      totalAdjustments,
-      adjustedTotal,
-      paypalFee,
-      totalWithPayPalFee,
-      totalPaid,
-      unpaidBalance,
-      unpaidBalanceWithPayPalFee,
-    };
+    return invoiceData.calculation;
   };
 
-  const generateInvoiceHTML = (includePayPalFee: boolean = false): Array<{name: string, grade: string, hour: string, item: string, fee: number}> => {
+  // Invoice rows are now generated server-side
+  const getInvoiceRows = () => {
     if (!invoiceData) return [];
-
-    const { family, students, settings, courses, hours, billAdjustments } = invoiceData;
-    const details = calculateInvoiceDetails(includePayPalFee);
-    if (!details) return [];
-
-    const familyFee = parseFloat(settings?.FamilyFee || "20");
-    const backgroundFee = parseFloat(settings?.BackgroundFee || "0");
-    const studentFee = parseFloat(settings?.StudentFee || "20");
-
-    // Sort students by gradYear (youngest first)
-    const sortedStudents = students.sort((a: any, b: any) => {
-      const gradYearA = parseInt(a.gradYear) || 0;
-      const gradYearB = parseInt(b.gradYear) || 0;
-      return gradYearB - gradYearA;
-    });
-
-    let invoiceRows = [];
-    let total = 0;
-
-    // Add family fee
-    invoiceRows.push({
-      name: family.lastName + ' family',
-      grade: '',
-      hour: '',
-      item: 'Family Fee',
-      fee: familyFee
-    });
-    total += familyFee;
-
-    // Add background check fee if needed
-    if (family.needsBackgroundCheck) {
-      invoiceRows.push({
-        name: family.lastName + ' family',
-        grade: '',
-        hour: '',
-        item: 'Background Check',
-        fee: backgroundFee
-      });
-      total += backgroundFee;
-    }
-
-    // Add student fees and course fees
-    sortedStudents.forEach((student: any) => {
-      const currentGrade = getCurrentGradeForStudent(student);
-      
-      // Student fee
-      invoiceRows.push({
-        name: student.firstName,
-        grade: currentGrade,
-        hour: '',
-        item: 'Student Fee',
-        fee: studentFee
-      });
-      total += studentFee;
-
-      // Course fees
-      const hourMappings = [
-        { field: 'mathHour', hourName: hours?.find((h: any) => h.id === 0)?.description || 'Math' },
-        { field: 'firstHour', hourName: hours?.find((h: any) => h.id === 1)?.description || '1st' },
-        { field: 'secondHour', hourName: hours?.find((h: any) => h.id === 2)?.description || '2nd' },
-        { field: 'thirdHour', hourName: hours?.find((h: any) => h.id === 3)?.description || '3rd' },
-        { field: 'fourthHour', hourName: hours?.find((h: any) => h.id === 4)?.description || '4th' },
-        { field: 'fifthHourFall', hourName: (hours?.find((h: any) => h.id === 5)?.description || '5th') + ' Fall' },
-        { field: 'fifthHourSpring', hourName: (hours?.find((h: any) => h.id === 5)?.description || '5th') + ' Spring' },
-      ];
-
-      hourMappings.forEach(mapping => {
-        const courseName = student[mapping.field];
-        if (courseName && courseName !== 'NO_COURSE') {
-          const course = courses?.find((c: any) => c.courseName === courseName);
-          if (course) {
-            // Add course fee if it exists and is greater than 0
-            if (course.fee && parseFloat(course.fee) > 0) {
-              const courseFee = parseFloat(course.fee);
-              invoiceRows.push({
-                name: student.firstName,
-                grade: currentGrade,
-                hour: mapping.hourName,
-                item: courseName,
-                fee: courseFee
-              });
-              total += courseFee;
-            }
-
-            // Add book rental fee if it exists and is greater than 0
-            if (course.bookRental && parseFloat(course.bookRental) > 0) {
-              const bookRentalFee = parseFloat(course.bookRental);
-              invoiceRows.push({
-                name: student.firstName,
-                grade: currentGrade,
-                hour: mapping.hourName,
-                item: `${courseName} - Book Rental`,
-                fee: bookRentalFee
-              });
-              total += bookRentalFee;
-            }
-          }
-        }
-      });
-    });
-
-    // Add bill adjustments
-    billAdjustments.forEach((adjustment: any) => {
-      const amount = parseFloat(adjustment.amount);
-      const isCredit = amount < 0;
-      invoiceRows.push({
-        name: family.lastName + ' family',
-        grade: new Date(adjustment.adjustmentDate).toLocaleDateString(),
-        hour: isCredit ? 'Credit' : 'Charge',
-        item: adjustment.description,
-        fee: amount
-      });
-      total += amount;
-    });
-
-    // Add PayPal processing fee if requested
-    if (includePayPalFee && details.paypalFee > 0 && settings?.PayPalPercentage && settings?.PayPalFixedRate) {
-      const paypalPercentage = parseFloat(settings.PayPalPercentage);
-      const paypalFixedRate = parseFloat(settings.PayPalFixedRate);
-      invoiceRows.push({
-        name: family.lastName + ' family',
-        grade: '',
-        hour: 'Online',
-        item: `PayPal Processing Fee ({paypalPercentage}% + ${paypalFixedRate})`,
-        fee: details.paypalFee
-      });
-    }
-
-    return invoiceRows;
-  };
-
-  const getCurrentGradeForStudent = (student: any) => {
-    if (!invoiceData?.settings || !invoiceData?.grades || !student.gradYear) return "Unknown";
-    
-    const schoolYear = parseInt(invoiceData.settings.SchoolYear || "2024");
-    const gradeCode = schoolYear - parseInt(student.gradYear) + 13;
-    const grade = invoiceData.grades.find((g: any) => g.code === gradeCode);
-    return grade ? grade.gradeName : "Unknown";
+    return invoiceData.invoiceRows;
   };
 
   const handlePrintInvoice = () => {
@@ -398,14 +175,14 @@ export default function PublicInvoice() {
           alert('Payment successful! Thank you for your payment.');
         } catch (error) {
           console.error('Error capturing PayPal payment:', error);
-          setError('Payment failed to process. Please contact support.');
+          setError(`Payment failed to process. ${error}`);
         } finally {
           setIsProcessingPayment(false);
         }
       },
       onError: (err: any) => {
         console.error('PayPal error:', err);
-        setError('Payment failed. Please try again or contact support.');
+        setError(`Payment failed. ${err}`);
         setIsProcessingPayment(false);
       },
       onCancel: () => {
@@ -447,17 +224,15 @@ export default function PublicInvoice() {
 
   if (!invoiceData) return null;
 
-  const details = calculateInvoiceDetails();
-  const detailsWithPayPal = calculateInvoiceDetails(ENABLE_PAYPAL_FEES);
-  if (!details || !detailsWithPayPal) return null;
+  const details = getInvoiceDetails();
+  if (!details) return null;
 
-  const invoiceRows = generateInvoiceHTML();
-  const invoiceRowsWithPayPal = generateInvoiceHTML(ENABLE_PAYPAL_FEES);
+  const invoiceRows = getInvoiceRows();
   const { family, payments } = invoiceData;
 
   // Payment status styling and messaging
   const getPaymentStatus = () => {
-    if (details.unpaidBalance > 0) {
+    if (details.balance > 0) {
       return {
         status: 'outstanding',
         color: 'text-red-600',
@@ -466,7 +241,7 @@ export default function PublicInvoice() {
         icon: <Clock className="h-4 w-4" />,
         message: 'Payment Due'
       };
-    } else if (details.unpaidBalance < 0) {
+    } else if (details.balance < 0) {
       return {
         status: 'overpaid',
         color: 'text-blue-600',
@@ -545,9 +320,9 @@ export default function PublicInvoice() {
               </span>
               <AlertDescription className={`ml-2 ${paymentStatus.color} font-medium`}>
                 {paymentStatus.message}: 
-                {details.unpaidBalance > 0 && ` $${details.unpaidBalance.toFixed(2)}`}
-                {details.unpaidBalance < 0 && ` -$${Math.abs(details.unpaidBalance).toFixed(2)}`}
-                {details.unpaidBalance === 0 && " Thank you for your payment!"}
+                {details.balance > 0 && ` $${details.balance.toFixed(2)}`}
+                {details.balance < 0 && ` -$${Math.abs(details.balance).toFixed(2)}`}
+                {details.balance === 0 && " Thank you for your payment!"}
               </AlertDescription>
             </div>
           </Alert>
@@ -582,11 +357,11 @@ export default function PublicInvoice() {
                     const isCredit = row.fee < 0;
                     return (
                       <tr key={index} className="border-b border-gray-200">
-                        <td className="py-2 px-4">{row.name}</td>
-                        <td className="py-2 px-4">{row.grade}</td>
-                        <td className="py-2 px-4">{row.hour}</td>
-                        <td className="py-2 px-4">{row.item}</td>
-                        <td className={`py-2 px-4 text-right ${isCredit ? 'text-green-600' : ''}`}>
+                        <td className="py-2 px-4 whitespace-nowrap">{row.studentName || family.lastName + ' family'}</td>
+                        <td className="py-2 px-4">{row.grade || ''}</td>
+                        <td className="py-2 px-4">{row.hour || ''}</td>
+                        <td className="py-2 px-4">{row.itemDescription}</td>
+                        <td className={`py-2 px-4 text-right whitespace-nowrap ${isCredit ? 'text-green-600' : ''}`}>
                           {isCredit ? '-$' + Math.abs(row.fee).toFixed(2) : '$' + row.fee.toFixed(2)}
                         </td>
                       </tr>
@@ -596,64 +371,64 @@ export default function PublicInvoice() {
                   {/* Total row */}
                   <tr className="border-t-2 border-gray-800 font-semibold bg-gray-50">
                     <td colSpan={4} className="py-3 px-4">Total Amount</td>
-                    <td className="py-3 px-4 text-right">${details.adjustedTotal.toFixed(2)}</td>
+                    <td className="py-3 px-4 text-right whitespace-nowrap">${details.totalAmount.toFixed(2)}</td>
                   </tr>
 
-                  {/* PayPal fee row - only show if unpaid balance exists and PayPal fees enabled */}
-                  {ENABLE_PAYPAL_FEES && details.unpaidBalance > 0 && (
+                  {/* PayPal fee row - only show if unpaid balance exists */}
+                  {details.balance > 0 && details.paypalFee && (
                     <tr className="border-b border-gray-200 text-blue-600">
-                      <td className="py-2 px-4">{family.lastName} family</td>
+                      <td className="py-2 px-4 whitespace-nowrap">{family.lastName} family</td>
                       <td className="py-2 px-4"></td>
                       <td className="py-2 px-4">Online</td>
                       <td className="py-2 px-4">PayPal Processing Fee</td>
-                      <td className="py-2 px-4 text-right">${detailsWithPayPal.paypalFee.toFixed(2)}</td>
+                      <td className="py-2 px-4 text-right whitespace-nowrap">${details.paypalFee.toFixed(2)}</td>
                     </tr>
                   )}
 
-                  {/* PayPal total row - only show if unpaid balance exists and PayPal fees enabled */}
-                  {ENABLE_PAYPAL_FEES && details.unpaidBalance > 0 && (
+                  {/* PayPal total row - only show if unpaid balance exists */}
+                  {details.balance > 0 && details.totalWithPayPal && (
                     <tr className="border-t border-gray-400 font-semibold bg-blue-50 text-blue-800">
                       <td colSpan={4} className="py-3 px-4">Total with PayPal Fee</td>
-                      <td className="py-3 px-4 text-right">${detailsWithPayPal.totalWithPayPalFee.toFixed(2)}</td>
+                      <td className="py-3 px-4 text-right whitespace-nowrap">${details.totalWithPayPal.toFixed(2)}</td>
                     </tr>
                   )}
 
                   {/* Payment rows */}
                   {payments.map((payment, index) => (
                     <tr key={`payment-${index}`} className="text-green-600">
-                      <td className="py-2 px-4">{family.lastName} family</td>
-                      <td className="py-2 px-4">{new Date(payment.paymentDate).toLocaleDateString()}</td>
+                      <td className="py-2 px-4 whitespace-nowrap">Payment</td>
+                      <td className="py-2 px-4">{new Date(payment.paymentDate).toLocaleDateString('en-US', { timeZone: 'UTC' })}</td>
                       <td className="py-2 px-4">{payment.paymentMethod || ''}</td>
                       <td className="py-2 px-4">
                         Payment Received{payment.description ? ` - ${payment.description}` : ''}
                       </td>
-                      <td className="py-2 px-4 text-right">-${parseFloat(payment.amount.toString()).toFixed(2)}</td>
+                      <td className="py-2 px-4 text-right whitespace-nowrap">-${parseFloat(payment.amount.toString()).toFixed(2)}</td>
                     </tr>
                   ))}
 
                   {/* Balance row */}
                   <tr className={`border-t-2 border-gray-800 font-bold text-lg ${
-                    details.unpaidBalance > 0 ? 'bg-red-50 text-red-800' : 
-                    details.unpaidBalance < 0 ? 'bg-blue-50 text-blue-800' : 
+                    details.balance > 0 ? 'bg-red-50 text-red-800' : 
+                    details.balance < 0 ? 'bg-blue-50 text-blue-800' : 
                     'bg-green-50 text-green-800'
                   }`}>
                     <td colSpan={4} className="py-4 px-4">
-                      {details.unpaidBalance > 0 ? 'Outstanding Balance' : 
-                       details.unpaidBalance < 0 ? 'Overpaid' : 
+                      {details.balance > 0 ? 'Outstanding Balance' : 
+                       details.balance < 0 ? 'Overpaid' : 
                        'Paid in Full'}
                     </td>
-                    <td className="py-4 px-4 text-right">
-                      {details.unpaidBalance > 0 ? '$' + details.unpaidBalance.toFixed(2) : 
-                       details.unpaidBalance < 0 ? '-$' + Math.abs(details.unpaidBalance).toFixed(2) : 
+                    <td className="py-4 px-4 text-right whitespace-nowrap">
+                      {details.balance > 0 ? '$' + details.balance.toFixed(2) : 
+                       details.balance < 0 ? '-$' + Math.abs(details.balance).toFixed(2) : 
                        '$0.00'}
                     </td>
                   </tr>
 
-                  {/* PayPal balance row - only show if unpaid balance exists and PayPal fees enabled */}
-                  {ENABLE_PAYPAL_FEES && details.unpaidBalance > 0 && (
+                  {/* PayPal balance row - only show if unpaid balance exists */}
+                  {details.balance > 0 && details.balanceWithPayPal && (
                     <tr className="border-t border-blue-400 font-bold text-lg bg-blue-100 text-blue-900">
                       <td colSpan={4} className="py-4 px-4">PayPal Payment Amount</td>
-                      <td className="py-4 px-4 text-right">${detailsWithPayPal.unpaidBalanceWithPayPalFee.toFixed(2)}</td>
+                      <td className="py-4 px-4 text-right whitespace-nowrap">${details.balanceWithPayPal.toFixed(2)}</td>
                     </tr>
                   )}
                 </tbody>
@@ -661,36 +436,23 @@ export default function PublicInvoice() {
             </div>
 
             {/* Payment instructions - only show if balance due */}
-            {details.unpaidBalance > 0 && (
+            {details.balance > 0 && (
               <div className="no-print mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
                 <h3 className="font-semibold text-yellow-800 mb-2">Payment Instructions</h3>
                 <p className="text-yellow-700 text-sm mb-3">
-                  Please remit payment of <strong>${details.unpaidBalance.toFixed(2)}</strong> at or before orientation.
+                  Please remit payment of <strong>${details.balance.toFixed(2)}</strong> at or before orientation.
                 </p>
                 <p className="text-xs text-yellow-600 mb-2">
                   Pay with check or cash at orientation, or pay securely online with PayPal below.
                 </p>
-                {ENABLE_PAYPAL_FEES && invoiceData.settings?.PayPalPercentage && invoiceData.settings?.PayPalFixedRate && detailsWithPayPal.paypalFee > 0 && (
+                {details.paypalFee && details.balanceWithPayPal && (
                   <p className="text-xs text-blue-600 mb-4">
-                    <strong>PayPal Payment: ${detailsWithPayPal.unpaidBalanceWithPayPalFee.toFixed(2)}</strong> (includes {parseFloat(invoiceData.settings.PayPalPercentage)}% + ${parseFloat(invoiceData.settings.PayPalFixedRate)} processing fee)
+                    <strong>PayPal Payment: ${details.balanceWithPayPal.toFixed(2)}</strong> (includes processing fee)
                   </p>
                 )}
                 
-                {/* Advanced PayPal buttons container - shown when fees are enabled */}
-                {ENABLE_PAYPAL_FEES && (
-                  <div ref={paypalButtonsRef} className="mt-4"></div>
-                )}
-                
-                {/* Simple PayPal donate form - shown when fees are disabled (PayPal handles fees) */}
-                {!ENABLE_PAYPAL_FEES && (
-                  <form action="https://www.paypal.com/donate" method="post" target="_top">
-                    <input type="hidden" name="hosted_button_id" value="LSP6ESUQWYW92" />
-                    <input type="image" src="https://tse1.mm.bing.net/th?id=OIP.JzIAJEPpncLSN_MWst60QAHaFX&pid=Api&rs=1&c=1&qlt=95&w=155&h=112" border="0" name="submit" title="PayPal - The safer, easier way to pay online!" alt="Donate with PayPal button" />
-                    <img alt="" border="0" src="https://www.paypal.com/en_US/i/scr/pixel.gif" width="1" height="1" />
-                    <input type="hidden" name="amount" value={details.unpaidBalance.toFixed(2)} />
-                    <input type="hidden" name="currency_code" value="USD" />
-                  </form>
-                )}
+                {/* PayPal buttons container */}
+                <div ref={paypalButtonsRef} className="mt-4"></div>
               </div>
             )}
           </CardContent>
