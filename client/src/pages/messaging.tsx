@@ -114,8 +114,9 @@ export default function Messaging() {
     sendSMSMutation.mutate(message);
   };
 
-  const familiesWithPhones = families?.filter(f => f.parentCell) || [];
-  const familiesWithoutPhones = families?.filter(f => !f.parentCell) || [];
+  // Server already filters for families with phones, so all returned families have phones
+  const familiesWithPhones = families || [];
+  const familiesWithoutPhones: Family[] = []; // No longer needed since server filters
 
   return (
     <div className="space-y-6">
