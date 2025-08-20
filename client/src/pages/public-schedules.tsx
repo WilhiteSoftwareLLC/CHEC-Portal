@@ -182,6 +182,7 @@ export default function PublicSchedules() {
           body { background: white !important; }
           .bg-gray-50 { background: white !important; }
           .shadow-sm { box-shadow: none !important; }
+          .student-card:not(:first-child) { page-break-before: always; }
         }
         .print-only { display: none; }
       `}</style>
@@ -203,13 +204,6 @@ export default function PublicSchedules() {
           </div>
         </div>
 
-        {/* Family info for print */}
-        <div className="print-only mb-6 text-center">
-          <h1 className="text-2xl font-bold text-gray-900 mb-2">CHEC Student Schedules</h1>
-          <h2 className="text-xl font-semibold text-gray-700">
-            {family.lastName}, {family.father || ''} & {family.mother || ''}
-          </h2>
-        </div>
 
         {/* Students and their schedules */}
         <div className="space-y-8">
@@ -218,7 +212,7 @@ export default function PublicSchedules() {
             const schedule = getStudentSchedule(student);
 
             return (
-              <Card key={student.id} className="shadow-sm">
+              <Card key={student.id} className="shadow-sm student-card">
                 <CardHeader className="pb-4">
                   <div className="flex items-center gap-3">
                     <div className="p-2 bg-blue-100 rounded-lg">
@@ -271,14 +265,8 @@ export default function PublicSchedules() {
             <FileText className="h-4 w-4" />
             <AlertDescription>
               This schedule shows all current course enrollments for the {family.lastName} family students.
-              For questions about courses or schedule changes, please contact the co-op administrator.
             </AlertDescription>
           </Alert>
-        </div>
-
-        {/* Print footer */}
-        <div className="print-only mt-8 text-center text-sm text-gray-500 border-t pt-4">
-          Generated from CHEC Portal • Please contact administrator for schedule changes
         </div>
       </div>
     </div>
