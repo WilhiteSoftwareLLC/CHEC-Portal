@@ -9,6 +9,7 @@ interface PageHeaderProps {
     label: string;
     onClick: () => void;
     icon?: any;
+    disabled?: boolean;
   };
   secondaryButton?: {
     label: string;
@@ -52,6 +53,7 @@ export default function PageHeader({ title, description, actionButton, secondary
           {actionButton && (
             <Button 
               onClick={actionButton.onClick}
+              disabled={actionButton.disabled}
               className="bg-blue-600 hover:bg-blue-700"
             >
               {actionButton.icon && <actionButton.icon className="mr-2 h-4 w-4" />}
