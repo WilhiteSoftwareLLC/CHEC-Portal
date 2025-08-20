@@ -36,6 +36,7 @@ export default function PaymentForm({ familyId, payment, onSubmit, onCancel }: P
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: [`/api/payments/family/${familyId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/summary"] });
       toast({
         title: "Success",
         description: "Payment added successfully",
@@ -58,6 +59,7 @@ export default function PaymentForm({ familyId, payment, onSubmit, onCancel }: P
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/payments"] });
       queryClient.invalidateQueries({ queryKey: [`/api/payments/family/${familyId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/summary"] });
       toast({
         title: "Success", 
         description: "Payment updated successfully",

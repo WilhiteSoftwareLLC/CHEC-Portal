@@ -49,6 +49,7 @@ export default function BillAdjustmentForm({ familyId, adjustment, onSubmit, onC
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bill-adjustments"] });
       queryClient.invalidateQueries({ queryKey: [`/api/bill-adjustments/family/${familyId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/summary"] });
       toast({
         title: "Success",
         description: "Bill adjustment added successfully",
@@ -71,6 +72,7 @@ export default function BillAdjustmentForm({ familyId, adjustment, onSubmit, onC
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/bill-adjustments"] });
       queryClient.invalidateQueries({ queryKey: [`/api/bill-adjustments/family/${familyId}`] });
+      queryClient.invalidateQueries({ queryKey: ["/api/invoices/summary"] });
       toast({
         title: "Success", 
         description: "Bill adjustment updated successfully",
