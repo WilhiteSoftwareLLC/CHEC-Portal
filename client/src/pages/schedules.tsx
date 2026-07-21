@@ -188,7 +188,9 @@ export default function Schedules() {
 
   const getAvailableCoursesForHour = (hourIndex: number) => {
     if (!courses) return [];
-    return courses.filter((course: Course) => course.hour === hourIndex);
+    return courses.filter((course: Course) =>
+      course.hour === hourIndex && (course.offeredFall || course.offeredSpring)
+    );
   };
 
   const updateCourse = (field: string, courseId: string | null) => {
@@ -360,7 +362,10 @@ export default function Schedules() {
     return (courses as any[]).filter((course: any) => {
       // Check if course is for the correct hour
       if (course.hour !== hour) return false;
-      
+
+      // Courses offered in neither semester aren't offered this year
+      if (!course.offeredFall && !course.offeredSpring) return false;
+
       // Check if student's grade falls within course grade range
       const fromGrade = course.fromGrade;
       const toGrade = course.toGrade;
