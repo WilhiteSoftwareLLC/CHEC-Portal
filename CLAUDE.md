@@ -246,4 +246,8 @@ The application includes emergency SMS messaging functionality for sending urgen
 - Production deployment uses PM2 with `ecosystem.config.cjs`
 - Build process creates optimized client bundle and server bundle
 - Database migrations handled through Drizzle Kit
+- `npm run deploy` runs `pm2 deploy ecosystem.config.cjs production`: it deploys origin/main to jeff@chec.wilhite.software into `/home/jeff/Development/CHEC-Portal` (pm2-deploy layout: `source/` clone with `current` symlink), then builds on the server and restarts PM2
+- Deploys are pull-based from origin/main — commit and push before deploying
+- Production env vars live in `env/.env` (gitignored); the deploy copies it to `current/.env` on the server via the `pre-deploy-local` hook. `deploy.key` (gitignored) is the SSH key for the deploy.
+- One-time setup on a new machine: copy `deploy.key` and `env/.env` from another machine; `pm2 deploy ecosystem.config.cjs production setup` only when provisioning a new server
 - Don't offer to 'npm run dev'. I will always run the app outside of Claude Code.

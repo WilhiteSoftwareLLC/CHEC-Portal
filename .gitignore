@@ -7,7 +7,7 @@ vite.config.ts.*
 .aider*
 .env
 .idea/
-ecosystem.config.cjs
+deploy.key
 db/backups/
 db/migrations/
 *~
