@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { PrinterCheck, Users, Plus } from "lucide-react";
+import { PrinterCheck, Users, Plus, Download } from "lucide-react";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
 import AddCourseDialog from "@/components/dialogs/add-course-dialog";
 import PageHeader from "@/components/layout/page-header";
@@ -461,9 +461,69 @@ export default function Courses() {
     { key: "offeredSpring", label: "Spring", sortable: true, editable: true, width: "16", type: "checkbox" },
   ];
 
+  const handleExportAllCourses = () => {
+    if (!courses || courses.length === 0) {
+      toast({
+        title: "No Courses Found",
+        description: "No courses available to export.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Create CSV content with all course fields
+    const headers = [
+      "ID",
+      "Course Name",
+      "From Grade",
+      "To Grade",
+      "Offered Fall",
+      "Offered Spring",
+      "Hour",
+      "Fee",
+      "Book Rental",
+      "Location"
+    ];
+
+    const csvRows = [
+      headers.join(","),
+      ...courses.map((course: Course) => [
+        course.id,
+        `"${(course.courseName || "").replace(/"/g, '""')}"`,
+        course.fromGrade ?? "",
+        course.toGrade ?? "",
+        course.offeredFall ? "Yes" : "No",
+        course.offeredSpring ? "Yes" : "No",
+        course.hour ?? "",
+        `"${course.fee || ""}"`,
+        `"${course.bookRental || ""}"`,
+        `"${(course.location || "").replace(/"/g, '""')}"`
+      ].join(","))
+    ];
+
+    const csvContent = csvRows.join("\n");
+
+    // Create and download file with BOM for proper UTF-8 encoding
+    const bom = '\uFEFF';
+    const blob = new Blob([bom + csvContent], { type: "text/csv;charset=utf-8;" });
+    const link = document.createElement("a");
+    const url = URL.createObjectURL(blob);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `all_courses_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = "hidden";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    toast({
+      title: "Export Complete",
+      description: `Exported ${courses.length} courses to CSV file.`,
+    });
+  };
+
   return (
     <div className="h-full flex flex-col">
-      <PageHeader 
+      <PageHeader
         title="Courses"
         description="Manage courses and instructors"
         actionButton={{
@@ -472,12 +532,18 @@ export default function Courses() {
           icon: Plus
         }}
         secondaryButton={{
-          label: selectedCourses.size > 0 
+          label: selectedCourses.size > 0
             ? `Print (${selectedCourses.size}) Course Rosters`
             : "Print All Course Rosters",
           onClick: handlePrintCourseRosters,
           variant: "outline",
           icon: PrinterCheck
+        }}
+        tertiaryButton={{
+          label: "Export All Courses",
+          onClick: handleExportAllCourses,
+          variant: "outline",
+          icon: Download
         }}
       />
       <div className="flex-1 p-6 overflow-hidden">

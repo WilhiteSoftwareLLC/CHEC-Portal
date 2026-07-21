@@ -18,9 +18,16 @@ interface PageHeaderProps {
     icon?: any;
     disabled?: boolean;
   };
+  tertiaryButton?: {
+    label: string;
+    onClick: () => void;
+    variant?: "outline" | "default";
+    icon?: any;
+    disabled?: boolean;
+  };
 }
 
-export default function PageHeader({ title, description, actionButton, secondaryButton }: PageHeaderProps) {
+export default function PageHeader({ title, description, actionButton, secondaryButton, tertiaryButton }: PageHeaderProps) {
   return (
     <header className="bg-white shadow-sm border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
@@ -40,6 +47,16 @@ export default function PageHeader({ title, description, actionButton, secondary
           </div>
         </div>
         <div className="flex items-center space-x-4">
+          {tertiaryButton && (
+            <Button
+              variant={tertiaryButton.variant || "outline"}
+              onClick={tertiaryButton.onClick}
+              disabled={tertiaryButton.disabled}
+            >
+              {tertiaryButton.icon && <tertiaryButton.icon className="mr-2 h-4 w-4" />}
+              {tertiaryButton.label}
+            </Button>
+          )}
           {secondaryButton && (
             <Button 
               variant={secondaryButton.variant || "outline"}
