@@ -45,7 +45,7 @@ export default function PublicInvoice() {
 
       const script = document.createElement('script');
       const clientId = import.meta.env.VITE_PAYPAL_CLIENT_ID;
-      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons`;
+      script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&components=buttons&enable-funding=venmo&disable-funding=paylater`;
       script.onload = () => setPaypalLoaded(true);
       script.onerror = () => console.error('Failed to load PayPal SDK');
       document.head.appendChild(script);
@@ -108,6 +108,77 @@ export default function PublicInvoice() {
     window.print();
   };
 
+  const createPayPalOrder = async (amount: number) => {
+    try {
+      setIsProcessingPayment(true);
+      const response = await fetch('/api/paypal/create-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          amount: amount.toFixed(2),
+          familyId: invoiceData!.family.id,
+          invoiceHash: hash
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to create PayPal order');
+      }
+
+      const data = await response.json();
+      return data.orderID;
+    } catch (error) {
+      console.error('Error creating PayPal order:', error);
+      setError('Failed to initialize payment. Please try again.');
+      setIsProcessingPayment(false);
+      throw error;
+    }
+  };
+
+  const onPayPalApprove = async (paymentData: any) => {
+    try {
+      const response = await fetch('/api/paypal/capture-order', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          paymentData,
+          invoiceData
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to capture PayPal payment');
+      }
+
+      const captureData = await response.json();
+      
+      // Refresh invoice data to show updated payment status
+      await fetchInvoiceData();
+      
+      setError(null);
+      alert('Payment successful! Thank you for your payment.');
+    } catch (error) {
+      console.error('Error capturing PayPal payment:', error);
+      setError(`Payment failed to process. ${error}`);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  };
+
+  const onPayPalError = (err: any) => {
+    console.error('PayPal error:', err);
+    setError(`Payment failed. ${err}`);
+    setIsProcessingPayment(false);
+  };
+
+  const onPayPalCancel = () => {
+    setIsProcessingPayment(false);
+  };
+
   const renderPayPalButtons = (amount: number) => {
     if (!window.paypal || !paypalButtonsRef.current) return;
 
@@ -119,75 +190,13 @@ export default function PublicInvoice() {
         layout: 'vertical',
         color: 'blue',
         shape: 'rect',
-        label: 'pay'
+        label: 'paypal',
+        tagline: false
       },
-      createOrder: async () => {
-        try {
-          setIsProcessingPayment(true);
-          const response = await fetch('/api/paypal/create-order', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              amount: amount.toFixed(2),
-              familyId: invoiceData!.family.id,
-              invoiceHash: hash
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to create PayPal order');
-          }
-
-          const data = await response.json();
-          return data.orderID;
-        } catch (error) {
-          console.error('Error creating PayPal order:', error);
-          setError('Failed to initialize payment. Please try again.');
-          setIsProcessingPayment(false);
-          throw error;
-        }
-      },
-      onApprove: async (data: any) => {
-        try {
-          const response = await fetch('/api/paypal/capture-order', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              orderID: data.orderID,
-              familyId: invoiceData!.family.id
-            }),
-          });
-
-          if (!response.ok) {
-            throw new Error('Failed to capture PayPal payment');
-          }
-
-          const captureData = await response.json();
-          
-          // Refresh invoice data to show updated payment status
-          await fetchInvoiceData();
-          
-          setError(null);
-          alert('Payment successful! Thank you for your payment.');
-        } catch (error) {
-          console.error('Error capturing PayPal payment:', error);
-          setError(`Payment failed to process. ${error}`);
-        } finally {
-          setIsProcessingPayment(false);
-        }
-      },
-      onError: (err: any) => {
-        console.error('PayPal error:', err);
-        setError(`Payment failed. ${err}`);
-        setIsProcessingPayment(false);
-      },
-      onCancel: () => {
-        setIsProcessingPayment(false);
-      }
+      createOrder: () => createPayPalOrder(amount),
+      onApprove: onPayPalApprove,
+      onError: onPayPalError,
+      onCancel: onPayPalCancel
     }).render(paypalButtonsRef.current);
   };
 

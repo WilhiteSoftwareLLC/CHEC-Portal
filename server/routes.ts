@@ -24,6 +24,7 @@ import {
 } from "@shared/schema";
 import { emailService } from "./email";
 import { createPayPalOrder, capturePayPalOrder, verifyPayPalWebhook, createPayPalWebhook } from "./paypal";
+import twilio from "twilio";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize invoice service
@@ -236,6 +237,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/families/with-phones", requireAdmin, async (req, res) => {
+    try {
+      const families = await storage.getFamilies();
+      // Filter families that have a parentCell phone number and are active
+      const familiesWithPhones = families.filter(family => {
+        const phone = family.parentCell;
+        if (!phone || !family.active) return false;
+        // Remove all non-digits and check if we have at least 10 digits
+        const digits = phone.replace(/\D/g, '');
+        return digits.length >= 10;
+      });
+      res.json(familiesWithPhones);
+    } catch (error) {
+      console.error("Error fetching families:", error);
+      res.status(500).json({ message: "Failed to fetch families" });
+    }
+  });
+
   app.get("/api/families/:id", async (req, res) => {
     try {
       const id = parseInt(req.params.id);
@@ -311,21 +330,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Messaging routes
-  app.get("/api/families/with-phones", requireAdmin, async (req, res) => {
+  app.post("/api/messaging/test-sms", requireAdmin, async (req, res) => {
     try {
-      const families = await storage.getFamilies();
-      // Filter families that have a parentCell phone number
-      const familiesWithPhones = families.filter(family => {
-        const phone = family.parentCell;
-        if (!phone) return false;
-        // Remove all non-digits and check if we have at least 10 digits
-        const digits = phone.replace(/\D/g, '');
-        return digits.length >= 10;
-      });
-      res.json(familiesWithPhones);
+      const { message, phoneNumber } = req.body;
+      
+      if (!message || typeof message !== 'string' || !message.trim()) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Message is required" 
+        });
+      }
+
+      if (!phoneNumber || typeof phoneNumber !== 'string' || !phoneNumber.trim()) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Phone number is required" 
+        });
+      }
+
+      // Validate phone number format (remove non-digits and check length)
+      const digits = phoneNumber.replace(/\D/g, '');
+      if (digits.length < 10) {
+        return res.status(400).json({ 
+          success: false,
+          message: "Phone number must have at least 10 digits" 
+        });
+      }
+
+      // Format phone number for Twilio (add +1 if not present)
+      const formattedPhone = digits.length === 10 ? `+1${digits}` : `+${digits}`;
+
+      // Initialize Twilio client
+      const accountSid = process.env.TWILIO_ACCOUNT_SID;
+      const authToken = process.env.TWILIO_AUTH_TOKEN;
+      const fromNumber = process.env.TWILIO_PHONE_NUMBER;
+
+      if (!accountSid || !authToken || !fromNumber) {
+        return res.status(500).json({
+          success: false,
+          message: "Twilio configuration is missing. Please check environment variables."
+        });
+      }
+
+      const twilioClient = twilio(accountSid, authToken);
+      
+      try {
+        const result = await twilioClient.messages.create({
+          body: `CHEC Test Message: ${message}`,
+          from: fromNumber,
+          to: formattedPhone
+        });
+
+        res.json({
+          success: true,
+          message: "Test message sent successfully",
+          messageId: result.sid,
+          sentTo: formattedPhone
+        });
+      } catch (error) {
+        console.error("Error sending test SMS:", error);
+        res.json({
+          success: false,
+          message: `Failed to send test message: ${error instanceof Error ? error.message : 'Unknown error'}`,
+          error: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+
     } catch (error) {
-      console.error("Error fetching families:", error);
-      res.status(500).json({ message: "Failed to fetch families" });
+      console.error("Error in test SMS endpoint:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to send test SMS",
+        error: error instanceof Error ? error.message : 'Unknown error'
+      });
     }
   });
 
@@ -367,7 +444,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      const twilio = require('twilio')(accountSid, authToken);
+      const twilioClient = twilio(accountSid, authToken);
       
       let sentCount = 0;
       let failedCount = 0;
@@ -376,7 +453,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Send SMS to each family
       for (const family of familiesWithPhones) {
         try {
-          await twilio.messages.create({
+          await twilioClient.messages.create({
             body: `CHEC Emergency Alert: ${message}`,
             from: fromNumber,
             to: family.parentCell
@@ -1623,11 +1700,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.post("/api/paypal/capture-order", async (req, res) => {
     try {
-      const { orderID, familyId } = req.body;
+      const { paymentData, invoiceData } = req.body;
       
-      if (!orderID || !familyId) {
+      if (!paymentData || !paymentData.orderID || !invoiceData.family.id) {
         return res.status(400).json({ message: "Missing required fields: orderID, familyId" });
       }
+      const familyId = invoiceData.family.id;
+      const orderID = paymentData.orderID;
 
       const captureData = await capturePayPalOrder(orderID);
       
@@ -1637,6 +1716,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "No capture data found" });
       }
 
+      console.log(capture);
       // Create payment record in database
       const paymentRecord = await storage.createPayment({
         familyId,
@@ -1656,25 +1736,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const paypalPercentage = parseFloat(settings?.PayPalPercentage || "0") / 100;
         const paypalFixedRate = parseFloat(settings?.PayPalFixedRate || "0");
         
-        if (paypalPercentage > 0 || paypalFixedRate > 0) {
-          // Calculate the original invoice balance that was paid
-          const paidAmount = parseFloat(capture.amount.value);
-          // Reverse calculate the original balance before PayPal fee was added
-          // If total paid = balance + fee, and fee = balance * percentage + fixed
-          // Then: paidAmount = originalBalance + (originalBalance * percentage + fixed)
-          // So: paidAmount = originalBalance * (1 + percentage) + fixed
-          // Therefore: originalBalance = (paidAmount - fixed) / (1 + percentage)
-          const originalBalance = (paidAmount - paypalFixedRate) / (1 + paypalPercentage);
-          const paypalFee = (originalBalance * paypalPercentage) + paypalFixedRate;
-
-          if (paypalFee > 0) {
-            await storage.createBillAdjustment({
-              familyId,
-              amount: paypalFee.toString(),
-              description: 'PayPal Processing Fee',
-              adjustmentDate: new Date().toISOString().split('T')[0]
-            });
-          }
+        if (invoiceData.calculation && invoiceData.calculation.paypalFee > 0) {
+          await storage.createBillAdjustment({
+            familyId,
+            amount: invoiceData.calculation.paypalFee.toString(),
+            description: 'PayPal Processing Fee',
+            adjustmentDate: new Date().toISOString().split('T')[0]
+          });
         }
       } catch (feeError) {
         console.error('Error adding PayPal fee bill adjustment:', feeError);
@@ -2382,6 +2450,168 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Selected families email send failed:", error);
       res.status(500).json({ 
         error: error instanceof Error ? error.message : 'Failed to send emails to selected families' 
+      });
+    }
+  });
+
+  // Send invoice email to a single family
+  app.post('/api/email/send-invoice-link', requireAdmin, async (req, res) => {
+    try {
+      const { familyId } = req.body;
+      
+      if (!familyId) {
+        return res.status(400).json({ error: 'Family ID is required' });
+      }
+      
+      // Get base URL from request
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      
+      // Get the family
+      const family = await storage.getFamily(familyId);
+      if (!family) {
+        return res.status(404).json({ error: 'Family not found' });
+      }
+      
+      if (!family.email || family.email.trim() === '') {
+        return res.status(400).json({ error: 'Family does not have an email address' });
+      }
+      
+      // Send invoice email
+      const result = await emailService.sendInvoiceLink(family, baseUrl);
+      
+      res.json({
+        success: result.success,
+        error: result.error,
+        familyName: family.lastName
+      });
+      
+    } catch (error) {
+      console.error("Invoice email send failed:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to send invoice email' 
+      });
+    }
+  });
+
+  // Send schedule email to a single family
+  app.post('/api/email/send-schedule-link', requireAdmin, async (req, res) => {
+    try {
+      const { familyId } = req.body;
+      
+      if (!familyId) {
+        return res.status(400).json({ error: 'Family ID is required' });
+      }
+      
+      // Get base URL from request
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      
+      // Get the family
+      const family = await storage.getFamily(familyId);
+      if (!family) {
+        return res.status(404).json({ error: 'Family not found' });
+      }
+      
+      if (!family.email || family.email.trim() === '') {
+        return res.status(400).json({ error: 'Family does not have an email address' });
+      }
+      
+      // Send schedule email
+      const result = await emailService.sendScheduleLink(family, baseUrl);
+      
+      res.json({
+        success: result.success,
+        error: result.error,
+        familyName: family.lastName
+      });
+      
+    } catch (error) {
+      console.error("Schedule email send failed:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to send schedule email' 
+      });
+    }
+  });
+
+  // Send schedule emails to families of selected students
+  app.post('/api/email/send-selected-schedule-links', requireAdmin, async (req, res) => {
+    try {
+      const { studentIds } = req.body;
+      
+      if (!studentIds || !Array.isArray(studentIds) || studentIds.length === 0) {
+        return res.status(400).json({ error: 'No student IDs provided' });
+      }
+      
+      // Get base URL from request
+      const baseUrl = `${req.protocol}://${req.get('host')}`;
+      
+      // Get students and their families
+      const students = await storage.getStudents();
+      const selectedStudents = students.filter(student => studentIds.includes(student.id));
+      
+      if (selectedStudents.length === 0) {
+        return res.json({
+          totalSent: 0,
+          totalFailed: 0,
+          failedFamilies: [],
+          message: 'No matching students found'
+        });
+      }
+      
+      // Get unique family IDs from selected students
+      const familyIds = Array.from(new Set(selectedStudents.map(student => student.familyId)));
+      
+      // Get all families and filter to only those with selected students
+      const allFamilies = await storage.getFamilies();
+      const selectedFamilies = allFamilies.filter(family => 
+        familyIds.includes(family.id) && 
+        family.active !== false && 
+        family.email && 
+        family.email.trim() !== ''
+      );
+      
+      if (selectedFamilies.length === 0) {
+        return res.json({
+          totalSent: 0,
+          totalFailed: 0,
+          failedFamilies: [],
+          message: 'No families with email addresses found for selected students'
+        });
+      }
+      
+      // Send schedule emails to selected families
+      let totalSent = 0;
+      let totalFailed = 0;
+      const failedFamilies: Array<{ family: string; error: string }> = [];
+
+      for (const family of selectedFamilies) {
+        const result = await emailService.sendScheduleLink(family, baseUrl);
+        
+        if (result.success) {
+          totalSent++;
+        } else {
+          totalFailed++;
+          failedFamilies.push({
+            family: family.lastName,
+            error: result.error || 'Unknown error'
+          });
+        }
+
+        // Small delay between emails to avoid overwhelming SMTP server
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+      
+      res.json({
+        totalSent,
+        totalFailed,
+        failedFamilies,
+        totalFamilies: selectedFamilies.length,
+        selectedStudents: selectedStudents.length
+      });
+      
+    } catch (error) {
+      console.error("Selected families schedule email send failed:", error);
+      res.status(500).json({ 
+        error: error instanceof Error ? error.message : 'Failed to send schedule emails to selected families' 
       });
     }
   });

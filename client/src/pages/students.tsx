@@ -409,7 +409,7 @@ export default function Students() {
     { key: "gradYear", label: "Grad Year", sortable: true, editable: true, type: "number", width: "28" },
     { key: "birthdate", label: "Birth Date", sortable: true, editable: true, type: "date", width: "32" },
     { key: "registeredOn", label: "Registered Date", sortable: true, editable: true, type: "date", width: "32" },
-    { key: "comment1", label: "Comments", sortable: true, editable: true, type: "text", width: "48" },
+    { key: "comment1", label: "Comments", sortable: true, editable: true, type: "textarea", width: "48" },
     { key: "inactive", label: "Inactive", sortable: true, editable: true, type: "checkbox", width: "24" },
   ];
 

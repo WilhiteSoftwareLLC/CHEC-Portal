@@ -19,6 +19,28 @@ CHEC Portal is a full-stack TypeScript application for managing homeschool coope
 - `npm run db:push` - Apply schema changes to database
 - Check `drizzle.config.ts` for database configuration
 
+#### Direct SQL Queries
+To run SQL queries directly from the command line for debugging or data inspection:
+```bash
+PGPASSWORD=<password> psql -U <username> -d <database> -c "SELECT * FROM families LIMIT 5;"
+```
+
+Database credentials are found in the `.env` file:
+- Parse the `DATABASE_URL` to get username, password, and database name
+- Example: `postgres://username:password@host:port/database`
+
+Common debugging queries:
+```bash
+# Count total families
+PGPASSWORD=<password> psql -U <username> -d <database> -c "SELECT COUNT(*) FROM families;"
+
+# Check families with phone numbers
+PGPASSWORD=<password> psql -U <username> -d <database> -c "SELECT COUNT(*) FROM families WHERE parent_cell IS NOT NULL AND parent_cell <> '';"
+
+# View sample data
+PGPASSWORD=<password> psql -U <username> -d <database> -c "SELECT last_name, parent_cell, active FROM families LIMIT 10;"
+```
+
 #### Database Backup Before Migrations
 Always create a backup before running database migrations:
 ```bash

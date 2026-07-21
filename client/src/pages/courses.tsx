@@ -492,6 +492,7 @@ export default function Courses() {
             icon: Users,
             onClick: handleViewRoster
           }}
+          actionsPosition="left"
         />
 
         <AddCourseDialog 

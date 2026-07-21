@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { MessageSquare, Send, Users, AlertTriangle, CheckCircle } from "lucide-react";
@@ -36,6 +37,10 @@ export default function Messaging() {
   const [message, setMessage] = useState("");
   const [isSending, setIsSending] = useState(false);
   const [lastResult, setLastResult] = useState<SMSResult | null>(null);
+  
+  // Test SMS state
+  const [testPhoneNumber, setTestPhoneNumber] = useState("");
+  const [isTestSending, setIsTestSending] = useState(false);
 
   // Fetch families with phone numbers
   const { data: families, isLoading } = useQuery({
@@ -92,6 +97,83 @@ export default function Messaging() {
       setIsSending(false);
     },
   });
+
+  // Test SMS mutation
+  const testSMSMutation = useMutation({
+    mutationFn: async ({ messageText, phoneNumber }: { messageText: string; phoneNumber: string }) => {
+      const response = await fetch("/api/messaging/test-sms", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include",
+        body: JSON.stringify({ message: messageText, phoneNumber }),
+      });
+      
+      if (!response.ok) {
+        throw new Error(`${response.status}: ${response.statusText}`);
+      }
+      
+      return response.json();
+    },
+    onSuccess: (result) => {
+      if (result.success) {
+        toast({
+          title: "Test Message Sent",
+          description: `Test message successfully sent to ${result.sentTo}`,
+        });
+      } else {
+        toast({
+          title: "Test Message Failed",
+          description: result.message,
+          variant: "destructive",
+        });
+      }
+      setIsTestSending(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: `Failed to send test message: ${error.message}`,
+        variant: "destructive",
+      });
+      setIsTestSending(false);
+    },
+  });
+
+  const handleTestSMS = async () => {
+    if (!message.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a message to test.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (!testPhoneNumber.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a phone number for testing.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Basic phone number validation
+    const digits = testPhoneNumber.replace(/\D/g, '');
+    if (digits.length < 10) {
+      toast({
+        title: "Error",
+        description: "Please enter a valid phone number with at least 10 digits.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsTestSending(true);
+    testSMSMutation.mutate({ messageText: message, phoneNumber: testPhoneNumber });
+  };
 
   const handleSendSMS = async () => {
     if (!message.trim()) {
@@ -165,6 +247,44 @@ export default function Messaging() {
                 This will send an SMS to all families with phone numbers. Use only for genuine emergencies.
               </AlertDescription>
             </Alert>
+
+            {/* Test Message Section */}
+            <div className="border-t pt-4 space-y-3">
+              <div className="space-y-2">
+                <Label htmlFor="testPhone" className="text-sm font-medium text-gray-700">
+                  Test Phone Number (optional)
+                </Label>
+                <Input
+                  id="testPhone"
+                  placeholder="Enter phone number to test message (e.g., 903-555-1234)"
+                  value={testPhoneNumber}
+                  onChange={(e) => setTestPhoneNumber(e.target.value)}
+                  className="text-sm"
+                />
+                <p className="text-xs text-gray-500">
+                  Send a test message to verify your emergency message before sending to all families
+                </p>
+              </div>
+              
+              <Button
+                onClick={handleTestSMS}
+                disabled={isTestSending || !message.trim() || !testPhoneNumber.trim()}
+                variant="outline"
+                className="w-full"
+              >
+                {isTestSending ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                    Sending Test...
+                  </>
+                ) : (
+                  <>
+                    <MessageSquare className="h-4 w-4 mr-2" />
+                    Send Test Message
+                  </>
+                )}
+              </Button>
+            </div>
 
             <Button
               onClick={handleSendSMS}

@@ -172,7 +172,9 @@ export class InvoiceService {
       if (includePayPal && balance > 0 && settings?.PayPalPercentage && settings?.PayPalFixedRate) {
         const paypalPercentage = parseFloat(settings.PayPalPercentage) / 100;
         const paypalFixedRate = parseFloat(settings.PayPalFixedRate);
-        const paypalFee = (balance * paypalPercentage) + paypalFixedRate;
+        // Because we have to pay a fee on the fee as well
+        // afterFee - (afterFee * paypalPercentage) - paypalFixedRate = beforeFee
+        const paypalFee = ((balance + paypalFixedRate) / (1.0 - paypalPercentage)) - balance;
         
         calculation.paypalFee = paypalFee;
         calculation.totalWithPayPal = totalAmount + paypalFee;

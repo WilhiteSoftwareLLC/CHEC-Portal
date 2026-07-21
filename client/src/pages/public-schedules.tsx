@@ -264,7 +264,7 @@ export default function PublicSchedules() {
           <Alert>
             <FileText className="h-4 w-4" />
             <AlertDescription>
-              This schedule shows all current course enrollments for the {family.lastName} family students.
+              This schedule shows all current course enrollments for the {family.lastName} family 7th-12th grade students.
             </AlertDescription>
           </Alert>
         </div>

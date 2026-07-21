@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Eye, Link2, Mail } from "lucide-react";
 import PageHeader from "@/components/layout/page-header";
 import EditableGrid, { GridColumn } from "@/components/ui/editable-grid";
-import { getCurrentGradeString, getCurrentSortableGrade } from "@/lib/gradeUtils";
+import { getCurrentGradeString, getCurrentSortableGrade, getCurrentGradeCode } from "@/lib/gradeUtils";
 import { useToast } from "@/hooks/use-toast";
 import { generateFamilyHash } from "@/lib/invoice-utils";
 import type { Student, Course, Grade } from "@shared/schema";
@@ -104,10 +104,10 @@ export default function Schedules() {
     },
   });
 
-  // Mutation to send emails to selected families
-  const sendSelectedFamilyEmailsMutation = useMutation({
+  // Mutation to send schedule emails to selected families
+  const sendSelectedScheduleEmailsMutation = useMutation({
     mutationFn: async (studentIds: number[]) => {
-      const response = await fetch("/api/email/send-selected-family-links", {
+      const response = await fetch("/api/email/send-selected-schedule-links", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
@@ -122,8 +122,8 @@ export default function Schedules() {
     },
     onSuccess: (response) => {
       toast({
-        title: "Family Links Sent",
-        description: `Successfully sent ${response.totalSent} emails to families with selected students. ${response.totalFailed > 0 ? `${response.totalFailed} failed.` : ''}`,
+        title: "Schedule Links Sent",
+        description: `Successfully sent ${response.totalSent} schedule emails to families with selected students. ${response.totalFailed > 0 ? `${response.totalFailed} failed.` : ''}`,
         variant: response.totalFailed > 0 ? "destructive" : "default",
       });
     },
@@ -208,11 +208,35 @@ export default function Schedules() {
       return;
     }
 
+    // Filter out students who are 6th grade and younger
     const selectedStudentIds = Array.from(selectedSchedules);
-    const confirmMessage = `Send family links emails to the families of ${selectedSchedules.size} selected student${selectedSchedules.size === 1 ? '' : 's'}?`;
+    const eligibleStudentIds = selectedStudentIds.filter(studentId => {
+      const student = students?.find((s: StudentWithFamily) => s.id === studentId);
+      if (!student) return false;
+      
+      const gradeCode = getCurrentGradeCode(student.gradYear, settings);
+      // Grade code 6 and below should be excluded (6th grade and younger)
+      return gradeCode !== null && gradeCode > 6;
+    });
+
+    if (eligibleStudentIds.length === 0) {
+      toast({
+        title: "No Eligible Students",
+        description: "Schedule emails are only sent for students in 7th grade and above. Elementary students (6th grade and younger) are excluded.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const excludedCount = selectedStudentIds.length - eligibleStudentIds.length;
+    let confirmMessage = `Send schedule links emails to the families of ${eligibleStudentIds.length} selected student${eligibleStudentIds.length === 1 ? '' : 's'}?`;
+    
+    if (excludedCount > 0) {
+      confirmMessage += `\n\nNote: ${excludedCount} student${excludedCount === 1 ? '' : 's'} (6th grade and younger) will be excluded from the email.`;
+    }
     
     if (window.confirm(confirmMessage)) {
-      sendSelectedFamilyEmailsMutation.mutate(selectedStudentIds);
+      sendSelectedScheduleEmailsMutation.mutate(eligibleStudentIds);
     }
   };
 
@@ -468,7 +492,7 @@ export default function Schedules() {
     { key: "lastName", label: "Last Name", sortable: true, editable: false, width: "40" },
     { key: "firstName", label: "First Name", sortable: true, editable: false, width: "40" },
     { key: "currentGrade", label: "Grade", sortable: true, editable: false, width: "32", sortKey: "currentGradeSortOrder" },
-    { key: "scheduleNotes", label: "Schedule Notes", sortable: true, editable: true, width: "48", type: "text" },
+    { key: "scheduleNotes", label: "Schedule Notes", sortable: true, editable: true, width: "48", type: "textarea" },
     { 
       key: "mathHour", 
       label: (hours || []).find((h: any) => h.id === 0)?.description || "Math Hour", 
@@ -647,7 +671,7 @@ export default function Schedules() {
           onClick: handleEmailSelectedSchedules,
           icon: Mail,
           variant: "outline",
-          disabled: selectedSchedules.size === 0 || sendSelectedFamilyEmailsMutation.isPending
+          disabled: selectedSchedules.size === 0 || sendSelectedScheduleEmailsMutation.isPending
         }}
         actionButton={{
           label: selectedSchedules.size > 0 

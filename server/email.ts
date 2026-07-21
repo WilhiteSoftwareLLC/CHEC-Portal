@@ -210,6 +210,230 @@ class EmailService {
 </html>`;
   }
 
+  private generateInvoiceEmail(family: FamilyData, baseUrl: string): string {
+    const familyHash = generateFamilyHash(family.id);
+    const invoiceUrl = `${baseUrl}/invoice/${familyHash}`;
+    
+    const familyName = [family.father, family.mother].filter(Boolean).join(' & ');
+    const displayName = familyName ? `${familyName} ${family.lastName}` : `${family.lastName} family`;
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHEC Family Invoice</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .header h1 {
+            color: #2563eb;
+            margin: 0;
+            font-size: 28px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .link-section {
+            background-color: #f8fafc;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #2563eb;
+        }
+        .link-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #2563eb;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 8px 8px 8px 0;
+            transition: background-color 0.3s;
+        }
+        .link-button:hover {
+            background-color: #1d4ed8;
+        }
+        .description {
+            color: #666;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>CHEC Family Portal</h1>
+        </div>
+        
+        <div class="greeting">
+            Dear ${displayName},
+        </div>
+        
+        <p>Your family invoice is now available for viewing.</p>
+        
+        <div class="link-section">
+            <h3 style="margin-top: 0; color: #2563eb;">📋 Family Invoice</h3>
+            <p>View your family invoice including all fees, payments, and current balance.</p>
+            <a href="${invoiceUrl}" class="link-button">View Family Invoice</a>
+            <div class="description">See all charges, payments made, and outstanding balance</div>
+        </div>
+        
+        <p>This link will work on any device and is optimized for printing if you need a hard copy.</p>
+        
+        <div class="footer">
+            <p><strong>CHEC Portal</strong><br>
+            This email was sent automatically from the CHEC Portal.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+  }
+
+  private generateScheduleEmail(family: FamilyData, baseUrl: string): string {
+    const familyHash = generateFamilyHash(family.id);
+    const schedulesUrl = `${baseUrl}/schedules/${familyHash}`;
+    
+    const familyName = [family.father, family.mother].filter(Boolean).join(' & ');
+    const displayName = familyName ? `${familyName} ${family.lastName}` : `${family.lastName} family`;
+
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CHEC Student Schedules</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        .header h1 {
+            color: #059669;
+            margin: 0;
+            font-size: 28px;
+        }
+        .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+        }
+        .link-section {
+            background-color: #f0fdf4;
+            padding: 20px;
+            border-radius: 6px;
+            margin: 20px 0;
+            border-left: 4px solid #059669;
+        }
+        .link-button {
+            display: inline-block;
+            padding: 12px 24px;
+            background-color: #059669;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: 500;
+            margin: 8px 8px 8px 0;
+            transition: background-color 0.3s;
+        }
+        .link-button:hover {
+            background-color: #047857;
+        }
+        .description {
+            color: #666;
+            font-size: 14px;
+            margin-top: 8px;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            font-size: 14px;
+            color: #666;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>CHEC Family Portal</h1>
+        </div>
+        
+        <div class="greeting">
+            Dear ${displayName},
+        </div>
+        
+        <p>Your students' schedules are now available for viewing.</p>
+        
+        <div class="link-section">
+            <h3 style="margin-top: 0; color: #059669;">🎓 Student Schedules</h3>
+            <p>Access the course schedules for all students in your family.</p>
+            <a href="${schedulesUrl}" class="link-button">View Student Schedules</a>
+            <div class="description">See courses, instructors, locations, and time slots</div>
+        </div>
+        
+        <p>This link will work on any device and is optimized for printing if you need hard copies.</p>
+        
+        <div class="footer">
+            <p><strong>CHEC Portal</strong><br>
+            This email was sent automatically from the CHEC Portal.
+            </p>
+        </div>
+    </div>
+</body>
+</html>`;
+  }
+
   private async sendEmailWithMailCommand(
     to: string,
     subject: string,
@@ -297,6 +521,132 @@ This email was sent automatically from the CHEC Portal.`;
       return { success: true };
     } catch (error) {
       console.error('Failed to send email to family:', family.lastName, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  async sendInvoiceLink(
+    family: FamilyData,
+    baseUrl: string,
+    fromEmail: string = process.env.FROM_EMAIL || '',
+    fromName: string = 'CHEC Portal'
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!family.email) {
+        return { success: false, error: 'No email address for family' };
+      }
+
+      if (!fromEmail) {
+        throw new Error('FROM_EMAIL environment variable is required');
+      }
+
+      const htmlContent = this.generateInvoiceEmail(family, baseUrl);
+      const displayName = [family.father, family.mother].filter(Boolean).join(' & ');
+      const familyDisplayName = displayName ? `${displayName} ${family.lastName}` : `${family.lastName} family`;
+
+      const subject = 'CHEC Family Invoice';
+      const textContent = `Dear ${familyDisplayName},
+
+Your family invoice is now available for viewing:
+
+Family Invoice: ${baseUrl}/invoice/${generateFamilyHash(family.id)}
+
+This email was sent automatically from the CHEC Portal.`;
+
+      if (!this.useSmtp) {
+        // Use mail command
+        return await this.sendEmailWithMailCommand(
+          family.email,
+          subject,
+          htmlContent,
+          textContent,
+          fromEmail
+        );
+      }
+
+      // Use SMTP
+      if (!this.transporter) {
+        throw new Error('SMTP transporter not initialized');
+      }
+
+      const mailOptions = {
+        from: `"${fromName}" <${fromEmail}>`,
+        to: family.email,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to send invoice email to family:', family.lastName, error);
+      return { 
+        success: false, 
+        error: error instanceof Error ? error.message : 'Unknown error' 
+      };
+    }
+  }
+
+  async sendScheduleLink(
+    family: FamilyData,
+    baseUrl: string,
+    fromEmail: string = process.env.FROM_EMAIL || '',
+    fromName: string = 'CHEC Portal'
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!family.email) {
+        return { success: false, error: 'No email address for family' };
+      }
+
+      if (!fromEmail) {
+        throw new Error('FROM_EMAIL environment variable is required');
+      }
+
+      const htmlContent = this.generateScheduleEmail(family, baseUrl);
+      const displayName = [family.father, family.mother].filter(Boolean).join(' & ');
+      const familyDisplayName = displayName ? `${displayName} ${family.lastName}` : `${family.lastName} family`;
+
+      const subject = 'CHEC Student Schedules';
+      const textContent = `Dear ${familyDisplayName},
+
+Your students' schedules are now available for viewing:
+
+Student Schedules: ${baseUrl}/schedules/${generateFamilyHash(family.id)}
+
+This email was sent automatically from the CHEC Portal.`;
+
+      if (!this.useSmtp) {
+        // Use mail command
+        return await this.sendEmailWithMailCommand(
+          family.email,
+          subject,
+          htmlContent,
+          textContent,
+          fromEmail
+        );
+      }
+
+      // Use SMTP
+      if (!this.transporter) {
+        throw new Error('SMTP transporter not initialized');
+      }
+
+      const mailOptions = {
+        from: `"${fromName}" <${fromEmail}>`,
+        to: family.email,
+        subject,
+        html: htmlContent,
+        text: textContent,
+      };
+
+      await this.transporter.sendMail(mailOptions);
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to send schedule email to family:', family.lastName, error);
       return { 
         success: false, 
         error: error instanceof Error ? error.message : 'Unknown error' 

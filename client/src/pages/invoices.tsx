@@ -42,16 +42,13 @@ export default function Invoices() {
     },
   });
 
-  const sendFamilyEmailMutation = useMutation({
+  const sendFamilyInvoiceEmailMutation = useMutation({
     mutationFn: async (familyId: number) => {
-      const response = await fetch("/api/email/send-family-links", {
+      const response = await fetch("/api/email/send-invoice-link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ 
-          testMode: true, 
-          testFamilyId: familyId 
-        })
+        body: JSON.stringify({ familyId })
       });
       
       if (!response.ok) {
@@ -66,13 +63,13 @@ export default function Invoices() {
       
       if (response.success) {
         toast({
-          title: "Email Sent Successfully",
-          description: `Invoice and schedule links sent to ${familyName} family.`,
+          title: "Invoice Email Sent Successfully",
+          description: `Invoice link sent to ${familyName} family.`,
         });
       } else {
         toast({
-          title: "Email Failed",
-          description: `Failed to send email to ${familyName} family: ${response.error}`,
+          title: "Invoice Email Failed",
+          description: `Failed to send invoice email to ${familyName} family: ${response.error}`,
           variant: "destructive",
         });
       }
@@ -82,8 +79,8 @@ export default function Invoices() {
       const familyName = family?.lastName || 'Unknown';
       
       toast({
-        title: "Email Error",
-        description: `Error sending email to ${familyName} family: ${error.message}`,
+        title: "Invoice Email Error",
+        description: `Error sending invoice email to ${familyName} family: ${error.message}`,
         variant: "destructive",
       });
     },
@@ -337,9 +334,9 @@ export default function Invoices() {
       return;
     }
 
-    const confirmMessage = `Send invoice and schedule links to ${family.lastName} family (${family.email})?`;
+    const confirmMessage = `Send invoice link to ${family.lastName} family (${family.email})?`;
     if (window.confirm(confirmMessage)) {
-      sendFamilyEmailMutation.mutate(family.id);
+      sendFamilyInvoiceEmailMutation.mutate(family.id);
     }
   };
 
@@ -547,12 +544,12 @@ export default function Invoices() {
                       <Button 
                         variant="outline"
                         size="sm"
-                        title={sendFamilyEmailMutation.isPending ? "Sending..." : "Email Links"}
+                        title={sendFamilyInvoiceEmailMutation.isPending ? "Sending..." : "Email Invoice Link"}
                         onClick={() => {
                           const family = (families as Family[])?.find(f => f.id === invoice.familyId);
                           if (family) handleEmailFamily(family);
                         }}
-                        disabled={sendFamilyEmailMutation.isPending}
+                        disabled={sendFamilyInvoiceEmailMutation.isPending}
                       >
                         <Mail className="h-4 w-4" />
                       </Button>

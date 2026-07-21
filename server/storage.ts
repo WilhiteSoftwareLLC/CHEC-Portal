@@ -816,26 +816,19 @@ export class DatabaseStorage implements IStorage {
   // Find family ID by hash - checks all active families
   async findFamilyByHash(hash: string): Promise<number | null> {
     try {
-      console.log(`[findFamilyByHash] Starting search for hash: "${hash}"`);
-      
       if (!hash || hash.length !== 8) {
-        console.log(`[findFamilyByHash] Invalid hash format: "${hash}", length: ${hash?.length}`);
         return null;
       }
 
       // Get all active family IDs
-      console.log(`[findFamilyByHash] Fetching all families...`);
       const families = await this.getFamilies();
-      console.log(`[findFamilyByHash] Found ${families.length} total families`);
       
       const activeFamilyIds = families
         .filter(family => family.active !== false)
         .map(family => family.id);
-      console.log(`[findFamilyByHash] Active family IDs: [${activeFamilyIds.join(', ')}]`);
 
       // Generate hash for each active family ID until we find a match
       const crypto = await import('crypto');
-      console.log(`[findFamilyByHash] Starting hash generation for each family...`);
       
       for (const familyId of activeFamilyIds) {
         const familyHash = crypto.createHash('sha256')
@@ -843,15 +836,11 @@ export class DatabaseStorage implements IStorage {
           .digest('hex')
           .substring(0, 8);
           
-        console.log(`[findFamilyByHash] Family ID ${familyId} → hash "${familyHash}"`);
-        
         if (familyHash === hash) {
-          console.log(`[findFamilyByHash] ✅ MATCH FOUND! Family ID ${familyId} matches hash "${hash}"`);
           return familyId;
         }
       }
       
-      console.log(`[findFamilyByHash] ❌ No match found for hash "${hash}"`);
       return null;
     } catch (error) {
       console.error("[findFamilyByHash] Error occurred:", error);
@@ -939,9 +928,23 @@ export class DatabaseStorage implements IStorage {
         return acc;
       }, {});
 
+      // Filter students to only include 7th grade and older
+      // Grade code calculation: schoolYear - graduationYear + 13
+      // Students with grade code > 6 are 7th grade and older
+      const schoolYear = parseInt(settingsObject.SchoolYear || "2024");
+      const eligibleStudents = familyStudents.filter(student => {
+        if (!student.gradYear) return false;
+        
+        const graduationYear = parseInt(String(student.gradYear));
+        const gradeCode = schoolYear - graduationYear + 13;
+        
+        // Only include students with grade code > 6 (7th grade and older)
+        return gradeCode > 6;
+      });
+
       return {
         family,
-        students: familyStudents,
+        students: eligibleStudents,
         courses: allCourses,
         grades: allGrades,
         hours: allHours,

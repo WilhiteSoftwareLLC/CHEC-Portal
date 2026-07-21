@@ -13,7 +13,7 @@ export interface GridColumn {
   sortable?: boolean;
   editable?: boolean;
   width?: string;
-  type?: "text" | "email" | "tel" | "number" | "checkbox" | "dropdown" | "date";
+  type?: "text" | "textarea" | "email" | "tel" | "number" | "checkbox" | "dropdown" | "date";
   sortKey?: string; // Optional different field to use for sorting
   options?: { value: any; label: string }[] | ((row: any) => { value: any; label: string }[]);
   onCheckboxChange?: (id: number, checked: boolean) => void;
@@ -491,7 +491,7 @@ export default function EditableGrid({
                         className={cn(
                           "px-4 py-3 whitespace-nowrap",
                           column.width && `w-${column.width}`,
-                          column.type === "text" && "max-w-0 overflow-hidden"
+                          (column.type === "text" || column.type === "textarea") && "max-w-0 overflow-hidden"
                         )}
                       >
                         {column.type === "checkbox" ? (
@@ -621,18 +621,18 @@ export default function EditableGrid({
                             className={cn(
                               "text-sm text-gray-900 dark:text-gray-100",
                               column.editable && "cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 rounded px-2 py-1 -mx-2 -my-1",
-                              column.type === "text" && "truncate min-w-0"
+                              (column.type === "text" || column.type === "textarea") && "truncate min-w-0"
                             )}
                             onClick={(e) => {
                               if (column.editable) {
-                                if (column.type === "text") {
+                                if (column.type === "textarea") {
                                   startTextEdit(row.id, column.key, value, e);
                                 } else {
                                   startEdit(row.id, column.key, value);
                                 }
                               }
                             }}
-                            title={column.type === "text" && value ? String(value) : undefined}
+                            title={(column.type === "text" || column.type === "textarea") && value ? String(value) : undefined}
                           >
                             {getDisplayValue(value, column) || (column.editable ? <span className="text-gray-400 italic">Click to edit</span> : "—")}
                           </div>
