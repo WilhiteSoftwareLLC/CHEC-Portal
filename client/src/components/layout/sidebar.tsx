@@ -16,7 +16,6 @@ import {
   Download,
   Upload,
   UserCog,
-  Terminal,
   MessageSquare,
   X,
 } from "lucide-react";
@@ -38,7 +37,6 @@ const navigation = [
   { name: "Import Data", href: "/import", icon: Upload },
   { name: "Users", href: "/users", icon: UserCog },
   { name: "Messaging", href: "/messaging", icon: MessageSquare },
-  { name: "Develop", href: "/develop", icon: Terminal },
 ];
 
 const settingsNavigation = [

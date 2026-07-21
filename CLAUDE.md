@@ -120,11 +120,6 @@ Students have a denormalized schedule structure with specific hour fields:
 - Automatic data validation and conflict resolution
 - Progress tracking for large imports
 
-### Development Features
-- Admin-only development page with Aider integration for AI-assisted development
-- Build and deployment tools integrated into the UI
-- Real-time streaming of development command output
-
 ## Common Development Patterns
 
 ### Adding New Entity Types
