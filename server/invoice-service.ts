@@ -25,7 +25,9 @@ export class InvoiceService {
         hours,
         settings,
         payments,
-        billAdjustments
+        billAdjustments,
+        classes,
+        classFees
       ] = await Promise.all([
         this.storage.getFamily(familyId),
         this.storage.getStudentsByFamily(familyId),
@@ -34,7 +36,9 @@ export class InvoiceService {
         this.storage.getHours(),
         this.storage.getSettings(),
         this.storage.getPaymentsByFamily(familyId),
-        this.storage.getBillAdjustmentsByFamily(familyId)
+        this.storage.getBillAdjustmentsByFamily(familyId),
+        this.storage.getClasses(),
+        this.storage.getClassFees()
       ]);
 
       if (!family || !students || !courses || !grades || !hours || !settings) {
@@ -89,6 +93,30 @@ export class InvoiceService {
           fee: studentFee
         });
         totalAmount += studentFee;
+
+        // Class fees (elementary classes match by grade range, no enrollment records)
+        const gradeCode = this.getGradeCodeForStudent(student, settings);
+        if (gradeCode !== null) {
+          for (const classData of classes) {
+            if (classData.startCode === null || classData.endCode === null) continue;
+            if (gradeCode < classData.startCode || gradeCode > classData.endCode) continue;
+
+            for (const classFee of classFees) {
+              if (classFee.classId !== classData.id) continue;
+              const feeAmount = parseFloat(classFee.amount);
+              if (feeAmount > 0) {
+                invoiceRows.push({
+                  studentName: student.firstName,
+                  grade: currentGrade,
+                  itemType: 'class-fee',
+                  itemDescription: `${classData.className} - ${classFee.description}`,
+                  fee: feeAmount
+                });
+                totalAmount += feeAmount;
+              }
+            }
+          }
+        }
 
         // Course fees
         const hourMappings = [
@@ -299,6 +327,22 @@ export class InvoiceService {
     const gradeCode = schoolYear - parseInt(student.gradYear) + 13;
     const grade = grades.find(g => g.code === gradeCode);
     return grade ? grade.gradeName : "Unknown";
+  }
+
+  /**
+   * Helper method to determine the numeric grade code for a student
+   */
+  private getGradeCodeForStudent(student: any, settings: any): number | null {
+    if (!settings || !student.gradYear) {
+      return null;
+    }
+
+    const schoolYear = parseInt(settings.SchoolYear || "2024");
+    const gradYear = parseInt(student.gradYear);
+    if (isNaN(schoolYear) || isNaN(gradYear)) {
+      return null;
+    }
+    return schoolYear - gradYear + 13;
   }
 
 }

@@ -6,6 +6,7 @@ import {
   students,
   courses,
   classes,
+  classFees,
   grades,
   hours,
   settings,
@@ -26,6 +27,8 @@ import {
   type InsertCourse,
   type Class,
   type InsertClass,
+  type ClassFee,
+  type InsertClassFee,
   type Grade,
   type InsertGrade,
   type Hour,
@@ -102,6 +105,13 @@ export interface IStorage {
   updateClass(id: number, classData: Partial<InsertClass>): Promise<Class>;
   deleteClass(id: number): Promise<void>;
   deleteAllClasses(): Promise<void>;
+
+  // Class fee operations
+  getClassFees(): Promise<ClassFee[]>;
+  getClassFeesByClass(classId: number): Promise<ClassFee[]>;
+  createClassFee(fee: InsertClassFee): Promise<ClassFee>;
+  updateClassFee(id: number, fee: Partial<InsertClassFee>): Promise<ClassFee>;
+  deleteClassFee(id: number): Promise<void>;
 
   // Grade operations
   getGrades(): Promise<Grade[]>;
@@ -577,6 +587,36 @@ export class DatabaseStorage implements IStorage {
 
   async deleteAllClasses(): Promise<void> {
     await db.delete(classes);
+  }
+
+  // Class fee operations
+  async getClassFees(): Promise<ClassFee[]> {
+    return db.select().from(classFees).orderBy(classFees.classId, classFees.id);
+  }
+
+  async getClassFeesByClass(classId: number): Promise<ClassFee[]> {
+    return db.select().from(classFees).where(eq(classFees.classId, classId)).orderBy(classFees.id);
+  }
+
+  async createClassFee(fee: InsertClassFee): Promise<ClassFee> {
+    const [newFee] = await db
+      .insert(classFees)
+      .values(fee)
+      .returning();
+    return newFee;
+  }
+
+  async updateClassFee(id: number, fee: Partial<InsertClassFee>): Promise<ClassFee> {
+    const [updatedFee] = await db
+      .update(classFees)
+      .set(fee)
+      .where(eq(classFees.id, id))
+      .returning();
+    return updatedFee;
+  }
+
+  async deleteClassFee(id: number): Promise<void> {
+    await db.delete(classFees).where(eq(classFees.id, id));
   }
 
   // Grade operations

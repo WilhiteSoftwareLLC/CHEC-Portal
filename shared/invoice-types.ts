@@ -15,7 +15,7 @@ export interface InvoiceRow {
   grade?: string;        // Student's grade level
   hour?: string;         // Time slot (e.g., "1st Hour", "Math Hour")
   courseName?: string;   // Course name
-  itemType: 'family' | 'student' | 'course' | 'book' | 'background' | 'adjustment' | 'paypal';
+  itemType: 'family' | 'student' | 'course' | 'book' | 'background' | 'adjustment' | 'paypal' | 'class-fee';
   itemDescription: string; // Human-readable description
   fee: number;
 }

@@ -16,6 +16,7 @@ import {
   insertStudentSchema,
   insertCourseSchema,
   insertClassSchema,
+  insertClassFeeSchema,
   insertGradeSchema,
   insertHourSchema,
   insertSettingsSchema,
@@ -806,6 +807,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting class:", error);
       res.status(500).json({ message: "Failed to delete class" });
+    }
+  });
+
+  // Class fee routes
+  app.get("/api/class-fees", async (req, res) => {
+    try {
+      const fees = await storage.getClassFees();
+      res.json(fees);
+    } catch (error) {
+      console.error("Error fetching class fees:", error);
+      res.status(500).json({ message: "Failed to fetch class fees" });
+    }
+  });
+
+  app.get("/api/classes/:id/fees", async (req, res) => {
+    try {
+      const classId = parseInt(req.params.id);
+      const fees = await storage.getClassFeesByClass(classId);
+      res.json(fees);
+    } catch (error) {
+      console.error("Error fetching class fees:", error);
+      res.status(500).json({ message: "Failed to fetch class fees" });
+    }
+  });
+
+  app.post("/api/class-fees", async (req, res) => {
+    try {
+      const feeData = insertClassFeeSchema.parse(req.body);
+      const newFee = await storage.createClassFee(feeData);
+      res.status(201).json(newFee);
+    } catch (error) {
+      console.error("Error creating class fee:", error);
+      res.status(500).json({ message: "Failed to create class fee" });
+    }
+  });
+
+  app.patch("/api/class-fees/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const feeData = insertClassFeeSchema.partial().parse(req.body);
+      const updatedFee = await storage.updateClassFee(id, feeData);
+      res.json(updatedFee);
+    } catch (error) {
+      console.error("Error updating class fee:", error);
+      res.status(500).json({ message: "Failed to update class fee" });
+    }
+  });
+
+  app.delete("/api/class-fees/:id", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      await storage.deleteClassFee(id);
+      res.status(204).send();
+    } catch (error) {
+      console.error("Error deleting class fee:", error);
+      res.status(500).json({ message: "Failed to delete class fee" });
     }
   });
 

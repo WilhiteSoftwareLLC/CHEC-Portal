@@ -146,6 +146,14 @@ export const classes = pgTable("classes", {
   endCode: integer("end_code"),
 });
 
+// Class fees - arbitrary named fees per class (e.g. notebook fee, science fee)
+export const classFees = pgTable("class_fees", {
+  id: serial("id").primaryKey(),
+  classId: integer("class_id").notNull().references(() => classes.id, { onDelete: "cascade" }),
+  description: varchar("description", { length: 255 }).notNull(),
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+});
+
 // Course table - for secondary students (7th grade and older)
 export const courses = pgTable("courses", {
   id: serial("id").primaryKey(),
@@ -241,6 +249,10 @@ export const insertClassSchema = createInsertSchema(classes).omit({
   id: true,
 });
 
+export const insertClassFeeSchema = createInsertSchema(classFees).omit({
+  id: true,
+});
+
 export const insertGradeSchema = createInsertSchema(grades).omit({
   id: true,
 });
@@ -276,6 +288,9 @@ export type Course = typeof courses.$inferSelect;
 
 export type InsertClass = z.infer<typeof insertClassSchema>;
 export type Class = typeof classes.$inferSelect;
+
+export type InsertClassFee = z.infer<typeof insertClassFeeSchema>;
+export type ClassFee = typeof classFees.$inferSelect;
 
 export type InsertGrade = z.infer<typeof insertGradeSchema>;
 export type Grade = typeof grades.$inferSelect;

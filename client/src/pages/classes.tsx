@@ -1,19 +1,36 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { PrinterCheck, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { PrinterCheck, Plus, DollarSign, Trash2 } from "lucide-react";
 import EditableGrid, { type GridColumn } from "@/components/ui/editable-grid";
 import AddClassDialog from "@/components/dialogs/add-class-dialog";
 import PageHeader from "@/components/layout/page-header";
 import { useDialogs } from "@/contexts/dialog-context";
 import { getCurrentGradeString, getCurrentGradeCode } from "@/lib/gradeUtils";
 import { formatPhoneNumber } from "@/lib/phoneUtils";
-import type { Class, Grade, InsertClass } from "@shared/schema";
+import type { Class, ClassFee, Grade, InsertClass } from "@shared/schema";
+
+const MAX_FEES_PER_CLASS = 7;
+
+interface FeeRow {
+  id?: number;
+  description: string;
+  amount: string;
+}
 
 export default function Classes() {
   const { toast } = useToast();
   const { addClassOpen, setAddClassOpen } = useDialogs();
+  const [feeDialogOpen, setFeeDialogOpen] = useState(false);
+  const [feeDialogClass, setFeeDialogClass] = useState<Class | null>(null);
+  const [feeRows, setFeeRows] = useState<FeeRow[]>([]);
+  const [deletedFeeIds, setDeletedFeeIds] = useState<number[]>([]);
+  const [savingFees, setSavingFees] = useState(false);
 
   const { data: classes, isLoading: classesLoading } = useQuery({
     queryKey: ["/api/classes"],
@@ -29,6 +46,16 @@ export default function Classes() {
     queryKey: ["/api/grades"],
     queryFn: async () => {
       const response = await fetch("/api/grades", { credentials: "include" });
+      if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
+      return response.json();
+    },
+    retry: false,
+  });
+
+  const { data: classFees } = useQuery({
+    queryKey: ["/api/class-fees"],
+    queryFn: async () => {
+      const response = await fetch("/api/class-fees", { credentials: "include" });
       if (!response.ok) throw new Error(`${response.status}: ${response.statusText}`);
       return response.json();
     },
@@ -120,6 +147,102 @@ export default function Classes() {
     value: grade.code,
     label: grade.gradeName
   })) : [];
+
+  const getFeesForClass = (classId: number): ClassFee[] => {
+    return (Array.isArray(classFees) ? classFees : []).filter((fee: ClassFee) => fee.classId === classId);
+  };
+
+  const handleEditFees = (classData: Class) => {
+    setFeeDialogClass(classData);
+    setFeeRows(getFeesForClass(classData.id).map((fee: ClassFee) => ({
+      id: fee.id,
+      description: fee.description,
+      amount: parseFloat(fee.amount).toFixed(2),
+    })));
+    setDeletedFeeIds([]);
+    setFeeDialogOpen(true);
+  };
+
+  const updateFeeRow = (index: number, field: 'description' | 'amount', value: string) => {
+    setFeeRows(prev => prev.map((row, i) => i === index ? { ...row, [field]: value } : row));
+  };
+
+  const removeFeeRow = (index: number) => {
+    const row = feeRows[index];
+    if (row.id) {
+      setDeletedFeeIds(prev => [...prev, row.id!]);
+    }
+    setFeeRows(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addFeeRow = () => {
+    setFeeRows(prev => [...prev, { description: "", amount: "" }]);
+  };
+
+  const handleSaveFees = async () => {
+    if (!feeDialogClass) return;
+
+    // Validate all rows before saving anything
+    for (const row of feeRows) {
+      if (!row.description.trim()) {
+        toast({
+          title: "Missing Description",
+          description: "Every fee needs a description.",
+          variant: "destructive",
+        });
+        return;
+      }
+      const amount = parseFloat(row.amount);
+      if (isNaN(amount) || amount < 0) {
+        toast({
+          title: "Invalid Amount",
+          description: `"${row.description.trim()}" needs a valid dollar amount.`,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+
+    setSavingFees(true);
+    try {
+      for (const feeId of deletedFeeIds) {
+        await apiRequest(`/api/class-fees/${feeId}`, "DELETE");
+      }
+
+      for (const row of feeRows) {
+        const description = row.description.trim();
+        const amount = parseFloat(row.amount).toFixed(2);
+
+        if (row.id) {
+          const original = getFeesForClass(feeDialogClass.id).find((fee: ClassFee) => fee.id === row.id);
+          if (original && (original.description !== description || parseFloat(original.amount).toFixed(2) !== amount)) {
+            await apiRequest(`/api/class-fees/${row.id}`, "PATCH", { description, amount });
+          }
+        } else {
+          await apiRequest(`/api/class-fees`, "POST", {
+            classId: feeDialogClass.id,
+            description,
+            amount,
+          });
+        }
+      }
+
+      queryClient.invalidateQueries({ queryKey: ["/api/class-fees"] });
+      toast({
+        title: "Fees Updated",
+        description: `Fees for ${feeDialogClass.className} have been saved.`,
+      });
+      setFeeDialogOpen(false);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save class fees",
+        variant: "destructive",
+      });
+    } finally {
+      setSavingFees(false);
+    }
+  };
 
 
 
@@ -265,10 +388,19 @@ export default function Classes() {
   };
 
   const columns: GridColumn[] = [
-    { key: "className", label: "Class Name", sortable: true, editable: true, width: "50" },
-    { key: "startCode", label: "Start Grade", sortable: true, editable: false, width: "25", type: "dropdown", options: gradeOptions },
-    { key: "endCode", label: "End Grade", sortable: true, editable: false, width: "25", type: "dropdown", options: gradeOptions },
+    { key: "className", label: "Class Name", sortable: true, editable: true, width: "40" },
+    { key: "startCode", label: "Start Grade", sortable: true, editable: false, width: "20", type: "dropdown", options: gradeOptions },
+    { key: "endCode", label: "End Grade", sortable: true, editable: false, width: "20", type: "dropdown", options: gradeOptions },
+    { key: "feesSummary", label: "Fees", sortable: false, editable: false, width: "60" },
   ];
+
+  // Add a read-only fees summary to each class row
+  const classesWithFees = (Array.isArray(classes) ? classes : []).map((classData: Class) => ({
+    ...classData,
+    feesSummary: getFeesForClass(classData.id)
+      .map((fee: ClassFee) => `${fee.description} $${parseFloat(fee.amount).toFixed(2)}`)
+      .join(" · "),
+  }));
 
   return (
     <div className="h-full flex flex-col">
@@ -289,17 +421,91 @@ export default function Classes() {
       />
       <div className="flex-1 p-6 overflow-hidden">
         <EditableGrid
-          data={Array.isArray(classes) ? classes : []}
+          data={classesWithFees}
           columns={columns}
           onRowUpdate={handleUpdateClass}
           onRowDelete={handleDeleteClass}
           isLoading={classesLoading}
+          customRowAction={{
+            label: "Edit Fees",
+            icon: DollarSign,
+            onClick: handleEditFees
+          }}
         />
-        
+
         <AddClassDialog
           open={addClassOpen}
           onOpenChange={setAddClassOpen}
         />
+
+        {/* Class Fees Edit Dialog */}
+        <Dialog open={feeDialogOpen} onOpenChange={setFeeDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
+            <DialogHeader>
+              <DialogTitle>
+                Edit Fees - {feeDialogClass?.className}
+              </DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              {feeRows.length === 0 ? (
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  No fees for this class yet. Click "Add Fee" to create one.
+                </p>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-[1fr_130px_40px] gap-3 items-center">
+                    <Label className="text-sm font-medium">Description</Label>
+                    <Label className="text-sm font-medium">Amount</Label>
+                    <span />
+                  </div>
+                  {feeRows.map((row, index) => (
+                    <div key={row.id ?? `new-${index}`} className="grid grid-cols-[1fr_130px_40px] gap-3 items-center">
+                      <Input
+                        value={row.description}
+                        placeholder="e.g. Notebook Fee"
+                        onChange={(e) => updateFeeRow(index, 'description', e.target.value)}
+                      />
+                      <Input
+                        value={row.amount}
+                        placeholder="0.00"
+                        inputMode="decimal"
+                        onChange={(e) => updateFeeRow(index, 'amount', e.target.value)}
+                      />
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                        title="Remove fee"
+                        onClick={() => removeFeeRow(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={addFeeRow}
+                disabled={feeRows.length >= MAX_FEES_PER_CLASS}
+              >
+                <Plus className="mr-2 h-4 w-4" />
+                {feeRows.length >= MAX_FEES_PER_CLASS ? `Maximum ${MAX_FEES_PER_CLASS} fees` : "Add Fee"}
+              </Button>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setFeeDialogOpen(false)} disabled={savingFees}>
+                  Cancel
+                </Button>
+                <Button onClick={handleSaveFees} disabled={savingFees}>
+                  {savingFees ? "Saving..." : "Save Fees"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
